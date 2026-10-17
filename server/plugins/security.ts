@@ -8,6 +8,8 @@ import type {
   FastifyError,
   FastifyInstance,
   FastifyPluginAsync,
+  FastifyReply,
+  FastifyRequest,
 } from "fastify";
 import fp from "fastify-plugin";
 import { loadEnv, resolveUrls } from "../config/env.js";
@@ -32,6 +34,43 @@ const SENSITIVE_KEYS = new Set(["password", "role", "mustChangePassword"]);
 function generateNonce(): string {
   return globalThis.crypto.randomUUID().replace(/-/g, "");
 }
+
+// Segment-aware: /embed and /embed/* are iframable widget pages; a sibling
+// like /embedxyz is not.
+export function isEmbedPath(path: string): boolean {
+  return path === "/embed" || path.startsWith("/embed/");
+}
+
+const ORIGIN_SPLIT = /[\s,]+/;
+
+/**
+ * Parse the shop's embedAllowedOrigins setting (one origin per line) into
+ * canonical scheme://host[:port] origins. Anything that isn't a valid
+ * http(s) origin is dropped — a typo must not weaken or break the CSP.
+ */
+export function parseOriginList(raw: string | null | undefined): string[] {
+  if (!raw) {
+    return [];
+  }
+  const origins: string[] = [];
+  for (const token of raw.split(ORIGIN_SPLIT)) {
+    const t = token.trim();
+    if (!t) {
+      continue;
+    }
+    try {
+      const url = new URL(t);
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        origins.push(url.origin);
+      }
+    } catch {
+      // invalid entry — ignored
+    }
+  }
+  return Array.from(new Set(origins));
+}
+
+const EMBED_ORIGINS_TTL_MS = 60_000;
 
 // An origin is only advertised in connect-src to clients that arrived on it.
 // This keeps the CSP from leaking other trusted origins (e.g. the LAN
@@ -58,18 +97,53 @@ const securityPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
   // HTTPS on the public origin gates TLS-only headers and cookie flags.
   const IS_HTTPS = (env.APP_URL ?? "").startsWith("https://");
 
+  // frame-ancestors for /embed/* comes from the shop's embedAllowedOrigins
+  // setting — a DB read per request would be wasteful, so cache it briefly.
+  // The cache is only ever written on success; a DB error falls back to the
+  // last good value (or '*' uncached if we never read one).
+  let embedOriginsCache: { at: number; value: string } | null = null;
+  app.decorate("resetEmbedOriginsCache", () => {
+    embedOriginsCache = null;
+  });
+  async function embedFrameAncestors(request: FastifyRequest): Promise<string> {
+    if (
+      embedOriginsCache &&
+      Date.now() - embedOriginsCache.at < EMBED_ORIGINS_TTL_MS
+    ) {
+      return embedOriginsCache.value;
+    }
+    let origins: string[];
+    try {
+      const settings = await request.server.prisma.shopSettings.findUnique({
+        where: { id: "default" },
+        select: { embedAllowedOrigins: true },
+      });
+      origins = parseOriginList(settings?.embedAllowedOrigins);
+    } catch (err) {
+      request.log.warn(
+        { err },
+        "embedAllowedOrigins lookup failed — reusing last good value"
+      );
+      return embedOriginsCache?.value ?? "*";
+    }
+    const value = origins.length > 0 ? origins.join(" ") : "*";
+    embedOriginsCache = { at: Date.now(), value };
+    return value;
+  }
+
   // ── Layer 1: Security Headers ──────────────────────────────────────────
   // Nonce-based CSP: generate a unique nonce per request and set the
   // Content-Security-Policy header manually so we can inject it into HTML.
-  app.addHook("onRequest", (request, reply, done) => {
+  app.addHook("onRequest", async (request, reply) => {
     const nonce = generateNonce();
     request.cspNonce = nonce;
 
     // /embed/* pages exist to be iframed on the shop's own website — they get
-    // a permissive frame-ancestors. Everything else stays clickjacking-proof.
-    const isEmbed = (request.raw.url ?? "")
-      .split("?", 1)[0]
-      .startsWith("/embed");
+    // a configurable frame-ancestors. Everything else stays clickjacking-proof.
+    const isEmbed = isEmbedPath((request.raw.url ?? "").split("?", 1)[0]);
+    const frameAncestors = isEmbed
+      ? await embedFrameAncestors(request)
+      : "'none'";
     const wsOrigins = IS_PROD ? "'self' wss:" : "'self' ws: wss:";
     const apiOrigin = env.API_URL ?? env.APP_URL ?? "";
     const requestHost = request.headers.host;
@@ -101,21 +175,19 @@ const securityPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
         // 'self' so the in-app print preview can frame /api/receipts/*; the
         // receipt route itself only allows same-origin framing (frame-ancestors).
         `frame-src 'self'`,
-        `frame-ancestors ${isEmbed ? "*" : "'none'"}`,
+        `frame-ancestors ${frameAncestors}`,
         `object-src 'none'`,
         `base-uri 'self'`,
         `form-action 'self'`,
         ...(IS_HTTPS ? ["upgrade-insecure-requests"] : []),
       ].join(";")
     );
-
-    done();
   });
 
   // XFO doesn't understand the /embed exception, so strip it there — CSP
   // frame-ancestors is the governing policy on modern browsers anyway.
   app.addHook("onSend", (request, reply, _payload, done) => {
-    if ((request.raw.url ?? "").split("?", 1)[0].startsWith("/embed")) {
+    if (isEmbedPath((request.raw.url ?? "").split("?", 1)[0])) {
       reply.removeHeader("x-frame-options");
     }
     done();
@@ -170,7 +242,12 @@ const securityPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
       typeof DEFAULT_SECURITY.rateLimit === "object"
         ? (DEFAULT_SECURITY.rateLimit as { timeWindow: string }).timeWindow
         : "1 minute",
-    keyGenerator: (request) => request.user?.id ?? request.ip,
+    // NOTE: keyed on IP, not user — this preHandler was registered before
+    // the auth plugin sets request.user, so request.user is always null
+    // here. IP keying is intended (single shop behind NAT shares the
+    // budget) and sensitive endpoints carry their own per-identifier
+    // limits + lockout.
+    keyGenerator: (request) => request.ip,
     exponentialBackoff: true,
     ban: 5,
     store: CappedBackoffStore,
@@ -335,41 +412,115 @@ const securityPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
   });
 
   // ── Layer 8: Audit Logging (fire-and-forget off the hot path) ──────────
-
   app.addHook("onResponse", (request, reply, done) => {
     done();
-    if (!MUTATION_METHODS.has(request.method)) {
-      return;
-    }
-    const userId = request.user?.id;
-    if (!userId) {
-      return;
-    }
-
-    const action = `${request.method} ${request.routeOptions?.url ?? request.url}`;
-    const statusCode = reply.statusCode;
-
-    setImmediate(() => {
-      request.server.prisma.auditLog
-        .create({
-          data: {
-            userId,
-            action: "API_MUTATION",
-            toValue: action,
-            jobId: null,
-            metadata: { requestId: request.id, statusCode },
-          },
-        })
-        .catch((err) => {
-          request.log.error({ err }, "Failed to write audit log");
-        });
-    });
+    logAuditRequest(request, reply);
   });
 };
+
+// Denylist: noisy routes with no audit value (mark-as-read, dashboard
+// polls, AI chat/sessions, feedback, anonymous public pages). Every other
+// authenticated mutation is audited — GDPR erasures, fiscal documents,
+// data-io import/export, stock and price changes, etc.
+export const NOISY_ROUTES = [
+  "/api/notifications",
+  "/api/dashboard",
+  "/api/ai",
+  "/api/feedback",
+  "/api/public",
+];
+
+// Bulk CSV exports exfiltrate personal/fiscal data in one click (RGPD), so
+// they are audited even though they are GETs. Every other audited request
+// must be a mutation.
+const AUDITED_GET_PREFIXES = ["/api/export"];
+
+// Segment-aware prefix match: "/api/users" matches "/api/users/123" but
+// never a sibling like "/api/users-x".
+export function matchesRoutePrefix(routeUrl: string, prefix: string): boolean {
+  return routeUrl === prefix || routeUrl.startsWith(`${prefix}/`);
+}
+
+// Validation failures (400/404/409/422) carry no audit value. Auth failures
+// (401/403) do — they are RBAC probing — and are recorded with their
+// statusCode in metadata.
+const SKIPPED_STATUS_CODES = new Set([400, 404, 409, 422]);
+
+export interface AuditDecision {
+  method: string;
+  routeUrl: string;
+  statusCode: number;
+  userId: string | null | undefined;
+}
+
+export function shouldAuditRequest({
+  method,
+  routeUrl,
+  userId,
+  statusCode,
+}: AuditDecision): boolean {
+  if (!userId) {
+    return false;
+  }
+  if (SKIPPED_STATUS_CODES.has(statusCode)) {
+    return false;
+  }
+  const path = routeUrl.split("?", 1)[0] ?? routeUrl;
+  if (NOISY_ROUTES.some((p) => matchesRoutePrefix(path, p))) {
+    return false;
+  }
+  if (MUTATION_METHODS.has(method)) {
+    return true;
+  }
+  return (
+    method === "GET" &&
+    AUDITED_GET_PREFIXES.some((p) => matchesRoutePrefix(path, p))
+  );
+}
+
+export function logAuditRequest(request: FastifyRequest, reply: FastifyReply) {
+  const userId = request.user?.id;
+  if (!userId) {
+    return;
+  }
+  const routeUrl = request.routeOptions?.url ?? request.url;
+  if (
+    !shouldAuditRequest({
+      method: request.method,
+      routeUrl,
+      userId,
+      statusCode: reply.statusCode,
+    })
+  ) {
+    return;
+  }
+
+  const action = `${request.method} ${routeUrl}`;
+  const statusCode = reply.statusCode;
+
+  setImmediate(() => {
+    request.server.prisma.auditLog
+      .create({
+        data: {
+          userId,
+          action: "API_MUTATION",
+          toValue: action,
+          jobId: null,
+          metadata: { requestId: request.id, statusCode },
+        },
+      })
+      .catch((err) => {
+        request.log.error({ err }, "Failed to write audit log");
+      });
+  });
+}
 
 export default fp(securityPlugin, { name: "security-plugin" });
 
 declare module "fastify" {
+  interface FastifyInstance {
+    resetEmbedOriginsCache: () => void;
+  }
   interface FastifyRequest {
     cspNonce: string;
   }

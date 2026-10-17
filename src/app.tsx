@@ -32,6 +32,9 @@ const TradeInsPage = lazy(() => import("@/pages/trade-ins"));
 const PartRequestsPage = lazy(() => import("@/pages/part-requests"));
 const MarketPricesPage = lazy(() => import("@/pages/market-prices"));
 const JobsPage = lazy(() => import("@/pages/jobs"));
+const PurchaseOrdersPage = lazy(() => import("@/pages/purchase-orders"));
+const BusinessPage = lazy(() => import("@/pages/business"));
+const TasksPage = lazy(() => import("@/pages/tasks"));
 const JobDetailPage = lazy(() => import("@/pages/jobs/detail"));
 const NotificationsPage = lazy(() => import("@/pages/notifications"));
 const PartsCatalogPage = lazy(() => import("@/pages/parts"));
@@ -45,6 +48,7 @@ const SettingsPage = lazy(() => import("@/pages/settings"));
 const SignPage = lazy(() => import("@/pages/sign"));
 const SupplierRmasPage = lazy(() => import("@/pages/rmas"));
 const SuppliersPage = lazy(() => import("@/pages/suppliers"));
+const SupplierDetailPage = lazy(() => import("@/pages/suppliers/detail"));
 const TrackingPage = lazy(() => import("@/pages/tracking"));
 
 const DASHBOARD_LAZY_MAP: Record<
@@ -134,6 +138,58 @@ export default function App() {
               }
               path="/jobs"
             />
+            <Route
+              element={<RequirePermission perm={{ parts: ["viewCatalog"] }} />}
+            >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <PurchaseOrdersPage />
+                  </DashboardLayout>
+                }
+                path="/purchase-orders"
+              />
+            </Route>
+            <Route element={<RequirePermission perm={{ jobs: ["view"] }} />}>
+              <Route
+                element={
+                  <DashboardLayout>
+                    <BusinessPage module="tickets" />
+                  </DashboardLayout>
+                }
+                path="/tickets"
+              />
+            </Route>
+            <Route
+              element={<RequirePermission perm={{ settings: ["edit"] }} />}
+            >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <BusinessPage module="messages" />
+                  </DashboardLayout>
+                }
+                path="/messages"
+              />
+              <Route
+                element={
+                  <DashboardLayout>
+                    <BusinessPage module="agreements" />
+                  </DashboardLayout>
+                }
+                path="/agreements"
+              />
+            </Route>
+            <Route element={<RequirePermission perm={{ jobs: ["view"] }} />}>
+              <Route
+                element={
+                  <DashboardLayout>
+                    <TasksPage />
+                  </DashboardLayout>
+                }
+                path="/tasks"
+              />
+            </Route>
             <Route
               element={
                 <DashboardLayout>
@@ -248,6 +304,14 @@ export default function App() {
                   </DashboardLayout>
                 }
                 path="/suppliers"
+              />
+              <Route
+                element={
+                  <DashboardLayout>
+                    <SupplierDetailPage />
+                  </DashboardLayout>
+                }
+                path="/suppliers/:id"
               />
               <Route
                 element={

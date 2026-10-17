@@ -9,7 +9,14 @@ export const createSupplierSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-export const updateSupplierSchema = createSupplierSchema.partial().extend({
+export const updateSupplierSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  // Nullable on update — null clears the field; undefined leaves it.
+  email: z.string().email().max(160).nullable().optional(),
+  phone: z.string().max(40).nullable().optional(),
+  taxId: z.string().max(20).nullable().optional(),
+  address: z.string().max(240).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -28,6 +35,7 @@ export const SUPPLIER_RMA_STATUSES = [
 
 export const createSupplierRmaSchema = z.object({
   supplierId: z.string().min(1),
+  jobCode: z.string().trim().min(1).max(80).optional(),
   partId: z.string().optional(),
   description: z.string().min(1).max(500),
   quantity: z.number().int().min(1).max(9999).optional(),
@@ -46,5 +54,6 @@ export const updateSupplierRmaSchema = z.object({
 
 export const listSupplierRmasQuerySchema = z.object({
   supplierId: z.string().optional(),
+  jobId: z.string().optional(),
   status: z.enum(SUPPLIER_RMA_STATUSES).optional(),
 });
