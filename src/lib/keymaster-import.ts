@@ -163,20 +163,81 @@ export function inspectKeymasterRows(
 }
 
 const XLSX = /\.xlsx$/i;
+const CELL_COLUMN = /^[A-Z]+/;
 const XML_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 const FIRST_SHEET = "xl/worksheets/sheet1.xml";
 const MAX_WORKSHEET_XML_BYTES = 12 * 1024 * 1024;
 
+function parseXml(bytes: Uint8Array): Document {
+  const document = new DOMParser().parseFromString(
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    "application/xml"
+  );
+  if (document.getElementsByTagName("parsererror").length > 0) {
+    throw new Error("O Excel tem XML inválido.");
+  }
+  return document;
+}
+
+function textNodes(element: Element): string {
+  return Array.from(
+    element.getElementsByTagNameNS(XML_NS, "t"),
+    (node) => node.textContent ?? ""
+  ).join("");
+}
+
+function sharedStringValues(
+  files: Record<string, Uint8Array>
+): string[] {
+  const source = files["xl/sharedStrings.xml"];
+  if (!source) {
+    return [];
+  }
+  const document = parseXml(source);
+  return Array.from(document.getElementsByTagNameNS(XML_NS, "si"), textNodes);
+}
+
+function columnIndex(cellRef: string): number {
+  const letters = CELL_COLUMN.exec(cellRef)?.[0];
+  if (!letters) {
+    return -1;
+  }
+  let index = 0;
+  for (let i = 0; i < letters.length; i++) {
+    index = index * 26 + letters.charCodeAt(i) - 64;
+  }
+  return index - 1;
+}
+
+function cellValue(cell: Element, sharedStrings: string[]): string {
+  const type = cell.getAttribute("t");
+  if (type === "inlineStr") {
+    return textNodes(cell);
+  }
+  const value = cell.getElementsByTagNameNS(XML_NS, "v")[0]?.textContent ?? "";
+  return type === "s" ? (sharedStrings[Number(value)] ?? "") : value;
+}
+
+function sheetRowValues(
+  row: Element,
+  sharedStrings: string[]
+): unknown[] {
+  const cells: unknown[] = [];
+  for (const cell of Array.from(row.getElementsByTagNameNS(XML_NS, "c"))) {
+    const index = columnIndex(cell.getAttribute("r") ?? "");
+    if (index >= 0 && index <= 127) {
+      cells[index] = cellValue(cell, sharedStrings);
+    }
+  }
+  return cells;
+}
+
 /**
  * Keymaster exports use ordinary OOXML worksheets with inline strings.
- * Decode the first sheet directly so the 2,634-row customers export doesn't
- * stall in read-excel-file's full workbook/cell processing.
- *
- * This is for read-only preview, NOT the audited importer or any DB write.
- * Do not evaluate formulas or open network resources from the workbook.
+ * Decode just the first sheet without read-excel-file's heavier full-workbook
+ * parsing. Never evaluate formulas or write records during preview.
  */
 export function readKeymasterPreviewXlsx(buffer: ArrayBuffer): unknown[][] {
-  // Reject oversized ZIP expansions before decompressing user content.
   const inflated = xlsxUncompressedSize(buffer);
   if (!Number.isFinite(inflated) || inflated > MAX_XLSX_UNCOMPRESSED_BYTES) {
     throw new ImportFileError("data_io.xlsx_too_large");
@@ -185,7 +246,9 @@ export function readKeymasterPreviewXlsx(buffer: ArrayBuffer): unknown[][] {
   try {
     files = unzipSync(new Uint8Array(buffer));
   } catch {
-    throw new Error("O ficheiro Excel está danificado ou não é um XLSX válido.");
+    throw new Error(
+      "O ficheiro Excel está danificado ou não é um XLSX válido."
+    );
   }
   const sheetBytes = files[FIRST_SHEET];
   if (!sheetBytes) {
@@ -195,40 +258,13 @@ export function readKeymasterPreviewXlsx(buffer: ArrayBuffer): unknown[][] {
     throw new ImportFileError("data_io.xlsx_too_large");
   }
 
-  const parser = new DOMParser();
-  function parseXml(bytes: Uint8Array): Document {
-    const document = parser.parseFromString(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-      "application/xml"
-    );
-    if (document.getElementsByTagName("parsererror").length > 0) {
-      throw new Error("O Excel tem XML inválido.");
-    }
-    return document;
-  }
-  function textNodes(element: Element): string {
-    return Array.from(
-      element.getElementsByTagNameNS(XML_NS, "t"),
-      (node) => node.textContent ?? ""
-    ).join("");
-  }
-
-  const sharedStrings: string[] = [];
-  if (files["xl/sharedStrings.xml"]) {
-    const shared = parseXml(files["xl/sharedStrings.xml"]);
-    for (const entry of Array.from(
-      shared.getElementsByTagNameNS(XML_NS, "si")
-    )) {
-      sharedStrings.push(textNodes(entry));
-    }
-  }
-
+  const sharedStrings = sharedStringValues(files);
   const sheet = parseXml(sheetBytes);
-  const out: unknown[][] = [];
-  const sheetRows = sheet.getElementsByTagNameNS(XML_NS, "row");
-  for (const xmlRow of Array.from(sheetRows)) {
+  const rows: unknown[][] = [];
+  for (const xmlRow of Array.from(
+    sheet.getElementsByTagNameNS(XML_NS, "row")
+  )) {
     const rowNumber = Number(xmlRow.getAttribute("r"));
-    // Stop crafted files from allocating unbounded sparse rows.
     if (
       !Number.isSafeInteger(rowNumber) ||
       rowNumber < 1 ||
@@ -236,44 +272,12 @@ export function readKeymasterPreviewXlsx(buffer: ArrayBuffer): unknown[][] {
     ) {
       throw new ImportFileError("data_io.too_many_rows");
     }
-    const cells: unknown[] = [];
-    for (const cell of Array.from(
-      xmlRow.getElementsByTagNameNS(XML_NS, "c")
-    )) {
-      const cellRef = cell.getAttribute("r") ?? "";
-      const letters = /^[A-Z]+/.exec(cellRef)?.[0];
-      if (!letters) {
-        continue;
-      }
-      let index = 0;
-      for (let i = 0; i < letters.length; i++) {
-        index = index * 26 + letters.charCodeAt(i) - 64;
-      }
-      index--;
-      if (index > 127) {
-        continue; // Only 31 columns are used in the five Keymaster exports.
-      }
-
-      let value = "";
-      const type = cell.getAttribute("t");
-      if (type === "inlineStr") {
-        value = textNodes(cell);
-      } else {
-        value =
-          cell.getElementsByTagNameNS(XML_NS, "v")[0]?.textContent ?? "";
-        if (type === "s") {
-          value = sharedStrings[Number(value)] ?? "";
-        }
-      }
-      cells[index] = value;
-    }
-    // Preserve worksheet physical row numbers: headers are on rows 2 or 3.
-    out[rowNumber - 1] = cells;
+    rows[rowNumber - 1] = sheetRowValues(xmlRow, sharedStrings);
   }
-  for (let i = 0; i < out.length; i++) {
-    out[i] ??= [];
+  for (let i = 0; i < rows.length; i++) {
+    rows[i] ??= [];
   }
-  return out;
+  return rows;
 }
 
 /** Browser-only preview: neither customer data nor XLSX is uploaded. */
