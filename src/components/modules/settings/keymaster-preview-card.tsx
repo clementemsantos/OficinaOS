@@ -60,6 +60,13 @@ export default function KeymasterPreviewCard() {
   );
   const [importResult, setImportResult] = useState<ChunkResult | null>(null);
   const [importProgress, setImportProgress] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState("");
+  const [syncedStatus, setSyncedStatus] = useState<ArchiveStatus | null>(null);
+  const [syncResult, setSyncResult] = useState<{
+    created: number;
+    errors: number;
+  } | null>(null);
   const [progress, setProgress] = useState<{
     current: number;
     total: number;
@@ -70,6 +77,15 @@ export default function KeymasterPreviewCard() {
     const response = await api.get<ArchiveStatus>("/import/keymaster/status");
     setArchiveStatus(response.data);
   }, []);
+
+  const refreshSyncedStatus = useCallback(async () => {
+    const response = await api.get<ArchiveStatus>("/import/keymaster/sync-status");
+    setSyncedStatus(response.data);
+  }, []);
+
+  useEffect(() => {
+    refreshSyncedStatus().catch(() => setSyncedStatus(null));
+  }, [refreshSyncedStatus]);
 
   useEffect(() => {
     refreshArchiveStatus().catch(() => {
@@ -182,6 +198,58 @@ export default function KeymasterPreviewCard() {
       setImporting(false);
       setImportProgress("");
       refreshArchiveStatus().catch(() => setArchiveStatus(null));
+    }
+  };
+
+  const applyToModules = async () => {
+    if (syncing || importing || busy || !archiveStatus?.total) {
+      return;
+    }
+    setSyncing(true);
+    setSyncResult(null);
+    let created = 0;
+    let errors = 0;
+    try {
+      for (const entity of ENTITIES) {
+        const count = archiveStatus.counts[entity] ?? 0;
+        if (count === 0) {
+          continue;
+        }
+        for (let attempt = 0; attempt <= Math.ceil(count / 25); attempt++) {
+          setSyncProgress(
+            t("data_io.keymaster_sync_progress", {
+              entity: t(ENTITY_KEYS[entity]),
+              created,
+            })
+          );
+          const response = await api.post<{
+            created: number;
+            errors: { reference: string; reason: string }[];
+            remaining: number;
+          }>("/import/keymaster/sync", { entity });
+          created += response.data.created;
+          errors += response.data.errors.length;
+          if (response.data.remaining === 0) {
+            break;
+          }
+          if (response.data.created === 0 && response.data.errors.length === 0) {
+            throw new Error("A sincronização não está a avançar.");
+          }
+        }
+      }
+      setSyncResult({ created, errors });
+      if (errors > 0) {
+        toast.warning(t("data_io.keymaster_sync_warnings", { count: errors }));
+      } else {
+        toast.success(t("data_io.keymaster_sync_success"));
+      }
+    } catch {
+      toast.error(t("data_io.keymaster_sync_failed"));
+    } finally {
+      setSyncing(false);
+      setSyncProgress("");
+      refreshArchiveStatus().catch(() => setArchiveStatus(null));
+      refreshSyncedStatus().catch(() => setSyncedStatus(null));
     }
   };
 
@@ -315,6 +383,45 @@ export default function KeymasterPreviewCard() {
           </p>
         </div>
       )}
+      {archiveStatus?.total ? (
+        <div className="mt-4 rounded-lg border border-outline-variant p-3">
+          <h4 className="font-semibold text-on-surface text-sm">
+            {t("data_io.keymaster_sync_title")}
+          </h4>
+          <p className="mt-2 text-on-surface-variant text-xs">
+            {t("data_io.keymaster_sync_explanation")}
+          </p>
+          <div className="mt-3">
+            <Button
+              disabled={busy || importing}
+              loading={syncing}
+              onClick={applyToModules}
+              size="sm"
+              type="button"
+            >
+              {t("data_io.keymaster_sync_action")}
+            </Button>
+          </div>
+          {syncProgress && (
+            <p aria-live="polite" className="mt-2 text-on-surface text-sm">
+              {syncProgress}
+            </p>
+          )}
+          {syncedStatus && (
+            <p className="mt-2 text-on-surface-variant text-xs">
+              {t("data_io.keymaster_synced_count", {
+                count: syncedStatus.total,
+                total: archiveStatus.total,
+              })}
+            </p>
+          )}
+          {syncResult && (
+            <p className="mt-2 text-on-surface text-sm">
+              {t("data_io.keymaster_sync_result", syncResult)}
+            </p>
+          )}
+        </div>
+      ) : null}
       <KeymasterArchiveBrowser />
       <p className="mt-4 text-on-surface-variant text-xs">
         {t("data_io.keymaster_safe_notice")}
