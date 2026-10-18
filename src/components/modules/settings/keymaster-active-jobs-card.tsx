@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { parsePtNumber, readTableFile } from "@/lib/import-table";
+import { readKeymasterPreviewXlsx } from "@/lib/keymaster-import";
 
 interface ActiveJobRow {
   attributedTo: string;
@@ -91,8 +92,27 @@ export default function KeymasterActiveJobsCard() {
     setDecisions([]);
     setComplete(false);
     try {
-      const parsed = await readTableFile(file);
-      const next = extract(parsed.rows);
+      let sourceRows: Record<string, string>[];
+      if (file.name.toLowerCase().endsWith(".xlsx")) {
+        // Use the small, already-tested OOXML reader. It reads the first
+        // worksheet directly and does not turn dates into JS Date objects.
+        const sheet = readKeymasterPreviewXlsx(await file.arrayBuffer());
+        const headers = (sheet[0] ?? []).map((head) =>
+          String(head ?? "").trim().toLowerCase()
+        );
+        sourceRows = sheet.slice(1).map((cells) =>
+          Object.fromEntries(
+            headers.map((head, index) => [
+              head,
+              String(cells[index] ?? "").trim(),
+            ])
+          )
+        );
+      } else {
+        const parsed = await readTableFile(file);
+        sourceRows = parsed.rows;
+      }
+      const next = extract(sourceRows);
       if (next.length === 0 || next.length > 100) {
         throw new Error("O ficheiro deve ter entre 1 e 100 obras.");
       }
