@@ -6,7 +6,10 @@ WORKDIR /app
 ENV HUSKY=0
 
 COPY package.json ./
-RUN node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json","utf8")); for(const [k,v] of Object.entries(p.overrides||{})){for(const group of ["dependencies","devDependencies"]){if(p[group]?.[k]) p[group][k]=v;}} p.devDependencies.tsx="4.20.6"; fs.writeFileSync("package.json",JSON.stringify(p,null,2));'
+# Docker only needs build/runtime tooling. Remove test/lint-only packages from
+# the temporary install manifest to avoid optional peer conflicts (vitest/vite-plus).
+# The repository package.json is untouched.
+RUN node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json","utf8")); for(const [k,v] of Object.entries(p.overrides||{})){for(const group of ["dependencies","devDependencies"]){if(p[group]?.[k]) p[group][k]=v;}} for(const k of ["ultracite","@biomejs/biome","vitest","@vitest/coverage-v8","@testing-library/jest-dom","@testing-library/react","jsdom"]) delete p.devDependencies[k]; p.devDependencies.tsx="4.20.6"; fs.writeFileSync("package.json",JSON.stringify(p,null,2));'
 RUN npm install -g npm@11.19.1
 RUN npm install --no-audit --no-fund
 
