@@ -191,10 +191,14 @@ async function classify(
     } else if (existingRefs.has(`KEYMASTER:${row.reference}`)) {
       result.action = "already_imported";
       result.reason = "Esta obra já existe no OficinaOS.";
-    } else if (!row.equipment || normalize(row.equipment) === "SEM EQUIPAMENTO") {
+    } else if (
+      !row.equipment ||
+      normalize(row.equipment) === "SEM EQUIPAMENTO"
+    ) {
       result.reason = "Equipamento não identificado; precisa de revisão.";
     } else if (normalize(row.stateOriginal).includes("VENDA")) {
-      result.reason = "Folha de venda: confirmar se deve entrar como reparação.";
+      result.reason =
+        "Folha de venda: confirmar se deve entrar como reparação.";
     } else if (!row.stateOriginal) {
       result.reason = "Estado de serviço em falta; requer confirmação.";
     } else if (!row.customer) {
