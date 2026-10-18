@@ -84,14 +84,20 @@ export async function create(prisma: PrismaClient, input: CreateCustomerInput) {
   }
 
   const phone = existing?.phone ?? input.phone.trim();
-  return await customerUpsert(prisma, { phone }, updateData, {
+  const data = {
     email,
     name: input.name,
     phone,
     taxId,
     whatsappConsent: input.whatsappConsent ?? false,
     whatsappConsentAt: input.whatsappConsent ? new Date() : null,
-  });
+  };
+  if (existing) {
+    return await customerUpsert(prisma, { id: existing.id }, updateData, data);
+  }
+  // Phone is intentionally not unique: imported family/business contacts
+  // can share a number. New clients are explicit creates, not phone upserts.
+  return await prisma.customer.create({ data });
 }
 
 export async function update(
