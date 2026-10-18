@@ -121,11 +121,9 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
           .send({ message: "Cabeçalhos Keymaster não reconhecidos." });
       }
       if (invalidReferences(records, config.idColumn)) {
-        return reply
-          .code(400)
-          .send({
-            message: "Referência vazia, repetida ou incoerente no lote.",
-          });
+        return reply.code(400).send({
+          message: "Referência vazia, repetida ou incoerente no lote.",
+        });
       }
       const ids = records.map((r) => r.sourceId);
 
