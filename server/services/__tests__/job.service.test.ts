@@ -526,7 +526,7 @@ describe("list", () => {
     expect(findManyCall[0].where.technicianId).toBe("tech-1");
   });
 
-  it("searches across job code, customer name, and device info", async () => {
+  it("searches job code, legacy Keymaster reference, customer, and device info", async () => {
     (prisma.job.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (prisma.job.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
 
@@ -541,7 +541,7 @@ describe("list", () => {
     const findManyCall = (prisma.job.findMany as ReturnType<typeof vi.fn>).mock
       .calls[0];
     expect(findManyCall[0].where.OR).toBeDefined();
-    expect(findManyCall[0].where.OR).toHaveLength(5);
+    expect(findManyCall[0].where.OR).toHaveLength(7);
   });
 
   it("sets nextCursor when more results exist", async () => {
