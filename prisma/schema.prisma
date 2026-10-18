@@ -1709,6 +1709,7 @@ model ExternalImportRecord {
   sourceRow    Int
   operationalId String?
   syncedAt     DateTime? @db.Timestamptz
+  syncError    String? @db.Text
   headers      Json
   values       Json
   checksum     String   @db.VarChar(64)
