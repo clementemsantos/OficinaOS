@@ -1,11 +1,14 @@
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
 import {
   type KeymasterEntity,
   type KeymasterPreview,
   previewKeymasterFile,
+  readKeymasterArchive,
 } from "@/lib/keymaster-import";
 
 const ENTITY_KEYS: Record<KeymasterEntity, string> = {
@@ -16,42 +19,76 @@ const ENTITY_KEYS: Record<KeymasterEntity, string> = {
   stock: "data_io.keymaster_stock",
 };
 
-/**
- * Read-only staging preview. The full records remain inside the browser;
- * importing them needs the audited, provenance-aware migration workflow.
- */
+const ENTITIES: KeymasterEntity[] = [
+  "customers",
+  "equipment",
+  "suppliers",
+  "services",
+  "stock",
+];
+
+interface ArchiveStatus {
+  counts: Record<KeymasterEntity, number>;
+  total: number;
+}
+
+interface ChunkResult {
+  stored: number;
+  unchanged: number;
+  conflicts: number;
+}
+
+const CHUNK_SIZE = 50;
+
 export default function KeymasterPreviewCard() {
   const { t } = useTranslation();
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<KeymasterPreview[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus | null>(null);
+  const [importResult, setImportResult] = useState<ChunkResult | null>(null);
+  const [importProgress, setImportProgress] = useState("");
   const [progress, setProgress] = useState<{
     current: number;
     total: number;
     fileName: string;
   } | null>(null);
 
+  const refreshArchiveStatus = async () => {
+    const response = await api.get<ArchiveStatus>("/import/keymaster/status");
+    setArchiveStatus(response.data);
+  };
+
+  useEffect(() => {
+    refreshArchiveStatus().catch(() => {
+      // The preview still works if the optional archive API isn't installed.
+      setArchiveStatus(null);
+    });
+  }, []);
+
   const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+    const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files.length === 0 || busy) {
+    if (selected.length === 0 || busy || importing) {
       return;
     }
     setBusy(true);
+    setFiles(selected);
     setPreviews([]);
     setErrors([]);
+    setImportResult(null);
     const next: KeymasterPreview[] = [];
     const problems: string[] = [];
     try {
-      for (const [index, file] of files.entries()) {
+      for (const [index, file] of selected.entries()) {
         setProgress({
           current: index + 1,
-          total: files.length,
+          total: selected.length,
           fileName: file.name,
         });
-        // Give the browser an opportunity to paint the file currently being
-        // checked before the parsing library performs any synchronous work.
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         try {
           next.push(await previewKeymasterFile(file));
@@ -60,13 +97,76 @@ export default function KeymasterPreviewCard() {
             `${file.name}: ${error instanceof Error ? error.message : t("data_io.import_failed")}`
           );
         }
-        // Show each result immediately instead of waiting for ALL five files.
         setPreviews([...next]);
         setErrors([...problems]);
       }
     } finally {
       setProgress(null);
       setBusy(false);
+    }
+  };
+
+  const canImport =
+    files.length > 0 &&
+    previews.length === files.length &&
+    errors.length === 0 &&
+    previews.every(
+      (preview) =>
+        preview.missingReferences === 0 && preview.duplicateReferences === 0
+    );
+
+  const importArchive = async () => {
+    if (!canImport || busy || importing) {
+      return;
+    }
+    setImporting(true);
+    setImportResult(null);
+    const summary: ChunkResult = { stored: 0, unchanged: 0, conflicts: 0 };
+    try {
+      for (const [fileIndex, file] of files.entries()) {
+        setImportProgress(
+          t("data_io.keymaster_import_progress", {
+            current: fileIndex + 1,
+            total: files.length,
+            file: file.name,
+          })
+        );
+        const archive = await readKeymasterArchive(file);
+        for (let index = 0; index < archive.records.length; index += CHUNK_SIZE) {
+          const response = await api.post<ChunkResult>(
+            "/import/keymaster/archive",
+            {
+              entity: archive.entity,
+              sourceFile: archive.sourceFile,
+              headers: archive.headers,
+              records: archive.records.slice(index, index + CHUNK_SIZE),
+            }
+          );
+          summary.stored += response.data.stored;
+          summary.unchanged += response.data.unchanged;
+          summary.conflicts += response.data.conflicts;
+        }
+      }
+      setImportResult(summary);
+      if (summary.conflicts > 0) {
+        toast.warning(t("data_io.keymaster_conflicts", {
+          count: summary.conflicts,
+        }));
+      } else {
+        toast.success(t("data_io.keymaster_import_success"));
+      }
+    } catch (error) {
+      setErrors((old) => [
+        ...old,
+        error instanceof Error
+          ? error.message
+          : t("data_io.keymaster_import_failed"),
+      ]);
+      toast.error(t("data_io.keymaster_import_failed"));
+    } finally {
+      setImporting(false);
+      setImportProgress("");
+      refreshArchiveStatus().catch(() => setArchiveStatus(null));
     }
   };
 
@@ -86,10 +186,11 @@ export default function KeymasterPreviewCard() {
         ref={fileInput}
         type="file"
       />
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
           icon="upload"
           loading={busy}
+          disabled={importing}
           onClick={() => fileInput.current?.click()}
           size="sm"
           type="button"
@@ -97,6 +198,17 @@ export default function KeymasterPreviewCard() {
         >
           {t("data_io.keymaster_pick_files")}
         </Button>
+        {canImport && (
+          <Button
+            disabled={busy}
+            loading={importing}
+            onClick={importArchive}
+            size="sm"
+            type="button"
+          >
+            {t("data_io.keymaster_import_archive")}
+          </Button>
+        )}
       </div>
       {progress && (
         <p aria-live="polite" className="mt-3 text-on-surface-variant text-sm">
@@ -105,6 +217,11 @@ export default function KeymasterPreviewCard() {
             total: progress.total,
             file: progress.fileName,
           })}
+        </p>
+      )}
+      {importProgress && (
+        <p aria-live="polite" className="mt-3 text-on-surface-variant text-sm">
+          {importProgress}
         </p>
       )}
       {previews.length > 0 && (
@@ -127,9 +244,7 @@ export default function KeymasterPreviewCard() {
                   <td className="max-w-52 break-words py-2 pe-3">
                     {preview.fileName}
                   </td>
-                  <td className="py-2 pe-3">
-                    {t(ENTITY_KEYS[preview.entity])}
-                  </td>
+                  <td className="py-2 pe-3">{t(ENTITY_KEYS[preview.entity])}</td>
                   <td className="py-2 pe-3">{preview.recordCount}</td>
                   <td className="py-2 pe-3">
                     {preview.missingReferences > 0 &&
@@ -152,11 +267,35 @@ export default function KeymasterPreviewCard() {
           </table>
         </div>
       )}
+      {importResult && (
+        <p aria-live="polite" className="mt-3 font-medium text-on-surface text-sm">
+          {t("data_io.keymaster_import_result", {
+            stored: importResult.stored,
+            unchanged: importResult.unchanged,
+            conflicts: importResult.conflicts,
+          })}
+        </p>
+      )}
       {errors.length > 0 && (
         <div aria-live="polite" className="mt-3 text-error text-sm">
           {errors.map((message) => (
             <p key={message}>{message}</p>
           ))}
+        </div>
+      )}
+      {archiveStatus && (
+        <div className="mt-4 rounded-lg border border-outline-variant p-3">
+          <p className="font-semibold text-on-surface text-sm">
+            {t("data_io.keymaster_archived_total", {
+              count: archiveStatus.total,
+            })}
+          </p>
+          <p className="mt-2 text-on-surface-variant text-xs">
+            {ENTITIES.map(
+              (entity) =>
+                `${t(ENTITY_KEYS[entity])}: ${archiveStatus.counts[entity] ?? 0}`
+            ).join(" · ")}
+          </p>
         </div>
       )}
       <p className="mt-4 text-on-surface-variant text-xs">
