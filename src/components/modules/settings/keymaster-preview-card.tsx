@@ -26,6 +26,11 @@ export default function KeymasterPreviewCard() {
   const [busy, setBusy] = useState(false);
   const [previews, setPreviews] = useState<KeymasterPreview[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [progress, setProgress] = useState<{
+    current: number;
+    total: number;
+    fileName: string;
+  } | null>(null);
 
   const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -34,20 +39,35 @@ export default function KeymasterPreviewCard() {
       return;
     }
     setBusy(true);
+    setPreviews([]);
+    setErrors([]);
     const next: KeymasterPreview[] = [];
     const problems: string[] = [];
-    for (const file of files) {
-      try {
-        next.push(await previewKeymasterFile(file));
-      } catch (error) {
-        problems.push(
-          `${file.name}: ${error instanceof Error ? error.message : t("data_io.import_failed")}`
-        );
+    try {
+      for (const [index, file] of files.entries()) {
+        setProgress({
+          current: index + 1,
+          total: files.length,
+          fileName: file.name,
+        });
+        // Give the browser an opportunity to paint the file currently being
+        // checked before the parsing library performs any synchronous work.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        try {
+          next.push(await previewKeymasterFile(file));
+        } catch (error) {
+          problems.push(
+            `${file.name}: ${error instanceof Error ? error.message : t("data_io.import_failed")}`
+          );
+        }
+        // Show each result immediately instead of waiting for ALL five files.
+        setPreviews([...next]);
+        setErrors([...problems]);
       }
+    } finally {
+      setProgress(null);
+      setBusy(false);
     }
-    setPreviews(next);
-    setErrors(problems);
-    setBusy(false);
   };
 
   return (
@@ -78,6 +98,15 @@ export default function KeymasterPreviewCard() {
           {t("data_io.keymaster_pick_files")}
         </Button>
       </div>
+      {progress && (
+        <p aria-live="polite" className="mt-3 text-on-surface-variant text-sm">
+          {t("data_io.keymaster_progress", {
+            current: progress.current,
+            total: progress.total,
+            file: progress.fileName,
+          })}
+        </p>
+      )}
       {previews.length > 0 && (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
