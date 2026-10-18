@@ -706,6 +706,7 @@ model PartsCatalog {
   name                String
   category            PartCategory
   defaultPrice        Decimal         @db.Decimal(10, 2)
+  priceKnown          Boolean         @default(true)
   acquisitionCost     Decimal?        @db.Decimal(10, 2)
   sourceReference     String?         @db.VarChar(200)
   supplier            String?
