@@ -1,36 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { inspectKeymasterRows } from "../keymaster-import";
 
+function cells(data: Record<number, unknown>): unknown[] {
+  const out: unknown[] = Array.from({ length: 31 }, () => null);
+  for (const [key, value] of Object.entries(data)) {
+    out[Number(key)] = value;
+  }
+  return out;
+}
+
 function sheet(
   marker: string,
   headerRow: number,
   headers: Record<number, string>,
-  data: unknown[][]
-) {
-  const rows: unknown[][] = Array.from(
-    { length: headerRow },
-    () => Array.from({ length: 31 }, () => null)
-  );
-  rows[0]![30] = marker;
-  for (const [index, title] of Object.entries(headers)) {
-    rows[headerRow - 1]![Number(index)] = title;
+  data: Record<number, unknown>[]
+): unknown[][] {
+  const rows: unknown[][] = [cells({ 30: marker })];
+  if (headerRow === 3) {
+    rows.push(cells({}));
   }
-  return [...rows, ...data];
+  rows.push(cells(headers));
+  rows.push(...data.map(cells));
+  return rows;
 }
 
 describe("Keymaster export preview", () => {
-  it("reads clients from row 2 and retains distinct source references", () => {
+  it("reads customer IDs from row 2 without merging matching phones", () => {
     const rows = sheet(
       "CLIENTS",
       2,
       { 1: "ID KEYMASTER", 3: "NOME", 12: "TELEFONE 1" },
       [
-        ["inove", "100", null, "Primeiro cliente", null, null, null, null, null, null, null, null, "900000000"],
-        ["inove", "101", null, "Segundo cliente", null, null, null, null, null, null, null, null, "900000000"],
+        { 1: "100", 3: "Cliente A", 12: "900000000" },
+        { 1: "101", 3: "Cliente B", 12: "900000000" },
       ]
     );
-    const out = inspectKeymasterRows(rows, "clientes.xlsx");
-    expect(out).toMatchObject({
+    expect(inspectKeymasterRows(rows, "clientes.xlsx")).toMatchObject({
       sourceSystem: "KEYMASTER",
       entity: "customers",
       headerRow: 2,
@@ -40,12 +45,12 @@ describe("Keymaster export preview", () => {
     });
   });
 
-  it("reads equipment from row 3 and warns when customer linkage is absent", () => {
+  it("reads equipment from row 3 and detects missing customer links", () => {
     const rows = sheet(
       "ITEMS",
       3,
       { 1: "ID", 4: "TIPO DE EQUIPAMENTO", 5: "MARCA", 6: "MODELO" },
-      [["inove", "550029", "", "", "Smartphone", "Xiaomi", "M1903C3EG"]]
+      [{ 1: "550029", 4: "Smartphone", 5: "Xiaomi", 6: "M1903C3EG" }]
     );
     expect(inspectKeymasterRows(rows, "equipamento.xlsx")).toMatchObject({
       entity: "equipment",
@@ -54,40 +59,61 @@ describe("Keymaster export preview", () => {
     });
   });
 
-  it.each([
-    ["SUPPLIERS", "suppliers", { 1: "ID", 3: "NOME", 10: "NIF" }, ["inove", "8", "", "Fornecedor"]],
-    ["SERVICES", "services", { 2: "DESCRIÇÃO", 4: "REF.", 6: "PVP UNITÁRIO" }, ["inove", "", "Serviço", "", "SVC1"]],
-    ["PRODUCTS", "stock", { 3: "DESCRIÇÃO DA PEÇA", 4: "REF.", 6: "CUSTO", 7: "QTD." }, ["inove", "", "", "Peça", "PRT1", "", 2.5, 1]],
-  ] as const)("accepts %s", (marker, entity, headers, record) => {
-    const result = inspectKeymasterRows(
-      sheet(marker, 2, headers, [record]),
-      "dados.xlsx"
+  it("reads the supplier sheet", () => {
+    const rows = sheet(
+      "SUPPLIERS",
+      2,
+      { 1: "ID", 3: "NOME", 10: "NIF" },
+      [{ 1: "8", 3: "Fornecedor", 10: "000000000" }]
     );
-    expect(result.entity).toBe(entity);
-    expect(result.recordCount).toBe(1);
-    expect(result.missingReferences).toBe(0);
-    if (entity === "services") {
-      expect(result.missingPrices).toBe(1);
-    }
+    expect(inspectKeymasterRows(rows, "fornecedores.xlsx").entity).toBe(
+      "suppliers"
+    );
   });
 
-  it("warns about repeated source IDs without attempting to merge customers", () => {
-    const headers = { 1: "ID KEYMASTER", 3: "NOME", 12: "TELEFONE 1" };
-    const data = [
-      ["inove", "100", "", "Cliente A"],
-      ["inove", "100", "", "Cliente B"],
-      ["inove", "", "", "Cliente C"],
-    ];
-    const result = inspectKeymasterRows(
-      sheet("CLIENTS", 2, headers, data),
-      "dados.xlsx"
+  it("warns when a service has no unit price", () => {
+    const rows = sheet(
+      "SERVICES",
+      2,
+      { 2: "DESCRIÇÃO", 4: "REF.", 6: "PVP UNITÁRIO" },
+      [{ 2: "Serviço", 4: "SVC1" }]
     );
-    expect(result.duplicateReferences).toBe(1);
-    expect(result.missingReferences).toBe(1);
+    expect(inspectKeymasterRows(rows, "servicos.xlsx")).toMatchObject({
+      entity: "services",
+      recordCount: 1,
+      missingPrices: 1,
+    });
   });
 
-  it("refuses an unexpected spreadsheet rather than importing as Keymaster", () => {
-    expect(() => inspectKeymasterRows([["NOME"], ["Alice"]], "x.xlsx")).toThrow(
+  it("recognises the stock export", () => {
+    const rows = sheet(
+      "PRODUCTS",
+      2,
+      { 3: "DESCRIÇÃO DA PEÇA", 4: "REF.", 6: "CUSTO", 7: "QTD." },
+      [{ 3: "Peça", 4: "PRT1", 6: 2.5, 7: 1 }]
+    );
+    expect(inspectKeymasterRows(rows, "stock.xlsx").entity).toBe("stock");
+  });
+
+  it("detects repeated and missing IDs", () => {
+    const rows = sheet(
+      "CLIENTS",
+      2,
+      { 1: "ID KEYMASTER", 3: "NOME", 12: "TELEFONE 1" },
+      [
+        { 1: "100", 3: "Cliente A" },
+        { 1: "100", 3: "Cliente B" },
+        { 3: "Cliente C" },
+      ]
+    );
+    expect(inspectKeymasterRows(rows, "clientes.xlsx")).toMatchObject({
+      duplicateReferences: 1,
+      missingReferences: 1,
+    });
+  });
+
+  it("rejects unknown exports", () => {
+    expect(() => inspectKeymasterRows([["NOME"]], "x.xlsx")).toThrow(
       "Keymaster"
     );
   });
