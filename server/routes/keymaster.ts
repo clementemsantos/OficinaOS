@@ -4,8 +4,8 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import { createAuditLog } from "../services/audit.service.js";
-import { syncKeymasterEntity } from "../services/keymaster-sync.service.js";
 import { importKeymasterJobs } from "../services/keymaster-jobs.service.js";
+import { syncKeymasterEntity } from "../services/keymaster-sync.service.js";
 import { getUserId } from "../utils/request.js";
 
 // This archive is deliberately separate from the live operational entities:
@@ -223,7 +223,9 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
       }
       const parsed = legacyJobsSchema.safeParse(req.body);
       if (!parsed.success) {
-        return reply.code(400).send({ message: "Listagem Keymaster inválida." });
+        return reply
+          .code(400)
+          .send({ message: "Listagem Keymaster inválida." });
       }
       const result = await importKeymasterJobs(
         app.prisma,
