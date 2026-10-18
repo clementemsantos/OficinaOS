@@ -1,0 +1,24 @@
+# Sandbox VoIP: ports accessible ONLY on the Ubuntu host's loopback.
+# This does NOT receive external calls or activate Amigo forwarding.
+services:
+  asterisk:
+    image: andrius/asterisk:22.10.1_debian-trixie
+    container_name: inovito-asterisk-lab
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:15060:5060/udp"
+    volumes:
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
+      - ./asterisk/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - ./runtime/pjsip-peer.conf:/etc/asterisk/pjsip-peer.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show uptime' >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
