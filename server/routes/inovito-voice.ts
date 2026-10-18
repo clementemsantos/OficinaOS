@@ -76,7 +76,6 @@ async function requireVoiceGateway(
 // biome-ignore lint/suspicious/useAwait: FastifyPluginAsync requires async
 export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
   app.post("/gateway/decision", {
-    config: { public: true },
     preHandler: [requireVoiceGateway],
     schema: { tags: ["inovito-voice"], summary: "Gateway pre-answer decision" },
     handler: async (request, reply) => {
@@ -101,7 +100,6 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
 
   // No inbound event from a private/blocked number reaches the commercial log.
   app.post("/gateway/event", {
-    config: { public: true },
     preHandler: [requireVoiceGateway],
     schema: { tags: ["inovito-voice"], summary: "Idempotent voice event" },
     handler: async (request, reply) => {
