@@ -53,6 +53,21 @@ fi
 
 docker compose -f compose.yml config -q
 docker compose -f compose.yml up -d
+
+ready=0
+for attempt in {1..15}; do
+  if docker compose -f compose.yml exec -T asterisk asterisk -rx 'core show version' >/dev/null 2>&1; then
+    ready=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$ready" -ne 1 ]]; then
+  echo "Asterisk não iniciou corretamente; últimos registos:" >&2
+  docker compose -f compose.yml logs --tail=40 asterisk >&2
+  exit 1
+fi
+
 echo
 echo "Central Asterisk de TESTES iniciada, sem desvio do número Amigo."
 echo "SIP somente no próprio servidor: 127.0.0.1:15060/udp."
