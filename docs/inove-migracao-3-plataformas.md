@@ -275,3 +275,67 @@ nem efetuar recolha automática de portal privado sem método autorizado.
 
 Segredos, acessos, ficheiros reais e dados pessoais **não devem ser
 colocados no repositório público**.
+
+## Revisão do esquema após validação dos cinco ficheiros (18/10/2026)
+
+**Validação confirmada no OficinaOS Misto 4002:** os cinco XLSX passaram
+a pré-visualização; 2 634 clientes, 168 equipamentos, 4 fornecedores,
+166 serviços e 94 artigos de stock (total **3 066**).
+Avisos: **168 equipamentos sem ID de cliente no export** e **166
+serviços sem PVP**. `Sem avisos` nos clientes **NÃO** significa
+compatibilidade com a base de dados: o pré-validador apenas verifica
+referências vazias/repetidas no export.
+
+### Bloqueios do modelo atual que impedem uma importação direta
+
+1. **Clientes:** `Customer.phone String @unique`, obrigatório e único;
+   na fonte 2 027 telefones principais preenchidos, mas apenas 1 061
+   distintos, e outros clientes sem telefone. **Não substituir ausências
+   por números fictícios; não fundir por telefone/nome.** Projetar
+   contactos múltiplos associados a cliente, com telefone opcional,
+   índices para pesquisa não exclusivos, e atualizar todos os fluxos
+   que atualmente esperam `findUnique({phone})` ou univocidade.
+   A chave de migração será `(KEYMASTER, CUSTOMER, ID KEYMASTER)`.
+2. **Equipamento:** `Device` representa uma combinação marca/modelo
+   (`@@unique([brandId,model])`) e **não uma unidade física**, sem
+   número de série ou ligação própria ao cliente. É necessário
+   preservar cada um dos 168 equipamentos físicos numa entidade
+   específica, sem fundir equipamentos iguais. Não inventar
+   ligação a cliente quando o export a omite.
+3. **Serviços:** `RepairCatalog.defaultPrice Decimal` é obrigatório,
+   mas **os 166 preços estão ausentes**. O catálogo importado deve
+   permitir valor desconhecido/nulo ou guardar PVP em campo de origem
+   distinto, sem atribuir arbitrariamente 0,00 €. Evitar fusões só
+   porque o nome de serviço coincide; guardar `REF.` original.
+4. **Stock:** `PartsCatalog` não tem custo de aquisição, referência
+   interna/SKU, EAN, margem ou categoria livre; `category` é
+   `PartCategory` restrito a tipos de componentes de reparação, e
+   `defaultPrice` é obrigatório. Implementar modelo adequado a
+   artigos comerciais, sem apagar custo/PVP/margem/código de barras
+   nem converter automaticamente para `OTHER` sem auditoria.
+5. **Fornecedores:** `Supplier` aceita NIF, nome e contacto, mas falta
+   proveniência externa estável e campos completos de morada/
+   condições comerciais. Identidade de cliente e fornecedor deve
+   continuar partilhável sem fundir historicamente pessoas distintas.
+
+### Ordem de implementação segura
+
+- **Fase A: base de migração:** criar proveniência única por
+  `(sourceSystem, sourceEntity, sourceId)` e recibos de importação,
+  mantendo dados de origem intactos, idempotência e hashes de conteúdo.
+  Criar *dry-run* detalhado com resolução explícita de conflitos,
+  impacto sobre dados existentes e contagens por entidade.
+- **Fase B: adaptar entidades:** clientes/contactos, equipamentos físicos,
+  serviços sem preço, artigos de stock com custo e PVP e fornecedores;
+  testar as rotas e formulários existentes após cada migração do esquema.
+- **Fase C: aplicar com aprovação:** importação Misto (4002) apenas após
+  backup verificável, relatório dry-run aprovado, permissões de
+  administrador e reconciliação de todos os 3 066 registos.
+- **Fase D: fichas de reparação:** importar todas as obras abertas/
+  concluídas, transições, notas e anexos após obter a exportação
+  completa do fornecedor; manter serviços antigos em consulta.
+
+**PROIBIDO:** enviar os XLSX de clientes para o GitHub, usar o importador
+genérico atual como atalho, gerar telefones fictícios, substituir
+preço desconhecido por zero ou sobrescrever dados antigos sem plano de
+reversão e aprovação.
