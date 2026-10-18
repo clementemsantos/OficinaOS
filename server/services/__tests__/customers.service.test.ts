@@ -59,7 +59,7 @@ describe("create", () => {
 
     const createCall = (prisma.customer.create as ReturnType<typeof vi.fn>).mock
       .calls[0];
-    expect(upsertCall[0].create.email).toBeNull();
+    expect(createCall[0].data.email).toBeNull();
   });
 
   it("rejects a phone that matches an existing customer in another format", async () => {
