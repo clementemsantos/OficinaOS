@@ -1,5 +1,10 @@
+// @vitest-environment jsdom
+import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { inspectKeymasterRows } from "../keymaster-import";
+import {
+  inspectKeymasterRows,
+  readKeymasterPreviewXlsx,
+} from "../keymaster-import";
 
 function cells(data: Record<number, unknown>): unknown[] {
   const out: unknown[] = Array.from({ length: 31 }, () => null);
@@ -113,5 +118,36 @@ describe("Keymaster export preview", () => {
     expect(() => inspectKeymasterRows([["NOME"]], "x.xlsx")).toThrow(
       "Keymaster"
     );
+  });
+});
+
+
+describe("Keymaster fast XLSX preview reader", () => {
+  it("reads the original worksheet row numbers and inline string values", () => {
+    const sheet = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>',
+      '<row r="1"><c r="AE1" t="inlineStr"><is><t>CLIENTS</t></is></c></row>',
+      '<row r="2"><c r="B2" t="inlineStr"><is><t>ID KEYMASTER</t></is></c>',
+      '<c r="D2" t="inlineStr"><is><t>NOME</t></is></c>',
+      '<c r="M2" t="inlineStr"><is><t>TELEFONE 1</t></is></c></row>',
+      '<row r="3"><c r="B3" t="inlineStr"><is><t>101</t></is></c>',
+      '<c r="D3" t="inlineStr"><is><t>João &amp; Filhos</t></is></c></row>',
+      '<row r="4"><c r="B4" t="inlineStr"><is><t>102</t></is></c>',
+      '<c r="D4" t="inlineStr"><is><t>Cliente B</t></is></c></row>',
+      '</sheetData></worksheet>',
+    ].join("");
+    const archive = zipSync({
+      "xl/worksheets/sheet1.xml": strToU8(sheet),
+    });
+    const buffer = new Uint8Array(archive).buffer;
+    const rows = readKeymasterPreviewXlsx(buffer);
+    expect(rows[0]?.[30]).toBe("CLIENTS");
+    expect(rows[2]?.[3]).toBe("João & Filhos");
+    expect(inspectKeymasterRows(rows, "clientes.xlsx")).toMatchObject({
+      entity: "customers",
+      recordCount: 2,
+      missingReferences: 0,
+    });
   });
 });
