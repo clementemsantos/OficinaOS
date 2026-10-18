@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
 
@@ -185,14 +186,15 @@ export default function InovitoVoicePage() {
                 addExclusion(event);
               }}
             >
-              <input
-                aria-label={t("inovito_voice.number")}
-                className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
-                onChange={(event) => setNumber(event.target.value)}
-                placeholder={t("inovito_voice.number")}
-                type="tel"
-                value={number}
-              />
+              <div className="min-w-0 flex-1">
+                <Input
+                  aria-label={t("inovito_voice.number")}
+                  onChange={(event) => setNumber(event.target.value)}
+                  placeholder={t("inovito_voice.number")}
+                  type="tel"
+                  value={number}
+                />
+              </div>
               <button
                 className="rounded-xl bg-primary px-4 py-2 font-bold text-on-primary disabled:opacity-50"
                 disabled={busy || !number.trim()}
