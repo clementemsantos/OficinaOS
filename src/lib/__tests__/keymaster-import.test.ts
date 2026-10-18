@@ -60,12 +60,9 @@ describe("Keymaster export preview", () => {
   });
 
   it("reads the supplier sheet", () => {
-    const rows = sheet(
-      "SUPPLIERS",
-      2,
-      { 1: "ID", 3: "NOME", 10: "NIF" },
-      [{ 1: "8", 3: "Fornecedor", 10: "000000000" }]
-    );
+    const rows = sheet("SUPPLIERS", 2, { 1: "ID", 3: "NOME", 10: "NIF" }, [
+      { 1: "8", 3: "Fornecedor", 10: "000000000" },
+    ]);
     expect(inspectKeymasterRows(rows, "fornecedores.xlsx").entity).toBe(
       "suppliers"
     );
