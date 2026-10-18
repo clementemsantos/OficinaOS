@@ -34,7 +34,11 @@ const NON_ALNUM = /[^A-Z0-9]/g;
 const DIACRITICS = /[\u0300-\u036f]/g;
 
 function normalize(value: string): string {
-  return value.normalize("NFD").replace(DIACRITICS, "").toUpperCase().replace(NON_ALNUM, "");
+  return value
+    .normalize("NFD")
+    .replace(DIACRITICS, "")
+    .toUpperCase()
+    .replace(NON_ALNUM, "");
 }
 
 function summary(item: ArchivedItem, entity: KeymasterEntity): string {
@@ -51,7 +55,12 @@ function summary(item: ArchivedItem, entity: KeymasterEntity): string {
       String(item.values[index] ?? ""),
     ])
   );
-  return keys[entity].map((key) => byHeader.get(key) || "").filter(Boolean).join(" · ") || "—";
+  return (
+    keys[entity]
+      .map((key) => byHeader.get(key) || "")
+      .filter(Boolean)
+      .join(" · ") || "—"
+  );
 }
 
 export default function KeymasterArchiveBrowser() {
@@ -96,7 +105,11 @@ export default function KeymasterArchiveBrowser() {
         type="button"
         variant="secondary"
       >
-        {t(open ? "data_io.keymaster_archive_hide" : "data_io.keymaster_archive_view")}
+        {t(
+          open
+            ? "data_io.keymaster_archive_hide"
+            : "data_io.keymaster_archive_view"
+        )}
       </Button>
       {open && (
         <div className="mt-3">
@@ -120,7 +133,13 @@ export default function KeymasterArchiveBrowser() {
                 </option>
               ))}
             </Select>
-            <Button disabled={busy} onClick={load} size="sm" type="button" variant="secondary">
+            <Button
+              disabled={busy}
+              onClick={load}
+              size="sm"
+              type="button"
+              variant="secondary"
+            >
               {t("data_io.keymaster_archive_refresh")}
             </Button>
           </div>
@@ -159,12 +178,19 @@ export default function KeymasterArchiveBrowser() {
                   </thead>
                   <tbody>
                     {result.items.map((item) => (
-                      <tr className="border-outline-variant border-b" key={item.id}>
+                      <tr
+                          className="border-outline-variant border-b"
+                          key={item.id}
+                        >
                         <td className="py-2 pe-3">{item.sourceId}</td>
                         <td className="py-2 pe-3">{summary(item, entity)}</td>
                         <td className="py-2 pe-3">
                           <Button
-                            onClick={() => setSelected((id) => (id === item.id ? null : item.id))}
+                            onClick={() =>
+                              setSelected((id) =>
+                                id === item.id ? null : item.id
+                              )
+                            }
                             size="sm"
                             type="button"
                             variant="secondary"
@@ -211,11 +237,11 @@ export default function KeymasterArchiveBrowser() {
                   <dl className="mt-2 grid gap-2 sm:grid-cols-2">
                     {detail.headers.map((header, index) => {
                       const value = String(detail.values[index] ?? "");
-                      if (!header.trim() || !value.trim()) {
+                      if (!(header.trim() && value.trim())) {
                         return null;
                       }
                       return (
-                        <div className="min-w-0" key={`${header}-${index}`}>
+                        <div className="min-w-0" key={`${header}-${value}`}>
                           <dt className="text-on-surface-variant text-xs">
                             {header}
                           </dt>
