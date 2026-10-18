@@ -89,13 +89,22 @@ async function createOperational(
   userId: string
 ): Promise<string> {
   const data = fields(source);
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: mapping of five audited Keymaster formats is kept together
   switch (entity) {
     case "customers": {
       const customer = await tx.customer.create({
         data: {
-          name: required(field(data, "NOME"), "nome"),
-          phone: field(data, "TELEFONE 1", "TELEMOVEL", "TELEMÓVEL", "TELEFONE"),
-          email: field(data, "EMAIL", "E-MAIL") || null,
+          name:
+            field(data, "NOME") ||
+            `[Sem nome no Keymaster — ID ${source.sourceId}]`,
+          phone: field(
+            data,
+            "TELEFONE 1",
+            "TELEMOVEL",
+            "TELEMÓVEL",
+            "TELEFONE"
+          ),
+          email: field(data, "EMAIL 1", "EMAIL", "E-MAIL") || null,
           taxId: field(data, "NIF", "NÚMERO DE CONTRIBUINTE") || null,
           whatsappConsent: false,
         },
@@ -124,7 +133,8 @@ async function createOperational(
           brand: field(data, "MARCA") || null,
           model: field(data, "MODELO") || null,
           category: field(data, "TIPO DE EQUIPAMENTO", "TIPO") || null,
-          serialNumber: field(data, "NUMERO DE SERIE", "NÚMERO DE SÉRIE", "SERIAL") || null,
+          serialNumber:
+            field(data, "NUMERO DE SERIE", "NÚMERO DE SÉRIE", "SERIAL") || null,
           // No customer ID in the supplied source. Never infer ownership.
           customerId: null,
         },
@@ -155,12 +165,14 @@ async function createOperational(
     }
     case "stock": {
       const label = required(field(data, "DESCRIÇÃO DA PEÇA"), "descrição");
-      const price = amount(field(data, "PVP", "PVP UNITÁRIO", "PREÇO DE VENDA"));
-      if (price === null || price < 0) {
-        throw new Error("PVP em falta ou inválido; o artigo não foi importado.");
+      const price = amount(
+        field(data, "PVP", "PVP UNITÁRIO", "PREÇO DE VENDA")
+      );
+      if (price !== null && price < 0) {
+        throw new Error("PVP negativo: o artigo requer revisão.");
       }
       const rawStock = amount(field(data, "QTD.", "QTD", "QUANTIDADE"));
-      if (rawStock === null || !Number.isSafeInteger(rawStock) || rawStock < 0) {
+      if (rawStock === null || !Number.isSafeInteger(rawStock)) {
         throw new Error("Quantidade de stock inválida ou em falta.");
       }
       const cost = amount(field(data, "CUSTO", "PREÇO DE CUSTO"));
@@ -168,14 +180,15 @@ async function createOperational(
         data: {
           name: label,
           category: "OTHER",
-          defaultPrice: price,
+          defaultPrice: price ?? 0,
+          priceKnown: price !== null,
           acquisitionCost: cost,
           sourceReference: source.sourceId,
           stockQuantity: rawStock,
         },
         select: { id: true },
       });
-      if (rawStock > 0) {
+      if (rawStock !== 0) {
         await tx.stockMovement.create({
           data: {
             partId: part.id,
@@ -190,6 +203,9 @@ async function createOperational(
         });
       }
       return part.id;
+    }
+    default: {
+      throw new Error("Tipo de registo Keymaster desconhecido.");
     }
   }
 }
@@ -240,9 +256,10 @@ export async function syncKeymasterEntity(
         created++;
       });
     } catch (error) {
-      const reason = error instanceof Error && error.message.startsWith("Campo obrigatório")
-        ? error.message
-        : "Incompatibilidade de dados: consultar o registo original.";
+      const reason =
+        error instanceof Error && error.message.startsWith("Campo obrigatório")
+          ? error.message
+          : "Incompatibilidade de dados: consultar o registo original.";
       await prisma.externalImportRecord.update({
         where: { id: source.id },
         data: { syncError: reason },
