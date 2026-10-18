@@ -2388,6 +2388,7 @@
     "save_failed": "Não foi possível guardar o encaminhamento",
     "empty": "Esta reparação ainda não foi encaminhada para nenhuma loja."
   },
+  "equipment_nav": "Equipamentos",
   "data_io": {
     "tab": "Dados",
     "tab_desc": "Importe e exporte os seus catálogos, e incorpore o formulário de pedido de reparação no seu site.",
