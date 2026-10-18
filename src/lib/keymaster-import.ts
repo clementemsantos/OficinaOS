@@ -291,8 +291,8 @@ export async function previewKeymasterFile(
 
 
 export interface KeymasterArchiveRecord {
-  sourceId: string;
   rowNumber: number;
+  sourceId: string;
   values: string[];
 }
 
