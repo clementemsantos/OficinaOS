@@ -288,3 +288,57 @@ export async function previewKeymasterFile(
   const rows = readKeymasterPreviewXlsx(await file.arrayBuffer());
   return inspectKeymasterRows(rows, file.name);
 }
+
+
+export interface KeymasterArchiveRecord {
+  sourceId: string;
+  rowNumber: number;
+  values: string[];
+}
+
+export interface KeymasterArchive {
+  entity: KeymasterEntity;
+  headers: string[];
+  records: KeymasterArchiveRecord[];
+  sourceFile: string;
+}
+
+/**
+ * Extract all original worksheet columns for archival staging, without
+ * inferring missing phone numbers, unknown prices or customer associations.
+ */
+export async function readKeymasterArchive(file: File): Promise<KeymasterArchive> {
+  if (!XLSX.test(file.name) || file.size > MAX_FILE_BYTES) {
+    throw new Error("Selecione uma exportação Keymaster XLSX válida (até 10 MB).");
+  }
+  const rows = readKeymasterPreviewXlsx(await file.arrayBuffer());
+  const preview = inspectKeymasterRows(rows, file.name);
+  const config = CONFIGS.find((item) => item.entity === preview.entity);
+  if (!config) {
+    throw new Error("Tipo de exportação desconhecido.");
+  }
+  if (preview.missingReferences > 0 || preview.duplicateReferences > 0) {
+    throw new Error("O ficheiro tem referências vazias ou repetidas; corrija antes de importar.");
+  }
+  const headers = Array.from(rows[config.headerRow - 1] ?? [], (value) =>
+    String(value ?? "")
+  );
+  const records: KeymasterArchiveRecord[] = [];
+  for (let index = config.headerRow; index < rows.length; index++) {
+    const row = rows[index] ?? [];
+    if (row.every((value) => String(value ?? "").trim() === "")) {
+      continue;
+    }
+    records.push({
+      sourceId: String(row[config.idColumn] ?? "").trim(),
+      rowNumber: index + 1,
+      values: Array.from(row, (value) => String(value ?? "")),
+    });
+  }
+  return {
+    entity: preview.entity,
+    headers,
+    records,
+    sourceFile: file.name,
+  };
+}
