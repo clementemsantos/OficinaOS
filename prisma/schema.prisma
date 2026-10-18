@@ -447,6 +447,9 @@ model Job {
   // used to deduplicate reimports. Unique so two jobs can never carry the
   // same legacy ref; NULLs don't collide in Postgres.
   externalRef    String?         @unique @db.VarChar(80)
+  // Original, unmodified Keymaster active-job list fields; owner-only import.
+  // Keeps original state, date, quote and attribution distinct from live fields.
+  legacyImport   Json?
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
