@@ -9,9 +9,15 @@ import { getUserId } from "../utils/request.js";
 // Never merge people on name/phone or manufacture diagnoses, payments, notes,
 // customer ownership or historical job-status transitions from a simple list.
 const sourceRow = z.object({
-  reference: z.string().regex(/^20\d{2}\/\d{1,7}$/).max(40),
+  reference: z
+    .string()
+    .regex(/^20\d{2}\/\d{1,7}$/)
+    .max(40),
   dateOriginal: z.string().trim().min(1).max(20),
-  timeOriginal: z.string().trim().regex(/^\d{2}:\d{2}$/),
+  timeOriginal: z
+    .string()
+    .trim()
+    .regex(/^\d{2}:\d{2}$/),
   pvp: z.number().nonnegative().finite().max(99_999_999.99),
   equipment: z.string().trim().max(160),
   customer: z.string().trim().max(160),
@@ -26,18 +32,29 @@ const applyBody = importBody.extend({
   confirm: z.literal("IMPORTAR_OBRAS_ATIVAS_KEYMASTER"),
 });
 type SourceRow = z.infer<typeof sourceRow>;
-type JobStatus = "INTAKE" | "WAITING_FOR_PARTS" | "IN_REPAIR" | "ON_HOLD" | "DONE";
-type ItemResult = {
-  reference: string;
+type JobStatus =
+  | "INTAKE"
+  | "WAITING_FOR_PARTS"
+  | "IN_REPAIR"
+  | "ON_HOLD"
+  | "DONE";
+interface ItemResult {
   action: "create" | "already_imported" | "needs_review";
-  reason: string;
-  status: JobStatus;
   customerId: string | null;
-};
+  reason: string;
+  reference: string;
+  status: JobStatus;
+}
 const DIACRITICS = /[\u0300-\u036f]/g;
 const SPACES = /\s+/g;
+const IPHONE_PREFIX = /^iphone\s/i;
 function normalize(raw: string): string {
-  return raw.normalize("NFD").replace(DIACRITICS, "").trim().replace(SPACES, " ").toUpperCase();
+  return raw
+    .normalize("NFD")
+    .replace(DIACRITICS, "")
+    .trim()
+    .replace(SPACES, " ")
+    .toUpperCase();
 }
 
 function mapStatus(state: string): JobStatus {
@@ -100,7 +117,9 @@ function dateFromSource(row: SourceRow): Date | null {
   const zone = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Lisbon",
     timeZoneName: "shortOffset",
-  }).formatToParts(d).find((part) => part.type === "timeZoneName")?.value;
+  })
+    .formatToParts(d)
+    .find((part) => part.type === "timeZoneName")?.value;
   const offsetHours = Number(zone?.replace("GMT", "") || 0);
   return new Date(d.getTime() - offsetHours * 3_600_000);
 }
@@ -116,10 +135,19 @@ function customerMatches(
   return customers.filter((customer) => normalize(customer.name) === target);
 }
 
-const BRAND_PREFIXES = ["Samsung", "HP", "Acer", "Oppo", "Lenovo", "Asus", "Huawei", "Xiaomi"];
+const BRAND_PREFIXES = [
+  "Samsung",
+  "HP",
+  "Acer",
+  "Oppo",
+  "Lenovo",
+  "Asus",
+  "Huawei",
+  "Xiaomi",
+];
 function identifyModel(raw: string): { brand: string; model: string } {
   const trimmed = raw.trim();
-  if (/^iphone\s/i.test(trimmed)) {
+  if (IPHONE_PREFIX.test(trimmed)) {
     return { brand: "Apple", model: trimmed };
   }
   for (const brand of BRAND_PREFIXES) {
@@ -135,14 +163,20 @@ async function classify(
   rows: SourceRow[]
 ): Promise<ItemResult[]> {
   const [customers, existing] = await Promise.all([
-    prisma.customer.findMany({ select: { id: true, name: true }, take: 50_000 }),
+    prisma.customer.findMany({
+      select: { id: true, name: true },
+      take: 50_000,
+    }),
     prisma.job.findMany({
-      where: { externalRef: { in: rows.map((r) => `KEYMASTER:${r.reference}`) } },
+      where: {
+        externalRef: { in: rows.map((r) => `KEYMASTER:${r.reference}`) },
+      },
       select: { externalRef: true },
     }),
   ]);
   const existingRefs = new Set(existing.map((row) => row.externalRef));
   const refs = new Set<string>();
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: explicit safety checks for source-job imports
   return rows.map((row) => {
     const status = mapStatus(row.stateOriginal);
     const result = {
@@ -157,13 +191,15 @@ async function classify(
     } else if (existingRefs.has(`KEYMASTER:${row.reference}`)) {
       result.action = "already_imported";
       result.reason = "Esta obra já existe no OficinaOS.";
-    } else if (!row.equipment) {
-      result.reason = "Equipamento não indicado; requer confirmação.";
+    } else if (!row.equipment || normalize(row.equipment) === "SEM EQUIPAMENTO") {
+      result.reason = "Equipamento não identificado; precisa de revisão.";
+    } else if (normalize(row.stateOriginal).includes("VENDA")) {
+      result.reason = "Folha de venda: confirmar se deve entrar como reparação.";
+    } else if (!row.stateOriginal) {
+      result.reason = "Estado de serviço em falta; requer confirmação.";
     } else if (!row.customer) {
       result.reason = "Cliente não indicado; requer confirmação.";
-    } else if (!dateFromSource(row)) {
-      result.reason = "Data ou hora inválida; requer confirmação.";
-    } else {
+    } else if (dateFromSource(row)) {
       const matches = customerMatches(row, customers);
       if (matches.length === 1) {
         result.customerId = matches[0]?.id ?? null;
@@ -177,6 +213,8 @@ async function classify(
             ? "Cliente não encontrado pelo nome; conferir a ficha."
             : "Várias fichas de cliente com o mesmo nome; associação ambígua.";
       }
+    } else {
+      result.reason = "Data ou hora inválida; requer confirmação.";
     }
     refs.add(row.reference);
     return result;
@@ -264,7 +302,8 @@ export const keymasterActiveJobsRoutes: FastifyPluginAsync = async (app) => {
                 status: decision.status,
                 createdAt: dateFromSource(row) ?? new Date(),
                 estimatedCost: row.pvp > 0 ? row.pvp : null,
-                reportedProblem: "Não indicado na listagem Keymaster; completar diagnóstico.",
+                reportedProblem:
+                  "Não indicado na listagem Keymaster; completar diagnóstico.",
                 conditionNotes:
                   "Dados migrados de uma LISTAGEM, não do histórico completo da obra. " +
                   `Nº original: ${row.reference}. ` +
@@ -274,7 +313,8 @@ export const keymasterActiveJobsRoutes: FastifyPluginAsync = async (app) => {
                   sourceSystem: "KEYMASTER",
                   sourceType: "ACTIVE_JOB_LIST",
                   ...row,
-                  yearInferredFromReference: row.dateOriginal.split("/").length === 2,
+                  yearInferredFromReference:
+                    row.dateOriginal.split("/").length === 2,
                 },
                 createdById: userId,
               },
@@ -300,7 +340,8 @@ export const keymasterActiveJobsRoutes: FastifyPluginAsync = async (app) => {
           items.push({
             ...decision,
             action: "needs_review",
-            reason: "Não foi possível criar esta obra; verificar conflitos e tentar novamente.",
+            reason:
+              "Não foi possível criar esta obra; verificar conflitos e tentar novamente.",
           });
         }
       }
