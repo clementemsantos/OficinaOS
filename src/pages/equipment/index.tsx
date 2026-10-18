@@ -81,7 +81,7 @@ export default function EquipmentPage() {
           placeholder="Pesquisar marca, modelo, série ou referência"
           value={query}
         />
-        <Button size="sm" submit type="submit">
+        <Button size="sm" type="submit">
           Pesquisar
         </Button>
       </form>
