@@ -16,7 +16,13 @@ describe("normalizeInovitoPhone", () => {
   });
 
   it("rejects hidden, empty and malformed caller IDs", () => {
-    for (const raw of ["", "private", "unknown", "123", "9999999999999999999999"]) {
+    for (const raw of [
+      "",
+      "private",
+      "unknown",
+      "123",
+      "9999999999999999999999",
+    ]) {
       expect(normalizeInovitoPhone(raw)).toBeNull();
     }
   });
