@@ -197,8 +197,9 @@ export default function KeymasterJobsImportCard() {
         <div aria-live="polite" className="mt-3 text-on-surface text-sm">
           <p>
             {result ? "Importação:" : "Simulação:"} {summary.total} obras ·
-            {result ? " criadas" : " prontas"}: {result ? summary.created : summary.ready} ·
-            já existentes: {summary.existing} · por resolver: {summary.issues.length}
+            {result ? " criadas" : " prontas"}:{" "}
+            {result ? summary.created : summary.ready} · já existentes:{" "}
+            {summary.existing} · por resolver: {summary.issues.length}
           </p>
           {summary.issues.length > 0 && (
             <div className="mt-2">
