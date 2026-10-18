@@ -31,7 +31,11 @@ const DIACRITICS = /[\u0300-\u036f]/g;
 const refCheck = /^20\d{2}\/\d{1,7}$/;
 
 function normalized(s: string): string {
-  return s.normalize("NFD").replace(DIACRITICS, "").toUpperCase().replace(NON_LETTER, "");
+  return s
+    .normalize("NFD")
+    .replace(DIACRITICS, "")
+    .toUpperCase()
+    .replace(NON_LETTER, "");
 }
 
 function extract(rows: Record<string, string>[]): ActiveJobRow[] {
@@ -44,7 +48,9 @@ function extract(rows: Record<string, string>[]): ActiveJobRow[] {
     const priceText = get("PVPCLIENTE");
     const pvp = parsePtNumber(priceText);
     if (!refCheck.test(reference)) {
-      throw new Error(`Linha ${index + 2}: referência de folha de obra inválida.`);
+      throw new Error(
+        `Linha ${index + 2}: referência de folha de obra inválida.`
+      );
     }
     if (pvp === null || pvp < 0) {
       throw new Error(`Linha ${index + 2}: PVP inválido.`);
@@ -98,16 +104,20 @@ export default function KeymasterActiveJobsCard() {
         // worksheet directly and does not turn dates into JS Date objects.
         const sheet = readKeymasterPreviewXlsx(await file.arrayBuffer());
         const headers = (sheet[0] ?? []).map((head) =>
-          String(head ?? "").trim().toLowerCase()
+          String(head ?? "")
+            .trim()
+            .toLowerCase()
         );
-        sourceRows = sheet.slice(1).map((cells) =>
-          Object.fromEntries(
-            headers.map((head, index) => [
-              head,
-              String(cells[index] ?? "").trim(),
-            ])
-          )
-        );
+        sourceRows = sheet
+          .slice(1)
+          .map((cells) =>
+            Object.fromEntries(
+              headers.map((head, index) => [
+                head,
+                String(cells[index] ?? "").trim(),
+              ])
+            )
+          );
       } else {
         const parsed = await readTableFile(file);
         sourceRows = parsed.rows;
@@ -148,7 +158,9 @@ export default function KeymasterActiveJobsCard() {
       setDecisions(res.data.items);
       setComplete(true);
     } catch {
-      setError("Falha na transferência. A operação é retomável: volta a validar o mesmo ficheiro.");
+      setError(
+        "Falha na transferência. A operação é retomável: volta a validar o mesmo ficheiro."
+      );
     } finally {
       setBusy(false);
     }
@@ -208,9 +220,11 @@ export default function KeymasterActiveJobsCard() {
       {decisions.length > 0 && (
         <>
           <p aria-live="polite" className="mt-3 text-on-surface text-sm">
-            {complete ? "Resultado da transferência" : "Simulação sem alterações"}:
-            {" "}{summary.possible} elegíveis, {summary.existing} já existentes,
-            {" "}{summary.review} para rever.
+            {complete
+              ? "Resultado da transferência"
+              : "Simulação sem alterações"}
+            : {summary.possible} elegíveis, {summary.existing} já existentes,{" "}
+            {summary.review} para rever.
           </p>
           <div className="mt-3 max-h-80 overflow-auto">
             <table className="w-full text-left text-xs">
@@ -224,9 +238,14 @@ export default function KeymasterActiveJobsCard() {
               </thead>
               <tbody>
                 {decisions.map((item, index) => (
-                  <tr className="border-outline-variant border-b" key={item.reference}>
+                  <tr
+                    className="border-outline-variant border-b"
+                    key={item.reference}
+                  >
                     <td className="py-2 pe-2">{item.reference}</td>
-                    <td className="py-2 pe-2">{rows[index]?.customer || "Sem cliente"}</td>
+                    <td className="py-2 pe-2">
+                      {rows[index]?.customer || "Sem cliente"}
+                    </td>
                     <td className="py-2 pe-2">{item.status}</td>
                     <td className="py-2 pe-2">{item.reason}</td>
                   </tr>
