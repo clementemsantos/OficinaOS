@@ -183,6 +183,7 @@ function buildJobListWhere(query: JobListQueryInput): Prisma.JobWhereInput {
     where.OR = [
       { jobCode: { contains: search, mode: "insensitive" } },
       { externalRef: { contains: search, mode: "insensitive" } },
+      { externalRef: { contains: search, mode: "insensitive" } },
       { customer: { name: { contains: search, mode: "insensitive" } } },
       {
         device: { brand: { name: { contains: search, mode: "insensitive" } } },
