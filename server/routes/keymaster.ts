@@ -71,40 +71,45 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
     "/import/keymaster/status",
     { preHandler: guard },
     async (_req, reply) => {
-    if (!requireMisto()) {
-      return reply
-        .code(403)
-        .send({ message: "Disponível apenas no ambiente Misto." });
-    }
-    const groups = await app.prisma.externalImportRecord.groupBy({
-      by: ["sourceEntity"],
-      where: { sourceSystem: "KEYMASTER" },
-      _count: { _all: true },
-    });
-    const counts = Object.fromEntries(types.map((entity) => [entity, 0]));
-    for (const group of groups) {
-      if (Object.hasOwn(counts, group.sourceEntity)) {
-        counts[group.sourceEntity] = group._count._all;
+      if (!requireMisto()) {
+        return reply
+          .code(403)
+          .send({ message: "Disponível apenas no ambiente Misto." });
       }
-    }
-    return reply.send({
+      const groups = await app.prisma.externalImportRecord.groupBy({
+        by: ["sourceEntity"],
+        where: { sourceSystem: "KEYMASTER" },
+        _count: { _all: true },
+      });
+      const counts = Object.fromEntries(types.map((entity) => [entity, 0]));
+      for (const group of groups) {
+        if (Object.hasOwn(counts, group.sourceEntity)) {
+          counts[group.sourceEntity] = group._count._all;
+        }
+      }
+      return reply.send({
         counts,
         total: Object.values(counts).reduce((a, b) => a + b, 0),
       });
-  });
+    }
+  );
 
   app.post(
     "/import/keymaster/archive",
     { preHandler: guard, bodyLimit: 5 * 1024 * 1024 },
     async (req, reply) => {
       if (!requireMisto()) {
-        return reply.code(403).send({ message: "Disponível apenas no ambiente Misto." });
+        return reply
+          .code(403)
+          .send({ message: "Disponível apenas no ambiente Misto." });
       }
       const parsed = chunkSchema.safeParse(req.body);
       if (!parsed.success) {
         return reply
           .code(400)
-          .send({ message: "Lote inválido: revise colunas, referências ou tamanho." });
+          .send({
+            message: "Lote inválido: revise colunas, referências ou tamanho.",
+          });
       }
       const { entity, headers, records, sourceFile } = parsed.data;
       const config = ENTITY_CONFIG[entity];
