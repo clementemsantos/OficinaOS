@@ -32,6 +32,69 @@
      completa ao fornecedor caso a interface não permita descarregar.
    - Referência sobre módulos: https://www.keymaster.pt/oficinas-auto-software/
 
+## Exportações Keymaster recebidas — 18/10/2026
+
+A loja forneceu cinco ficheiros `.xlsx` na conversa. Os **dados pessoais
+não foram colocados no repositório GitHub**. Contagens verificadas na primeira
+folha útil de cada ficheiro, excluindo as folhas auxiliares Países/RegimesIva.
+
+| Fonte Keymaster | Folha | Linha dos cabeçalhos | Registos | Identificador principal |
+| --- | --- | ---: | ---: | --- |
+| Listagem de Clientes | Lista de Clientes | 2 | **2 634** | ID KEYMASTER |
+| Lista de Equipamento | Lista de Equipamentos | 3 | **168** | ID |
+| Listagem de Fornecedores | Lista de Fornecedores | 2 | **4** | ID |
+| Catálogo de Serviços | Lista de serviços | 2 | **166** | REF. |
+| Inventário de Stock | Lista de produtos | 2 | **94** | REF. |
+| **Total** | | | **3 066** | |
+
+### Correspondências pretendidas, sem importação automática
+
+- **Clientes:** ID KEYMASTER → `sourceId` na proveniência; NOME →
+  `Customer.name`; TELEFONE 1/2/3 e EMAIL 1/2 → contactos; NIF, morada,
+  localidade, país, regime IVA e crédito exigem preservação adicional.
+  Contagem observada: **2 634 IDs Keymaster distintos**, mas apenas
+  **1 061 valores distintos** em **2 027 telefones 1 preenchidos**.
+  Não fundir por telefone ou nome sem inspeção humana.
+- **Equipamentos:** ID → `sourceId`; tipo, marca, modelo, número de série,
+  acessórios e cor → equipamento e atributos de entrada. Os **168 registos**
+  não têm preenchido `ID SISTEMA LEGADO DO CLIENTE`; o ficheiro por si só
+  **não permite ligar equipamento a cliente ou ficha de obra**.
+  Não criar fichas de reparação a partir de equipamentos soltos.
+- **Fornecedores:** ID → `sourceId`; nome, NIF, contactos, morada, favorito
+  e condições comerciais → registo de fornecedor, preservando impostos.
+- **Serviços:** REF. → referência externa; DESCRIÇÃO, opções/QTD,
+  invisibilidade e sinalizadores → catálogo de serviços. **166/166**
+  estão sem PVP UNITÁRIO neste ficheiro; preço **desconhecido** não
+  equivale a 0,00 €.
+- **Stock:** REF. → referência externa; descrição, família, código de
+  barras, CUSTO, QTD., MARGEM, PVP UNITÁRIO, visibilidade → inventário.
+  **94 artigos**, mas `ID GRUPO` aparece repetido; não é identificador
+  individual seguro. Valores monetários devem preservar vírgula decimal
+  portuguesa, custo vs preço, e IVA.
+
+### Implementação inicial no ramo
+
+- **Definições → Dados → Origem Keymaster** apresenta uma
+  pré-validação **sem escrita** para estes cinco tipos de exportação.
+- Deteção da assinatura `CLIENTS`, `ITEMS`, `SUPPLIERS`,
+  `SERVICES`, `PRODUCTS` e das linhas de cabeçalho 2/3.
+- Lista quantidade, referências vazias/repetidas, equipamentos sem ligação
+  a clientes e serviços sem preços. O ficheiro é lido no browser e **não é
+  enviado para o servidor** nesta etapa.
+- **PENDENTE**: criar armazenamento de proveniência e importadores por
+  entidade, com dry-run, reconciliação e associação explícita. Não
+  escolher o importador genérico existente para importar estes ficheiros
+  por engano: perder-se-iam campos, referências e relações.
+
+### Ficheiros que continuam em falta
+
+Os cinco ficheiros acima **não** são uma exportação de obras de reparação
+com estados, alterações de estado, notas e ficheiros binários.
+Para cumprir os requisitos obrigatórios da loja, falta obter separadamente:
+fichas/obras, respetivos eventos, notas e um pacote de anexos com
+referência de ligação à obra. **Não declarar migração Keymaster concluída
+sem estes dados.**
+
 ## Keymaster — requisitos obrigatórios confirmados pela loja (18/10/2026)
 
 **A referência antiga, os estados, as notas e os ficheiros são informação
