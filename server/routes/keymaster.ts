@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import { createAuditLog } from "../services/audit.service.js";
 import { getUserId } from "../utils/request.js";
+import { syncKeymasterEntity } from "../services/keymaster-sync.service.js";
 
 // This archive is deliberately separate from the live operational entities:
 // source IDs, duplicate customer phones, stock costs and unknown service
@@ -146,6 +147,51 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
         total,
         items,
       });
+    }
+  );
+
+  app.get(
+    "/import/keymaster/sync-status",
+    { preHandler: guard },
+    async (_req, reply) => {
+      if (!requireMisto()) {
+        return reply.code(403).send({ message: "Apenas OficinaOS Misto." });
+      }
+      const groups = await app.prisma.externalImportRecord.groupBy({
+        by: ["sourceEntity"],
+        where: { sourceSystem: "KEYMASTER", operationalId: { not: null } },
+        _count: { _all: true },
+      });
+      const counts = Object.fromEntries(types.map((entity) => [entity, 0]));
+      for (const group of groups) {
+        if (Object.hasOwn(counts, group.sourceEntity)) {
+          counts[group.sourceEntity] = group._count._all;
+        }
+      }
+      return reply.send({
+        counts,
+        total: Object.values(counts).reduce((a, b) => a + b, 0),
+      });
+    }
+  );
+
+  app.post(
+    "/import/keymaster/sync",
+    { preHandler: guard },
+    async (req, reply) => {
+      if (!requireMisto()) {
+        return reply.code(403).send({ message: "Apenas OficinaOS Misto." });
+      }
+      const parsed = z.object({ entity: typeSchema }).safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ message: "Entidade inválida." });
+      }
+      const result = await syncKeymasterEntity(
+        app.prisma,
+        parsed.data.entity,
+        getUserId(req)
+      );
+      return reply.send(result);
     }
   );
 
