@@ -2445,7 +2445,7 @@
     "keymaster_missing_links": "Without customer association",
     "keymaster_missing_prices": "Without price",
     "keymaster_no_warnings": "No warnings",
-    "keymaster_safe_notice": "Import stores all original columns in a private Keymaster archive in the Misto database and can be repeated without duplicate IDs. This does NOT yet move customers, equipment, services or stock into the live operational modules: reconciliation is needed to protect shared phone numbers, missing customer links and unknown prices. Job histories, notes and attachments remain a separate migration.",
+    "keymaster_safe_notice": "The original Keymaster files are first stored in a separate archive preserving source IDs. To display them in the operational modules, select 'Add archived records to OficinaOS modules'. The operation can be resumed without duplicating source IDs. Repair jobs, status history, notes and attachments will be migrated separately when their full export is available.",
     "keymaster_import_archive": "Import into Misto database (Keymaster archive)",
     "keymaster_import_progress": "Importing {{current}} of {{total}}: {{file}}",
     "keymaster_import_result": "Stored: {{stored}} · Unchanged: {{unchanged}} · Conflicts: {{conflicts}}",
