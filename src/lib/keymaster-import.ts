@@ -186,9 +186,7 @@ function textNodes(element: Element): string {
   ).join("");
 }
 
-function sharedStringValues(
-  files: Record<string, Uint8Array>
-): string[] {
+function sharedStringValues(files: Record<string, Uint8Array>): string[] {
   const source = files["xl/sharedStrings.xml"];
   if (!source) {
     return [];
@@ -218,10 +216,7 @@ function cellValue(cell: Element, sharedStrings: string[]): string {
   return type === "s" ? (sharedStrings[Number(value)] ?? "") : value;
 }
 
-function sheetRowValues(
-  row: Element,
-  sharedStrings: string[]
-): unknown[] {
+function sheetRowValues(row: Element, sharedStrings: string[]): unknown[] {
   const cells: unknown[] = [];
   for (const cell of Array.from(row.getElementsByTagNameNS(XML_NS, "c"))) {
     const index = columnIndex(cell.getAttribute("r") ?? "");
