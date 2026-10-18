@@ -2444,7 +2444,14 @@
     "keymaster_missing_links": "Without customer association",
     "keymaster_missing_prices": "Without price",
     "keymaster_no_warnings": "No warnings",
-    "keymaster_safe_notice": "Read-only preview. No private data is sent to the server. A full migration of repair history, statuses, notes and attachments requires the dedicated Keymaster importer, which has not yet been deployed."
+    "keymaster_safe_notice": "Import stores all original columns in a private Keymaster archive in the Misto database and can be repeated without duplicate IDs. This does NOT yet move customers, equipment, services or stock into the live operational modules: reconciliation is needed to protect shared phone numbers, missing customer links and unknown prices. Job histories, notes and attachments remain a separate migration.",
+    "keymaster_import_archive": "Import into Misto database (Keymaster archive)",
+    "keymaster_import_progress": "Importing {{current}} of {{total}}: {{file}}",
+    "keymaster_import_result": "Stored: {{stored}} · Unchanged: {{unchanged}} · Conflicts: {{conflicts}}",
+    "keymaster_archived_total": "In Misto database: {{count}} Keymaster records",
+    "keymaster_import_success": "Keymaster records saved in the Misto database.",
+    "keymaster_import_failed": "Import interrupted. Check the counts before trying again.",
+    "keymaster_conflicts": "{{count}} IDs have changed data. Existing records have not been overwritten."
   },
   "tasks": {
     "title": "Tasks",
