@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
 
 interface VoiceCall {
-  id: string;
-  callerPhone: string;
   calledPhone: string | null;
-  status: string;
-  durationSeconds: number | null;
-  summary: string | null;
-  startedAt: string;
+  callerPhone: string;
   customer: { id: string; name: string } | null;
+  durationSeconds: number | null;
+  id: string;
+  startedAt: string;
+  status: string;
+  summary: string | null;
 }
 
 interface ExcludedNumber {
@@ -60,7 +60,7 @@ export default function InovitoVoicePage() {
   }, [canViewExclusions, t]);
 
   useEffect(() => {
-    void refresh();
+    refresh();
   }, [refresh]);
 
   async function addExclusion(event: FormEvent<HTMLFormElement>) {
@@ -107,7 +107,9 @@ export default function InovitoVoicePage() {
         </div>
         <button
           className="rounded-xl border border-outline-variant px-4 py-2 font-semibold text-sm hover:bg-surface-container"
-          onClick={() => void refresh()}
+          onClick={() => {
+            refresh();
+          }}
           type="button"
         >
           {t("inovito_voice.refresh")}
@@ -125,13 +127,17 @@ export default function InovitoVoicePage() {
 
       <section className="space-y-3">
         <h3 className="font-bold text-lg">{t("inovito_voice.calls")}</h3>
-        {loading ? (
-          <p className="text-on-surface-variant">{t("inovito_voice.loading")}</p>
-        ) : calls.length === 0 ? (
+        {loading && (
+          <p className="text-on-surface-variant">
+            {t("inovito_voice.loading")}
+          </p>
+        )}
+        {!loading && calls.length === 0 && (
           <p className="rounded-xl bg-surface-container-low p-4 text-on-surface-variant">
             {t("inovito_voice.no_calls")}
           </p>
-        ) : (
+        )}
+        {!loading && calls.length > 0 && (
           <div className="space-y-3">
             {calls.map((call) => (
               <article
@@ -139,16 +145,21 @@ export default function InovitoVoicePage() {
                 key={call.id}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">{call.customer?.name ?? call.callerPhone}</p>
+                  <p className="font-semibold">
+                    {call.customer?.name ?? call.callerPhone}
+                  </p>
                   <span className="rounded-lg bg-surface-container px-3 py-1 text-xs">
                     {t(`inovito_voice.status_${call.status}`, call.status)}
                   </span>
                 </div>
                 <p className="mt-1 text-on-surface-variant text-xs">
-                  {localDate(call.startedAt)} · {call.callerPhone} · {call.durationSeconds ?? 0}s
+                  {localDate(call.startedAt)} · {call.callerPhone} ·{" "}
+                  {call.durationSeconds ?? 0}s
                 </p>
                 {call.summary ? (
-                  <p className="mt-3 whitespace-pre-wrap text-sm">{call.summary}</p>
+                  <p className="mt-3 whitespace-pre-wrap text-sm">
+                    {call.summary}
+                  </p>
                 ) : null}
               </article>
             ))}
@@ -170,7 +181,9 @@ export default function InovitoVoicePage() {
           {canEditExclusions ? (
             <form
               className="flex flex-wrap gap-2"
-              onSubmit={(event) => void addExclusion(event)}
+              onSubmit={(event) => {
+                addExclusion(event);
+              }}
             >
               <input
                 aria-label={t("inovito_voice.number")}
@@ -206,7 +219,9 @@ export default function InovitoVoicePage() {
                     <button
                       className="rounded-lg px-3 py-2 text-error text-sm hover:bg-error-container disabled:opacity-50"
                       disabled={busy}
-                      onClick={() => void removeExclusion(item.id)}
+                      onClick={() => {
+                        removeExclusion(item.id);
+                      }}
                       type="button"
                     >
                       {t("inovito_voice.remove")}
