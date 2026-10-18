@@ -284,10 +284,7 @@ export default function KeymasterPreviewCard() {
         </div>
       )}
       {importResult && (
-        <p
-            aria-live="polite"
-            className="mt-3 font-medium text-on-surface text-sm"
-          >
+        <p aria-live="polite" className="mt-3 text-sm">
           {t("data_io.keymaster_import_result", {
             stored: importResult.stored,
             unchanged: importResult.unchanged,
