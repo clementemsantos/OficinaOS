@@ -98,7 +98,9 @@ export default function KeymasterPreviewCard() {
                   <td className="max-w-52 break-words py-2 pe-3">
                     {preview.fileName}
                   </td>
-                  <td className="py-2 pe-3">{t(ENTITY_KEYS[preview.entity])}</td>
+                  <td className="py-2 pe-3">
+                    {t(ENTITY_KEYS[preview.entity])}
+                  </td>
                   <td className="py-2 pe-3">{preview.recordCount}</td>
                   <td className="py-2 pe-3">
                     {preview.missingReferences > 0 &&
