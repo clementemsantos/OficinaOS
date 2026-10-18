@@ -2464,6 +2464,15 @@
     "keymaster_archive_detail": "Ver ficha",
     "keymaster_archive_previous": "Anterior",
     "keymaster_archive_next": "Seguinte",
+    "keymaster_sync_title": "Transferir para os módulos da loja",
+    "keymaster_sync_explanation": "Cria fichas reais nos módulos Clientes, Fornecedores, Serviços e Stock, e registos de equipamentos físicos. Não mistura clientes por telefone nem substitui fichas já existentes. Os dados originais continuam preservados.",
+    "keymaster_sync_action": "Colocar dados nos módulos do OficinaOS",
+    "keymaster_sync_progress": "A transferir {{entity}} — {{created}} fichas criadas",
+    "keymaster_synced_count": "Fichas já transferidas: {{count}} de {{total}}",
+    "keymaster_sync_result": "Foram criadas {{created}} fichas. Registos a corrigir: {{errors}}.",
+    "keymaster_sync_warnings": "A transferência terminou com {{count}} registos que precisam de revisão.",
+    "keymaster_sync_success": "Dados transferidos para os módulos operacionais.",
+    "keymaster_sync_failed": "Não foi possível concluir a transferência. Os dados já gravados foram mantidos; consulta os totais antes de repetir.",
     "keymaster_conflicts": "{{count}} referências têm dados diferentes dos que já estavam guardados. Não foram substituídas."
   },
   "tasks": {
