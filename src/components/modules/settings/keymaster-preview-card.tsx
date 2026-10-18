@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import KeymasterArchiveBrowser from "@/components/modules/settings/keymaster-archive-browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
@@ -314,6 +315,7 @@ export default function KeymasterPreviewCard() {
           </p>
         </div>
       )}
+      <KeymasterArchiveBrowser />
       <p className="mt-4 text-on-surface-variant text-xs">
         {t("data_io.keymaster_safe_notice")}
       </p>
