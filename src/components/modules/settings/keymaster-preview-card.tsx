@@ -79,7 +79,9 @@ export default function KeymasterPreviewCard() {
   }, []);
 
   const refreshSyncedStatus = useCallback(async () => {
-    const response = await api.get<ArchiveStatus>("/import/keymaster/sync-status");
+    const response = await api.get<ArchiveStatus>(
+      "/import/keymaster/sync-status"
+    );
     setSyncedStatus(response.data);
   }, []);
 
@@ -201,6 +203,7 @@ export default function KeymasterPreviewCard() {
     }
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: sequential per-entity sync with explicit stop conditions
   const applyToModules = async () => {
     if (syncing || importing || busy || !archiveStatus?.total) {
       return;
@@ -232,7 +235,10 @@ export default function KeymasterPreviewCard() {
           if (response.data.remaining === 0) {
             break;
           }
-          if (response.data.created === 0 && response.data.errors.length === 0) {
+          if (
+            response.data.created === 0 &&
+            response.data.errors.length === 0
+          ) {
             throw new Error("A sincronização não está a avançar.");
           }
         }
