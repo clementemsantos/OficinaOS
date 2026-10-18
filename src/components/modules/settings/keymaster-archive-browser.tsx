@@ -179,9 +179,9 @@ export default function KeymasterArchiveBrowser() {
                   <tbody>
                     {result.items.map((item) => (
                       <tr
-                          className="border-outline-variant border-b"
-                          key={item.id}
-                        >
+                        className="border-outline-variant border-b"
+                        key={item.id}
+                      >
                         <td className="py-2 pe-3">{item.sourceId}</td>
                         <td className="py-2 pe-3">{summary(item, entity)}</td>
                         <td className="py-2 pe-3">
