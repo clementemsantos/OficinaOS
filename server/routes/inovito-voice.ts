@@ -55,10 +55,7 @@ function equalsSecret(provided: unknown, expected: string): boolean {
 }
 
 /** Gateway-only. Does not use a user session and must not expose secrets. */
-function requireVoiceGateway(
-  request: FastifyRequest,
-  reply: FastifyReply
-) {
+function requireVoiceGateway(request: FastifyRequest, reply: FastifyReply) {
   const token = loadEnv().INOVITO_VOICE_TOKEN;
   if (!token) {
     return reply.code(503).send({ code: "INOVITO_VOICE_DISABLED" });
