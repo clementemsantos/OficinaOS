@@ -2388,6 +2388,7 @@
     "save_failed": "Could not save the referral",
     "empty": "This job has not been forwarded to any shop."
   },
+  "equipment_nav": "Equipment",
   "data_io": {
     "tab": "Data",
     "tab_desc": "Import and export your catalogues, and embed the online repair request form on your website.",
