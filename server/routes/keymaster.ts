@@ -53,7 +53,10 @@ function invalidReferences(
 ): boolean {
   const ids = new Set<string>();
   for (const row of records) {
-    if (row.values[idColumn]?.trim() !== row.sourceId || ids.has(row.sourceId)) {
+    if (
+      row.values[idColumn]?.trim() !== row.sourceId ||
+      ids.has(row.sourceId)
+    ) {
       return true;
     }
     ids.add(row.sourceId);
@@ -105,11 +108,9 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
       }
       const parsed = chunkSchema.safeParse(req.body);
       if (!parsed.success) {
-        return reply
-          .code(400)
-          .send({
-            message: "Lote inválido: revise colunas, referências ou tamanho.",
-          });
+        return reply.code(400).send({
+          message: "Lote inválido: revise colunas, referências ou tamanho.",
+        });
       }
       const { entity, headers, records, sourceFile } = parsed.data;
       const config = ENTITY_CONFIG[entity];
@@ -122,7 +123,9 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
       if (invalidReferences(records, config.idColumn)) {
         return reply
           .code(400)
-          .send({ message: "Referência vazia, repetida ou incoerente no lote." });
+          .send({
+            message: "Referência vazia, repetida ou incoerente no lote.",
+          });
       }
       const ids = records.map((r) => r.sourceId);
 
