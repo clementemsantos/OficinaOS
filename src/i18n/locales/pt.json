@@ -2429,6 +2429,7 @@
     "keymaster_title": "Keymaster — validar exportações",
     "keymaster_preview_desc": "Seleciona os ficheiros Excel exportados de clientes, equipamentos, fornecedores, serviços e stock. Este passo verifica apenas a estrutura e as referências; não importa registos.",
     "keymaster_pick_files": "Verificar ficheiros Keymaster...",
+    "keymaster_progress": "A verificar {{current}} de {{total}}: {{file}}",
     "keymaster_file": "Ficheiro",
     "keymaster_type": "Tipo de dados",
     "keymaster_rows": "Registos",
