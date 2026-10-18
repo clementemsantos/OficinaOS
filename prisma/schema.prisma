@@ -1687,3 +1687,26 @@ model CommercialAgreement {
   @@index([renewsAt])
   @@map("commercial_agreements")
 }
+
+// ─────────────────────────────────────────────────────────────
+// External source staging (Inove.pt Misto migration)
+// SOURCE ARCHIVE ONLY: does not make these records live customers,
+// devices, stock or invoices until a separate reviewed reconciliation.
+// Every original sheet column/value is preserved for lossless mapping.
+// ─────────────────────────────────────────────────────────────
+model ExternalImportRecord {
+  id           String   @id @default(cuid())
+  sourceSystem String   @db.VarChar(32)
+  sourceEntity String   @db.VarChar(32)
+  sourceId     String   @db.VarChar(200)
+  sourceFile   String?  @db.VarChar(255)
+  sourceRow    Int
+  headers      Json
+  values       Json
+  checksum     String   @db.VarChar(64)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+
+  @@unique([sourceSystem, sourceEntity, sourceId])
+  @@index([sourceSystem, sourceEntity])
+  @@map("external_import_records")
+}
