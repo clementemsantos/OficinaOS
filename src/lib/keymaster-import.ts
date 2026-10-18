@@ -5,6 +5,7 @@
  * Keymaster exports have their displayed headers on row 2, except
  * equipment exports whose headers are on row 3.
  */
+import { unzipSync } from "fflate";
 import {
   ImportFileError,
   MAX_FILE_BYTES,
@@ -162,8 +163,120 @@ export function inspectKeymasterRows(
 }
 
 const XLSX = /\.xlsx$/i;
+const XML_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+const FIRST_SHEET = "xl/worksheets/sheet1.xml";
+const MAX_WORKSHEET_XML_BYTES = 12 * 1024 * 1024;
 
-/** Browser-only preview — never uploads customers or suppliers to a server. */
+/**
+ * Keymaster exports use ordinary OOXML worksheets with inline strings.
+ * Decode the first sheet directly so the 2,634-row customers export doesn't
+ * stall in read-excel-file's full workbook/cell processing.
+ *
+ * This is for read-only preview, NOT the audited importer or any DB write.
+ * Do not evaluate formulas or open network resources from the workbook.
+ */
+export function readKeymasterPreviewXlsx(buffer: ArrayBuffer): unknown[][] {
+  // Reject oversized ZIP expansions before decompressing user content.
+  const inflated = xlsxUncompressedSize(buffer);
+  if (!Number.isFinite(inflated) || inflated > MAX_XLSX_UNCOMPRESSED_BYTES) {
+    throw new ImportFileError("data_io.xlsx_too_large");
+  }
+  let files: Record<string, Uint8Array>;
+  try {
+    files = unzipSync(new Uint8Array(buffer));
+  } catch {
+    throw new Error("O ficheiro Excel está danificado ou não é um XLSX válido.");
+  }
+  const sheetBytes = files[FIRST_SHEET];
+  if (!sheetBytes) {
+    throw new Error("Não foi encontrada a primeira folha do Excel Keymaster.");
+  }
+  if (sheetBytes.byteLength > MAX_WORKSHEET_XML_BYTES) {
+    throw new ImportFileError("data_io.xlsx_too_large");
+  }
+
+  const parser = new DOMParser();
+  function parseXml(bytes: Uint8Array): Document {
+    const document = parser.parseFromString(
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      "application/xml"
+    );
+    if (document.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("O Excel tem XML inválido.");
+    }
+    return document;
+  }
+  function textNodes(element: Element): string {
+    return Array.from(
+      element.getElementsByTagNameNS(XML_NS, "t"),
+      (node) => node.textContent ?? ""
+    ).join("");
+  }
+
+  const sharedStrings: string[] = [];
+  if (files["xl/sharedStrings.xml"]) {
+    const shared = parseXml(files["xl/sharedStrings.xml"]);
+    for (const entry of Array.from(
+      shared.getElementsByTagNameNS(XML_NS, "si")
+    )) {
+      sharedStrings.push(textNodes(entry));
+    }
+  }
+
+  const sheet = parseXml(sheetBytes);
+  const out: unknown[][] = [];
+  const sheetRows = sheet.getElementsByTagNameNS(XML_NS, "row");
+  for (const xmlRow of Array.from(sheetRows)) {
+    const rowNumber = Number(xmlRow.getAttribute("r"));
+    // Stop crafted files from allocating unbounded sparse rows.
+    if (
+      !Number.isSafeInteger(rowNumber) ||
+      rowNumber < 1 ||
+      rowNumber > MAX_IMPORT_ROWS + 3
+    ) {
+      throw new ImportFileError("data_io.too_many_rows");
+    }
+    const cells: unknown[] = [];
+    for (const cell of Array.from(
+      xmlRow.getElementsByTagNameNS(XML_NS, "c")
+    )) {
+      const cellRef = cell.getAttribute("r") ?? "";
+      const letters = /^[A-Z]+/.exec(cellRef)?.[0];
+      if (!letters) {
+        continue;
+      }
+      let index = 0;
+      for (let i = 0; i < letters.length; i++) {
+        index = index * 26 + letters.charCodeAt(i) - 64;
+      }
+      index--;
+      if (index > 127) {
+        continue; // Only 31 columns are used in the five Keymaster exports.
+      }
+
+      let value = "";
+      const type = cell.getAttribute("t");
+      if (type === "inlineStr") {
+        value = textNodes(cell);
+      } else {
+        value =
+          cell.getElementsByTagNameNS(XML_NS, "v")[0]?.textContent ?? "";
+        if (type === "s") {
+          value = sharedStrings[Number(value)] ?? "";
+        }
+      }
+      cells[index] = value;
+    }
+    // Preserve worksheet physical row numbers: headers are on rows 2 or 3.
+    out[rowNumber - 1] = cells;
+  }
+  for (let i = 0; i < out.length; i++) {
+    out[i] ??= [];
+  }
+  return out;
+}
+
+/** Browser-only preview: neither customer data nor XLSX is uploaded. */
 export async function previewKeymasterFile(
   file: File
 ): Promise<KeymasterPreview> {
@@ -173,14 +286,6 @@ export async function previewKeymasterFile(
   if (file.size > MAX_FILE_BYTES) {
     throw new ImportFileError("data_io.file_too_large");
   }
-  const buffer = await file.arrayBuffer();
-  if (xlsxUncompressedSize(buffer) > MAX_XLSX_UNCOMPRESSED_BYTES) {
-    throw new ImportFileError("data_io.xlsx_too_large");
-  }
-  // readSheet() parses ONLY the first worksheet. The default export parses
-  // every sheet, including Keymaster auxiliary lists, which can leave the UI
-  // apparently blocked for a long time when multiple files are selected.
-  const { readSheet } = await import("read-excel-file/browser");
-  const rows = (await readSheet(file)) as unknown[][];
+  const rows = readKeymasterPreviewXlsx(await file.arrayBuffer());
   return inspectKeymasterRows(rows, file.name);
 }
