@@ -3,6 +3,8 @@ name: Inove Misto Sandbox (Docker validation)
 on:
   pull_request:
     paths:
+      - "Dockerfile.node"
+      - "package.json"
       - "compose.misto.yaml"
       - "scripts/setup-misto-env.sh"
       - ".github/workflows/inove-misto-validate.yml"
@@ -41,3 +43,5 @@ jobs:
           assert 'misto-pgdata' in d['volumes'] and 'misto-uploads' in d['volumes']
           print('Isolation validated: only Tailscale:4002 published; database internal')
           PY
+      - name: Build Node Docker image (catch npm peer conflicts)
+        run: docker build --file Dockerfile.node --tag inove-misto-ci .
