@@ -11,6 +11,7 @@ ALTER TABLE "external_import_records"
 
 ALTER TABLE "parts_catalog"
   ADD COLUMN IF NOT EXISTS "acquisitionCost" DECIMAL(10, 2),
+  ADD COLUMN IF NOT EXISTS "priceKnown" BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS "sourceReference" VARCHAR(200);
 
 ALTER TABLE "repair_catalog"
