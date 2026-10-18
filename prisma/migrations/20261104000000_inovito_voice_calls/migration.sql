@@ -5,6 +5,7 @@ CREATE TABLE "inovito_calls" (
     "callerPhone" TEXT NOT NULL,
     "calledPhone" TEXT,
     "status" TEXT NOT NULL DEFAULT 'ringing',
+    "eventRank" INTEGER NOT NULL DEFAULT 0,
     "durationSeconds" INTEGER,
     "summary" TEXT,
     "customerId" TEXT,
