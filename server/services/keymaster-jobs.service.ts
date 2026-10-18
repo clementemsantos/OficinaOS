@@ -1,4 +1,3 @@
-
 import crypto from "node:crypto";
 import { AuditAction, type PrismaClient } from "@generated/client";
 import { generateJobCode } from "../utils/job-code.js";
@@ -39,6 +38,7 @@ const MONEY = /^(\d{1,8}),([0-9]{2})$/;
 const UNCLASSIFIED_BRAND = "Keymaster (por classificar)";
 const RAW_FAULT = "Avaria não indicada na listagem importada do Keymaster.";
 const EURO_TOKEN = /\s*€/g;
+const GMT_OFFSET_RE = /GMT([+-]\d+)?/;
 
 function normalize(value: string): string {
   return value
@@ -86,7 +86,7 @@ function sourceDate(row: KeymasterJobRow): Date | null {
     timeZoneName: "shortOffset",
   }).formatToParts(naive);
   const label = zone.find((part) => part.type === "timeZoneName")?.value ?? "";
-  const offset = /GMT([+-]\d+)?/.exec(label);
+  const offset = GMT_OFFSET_RE.exec(label);
   if (!offset) {
     return null;
   }
@@ -155,12 +155,12 @@ function validateRow(row: KeymasterJobRow): string | null {
   return null;
 }
 
-type PreparedRow = {
-  row: KeymasterJobRow;
-  customerId: string;
+interface PreparedRow {
   createdAt: Date;
+  customerId: string;
   price: number;
-};
+  row: KeymasterJobRow;
+}
 
 async function assess(prisma: PrismaClient, rows: KeymasterJobRow[]) {
   const references = rows.map((row) => `KEYMASTER:${row.jobRef.trim()}`);
