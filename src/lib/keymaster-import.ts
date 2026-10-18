@@ -177,8 +177,10 @@ export async function previewKeymasterFile(
   if (xlsxUncompressedSize(buffer) > MAX_XLSX_UNCOMPRESSED_BYTES) {
     throw new ImportFileError("data_io.xlsx_too_large");
   }
-  const { default: readXlsxFile } = await import("read-excel-file/browser");
-  const worksheets = await readXlsxFile(file);
-  const rows = (worksheets[0]?.data ?? []) as unknown[][];
+  // readSheet() parses ONLY the first worksheet. The default export parses
+  // every sheet, including Keymaster auxiliary lists, which can leave the UI
+  // apparently blocked for a long time when multiple files are selected.
+  const { readSheet } = await import("read-excel-file/browser");
+  const rows = (await readSheet(file)) as unknown[][];
   return inspectKeymasterRows(rows, file.name);
 }
