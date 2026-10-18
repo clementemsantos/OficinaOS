@@ -119,6 +119,11 @@ export default function KeymasterPreviewCard() {
         });
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         try {
+          if (file.name.toLowerCase().includes("obras_ativas")) {
+            throw new Error(
+              "Este ficheiro é de obras ativas. Usa o botão «Selecionar lista de obras ativas...» na primeira secção acima."
+            );
+          }
           next.push(await previewKeymasterFile(file));
         } catch (error) {
           problems.push(
@@ -262,7 +267,27 @@ export default function KeymasterPreviewCard() {
 
   return (
     <div className="rounded-xl bg-surface-container-lowest p-5">
-      <h3 className="font-bold text-on-surface text-sm">
+      <div className="mb-5">
+        <h3 className="font-bold text-on-surface text-base">
+          1. Obras ativas do Keymaster
+        </h3>
+        <p className="mt-2 text-on-surface-variant text-sm">
+          Para as 32 obras, utiliza abaixo «Selecionar lista de obras ativas...».
+          Este importador associa as obras aos clientes já existentes. Faz
+          primeiro a simulação e confirma as associações antes de criar fichas.
+        </p>
+        <KeymasterActiveJobsCard />
+      </div>
+      <div className="my-5 border-outline-variant border-t" />
+      <h3 className="font-bold text-on-surface text-base">
+        2. Clientes, equipamentos, fornecedores, serviços e stock
+      </h3>
+      <p className="mt-2 text-on-surface-variant text-xs">
+        Esta área é apenas para as cinco exportações originais do Keymaster.
+        NÃO aceita ficheiros de obras ativas nem de encomendas. Se os clientes
+        já aparecem no OficinaOS, não precisas de os importar novamente.
+      </p>
+      <h3 className="mt-4 font-bold text-on-surface text-sm">
         {t("data_io.keymaster_title")}
       </h3>
       <p className="mt-2 text-on-surface-variant text-sm">
@@ -430,7 +455,6 @@ export default function KeymasterPreviewCard() {
         </div>
       ) : null}
       <KeymasterArchiveBrowser />
-      <KeymasterActiveJobsCard />
       <p className="mt-4 text-on-surface-variant text-xs">
         {t("data_io.keymaster_safe_notice")}
       </p>
