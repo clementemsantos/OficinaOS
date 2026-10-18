@@ -2400,5 +2400,29 @@
     "copied": "Copied",
     "copy_failed": "Could not copy",
     "jobs": "Repair jobs"
+  },
+  "inovito_voice": {
+    "title": "Inovito Voice",
+    "subtitle": "Commercial calls and AI exclusion numbers",
+    "refresh": "Refresh",
+    "not_connected": "Phone service not activated",
+    "not_connected_desc": "This screen is ready to record gateway events; the Amigo mobile forwarding and VoIP voice service must first be tested separately.",
+    "calls": "Call history",
+    "loading": "Loading calls...",
+    "no_calls": "No commercial calls recorded yet.",
+    "exclusions": "Numbers excluded from AI",
+    "exclusions_explanation": "These numbers will not be answered by the AI when caller ID is preserved. Carrier forwarding may still occur, so a safe non-AI fallback is required.",
+    "number": "Phone number (e.g. +351 912 345 678)",
+    "exclude": "Exclude number",
+    "remove": "Remove",
+    "no_exclusions": "No excluded numbers.",
+    "load_error": "Unable to load the call centre.",
+    "exclusion_saved": "Number excluded.",
+    "exclusion_removed": "Exclusion removed.",
+    "exclusion_error": "Unable to update exclusions.",
+    "status_ringing": "Ringing",
+    "status_answered": "Answered by IA",
+    "status_completed": "Completed",
+    "status_failed": "Failed"
   }
 }
