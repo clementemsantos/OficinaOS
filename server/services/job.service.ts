@@ -424,19 +424,28 @@ export async function create(
     customer = found;
   } else {
     const email = input.customerEmail?.trim() || null;
-    customer = await customerUpsert(
+    const matched = await findByNormalizedPhone(
       prisma,
-      { phone: input.customerPhone },
-      {
-        name: input.customerName,
-        ...(email ? { email } : {}),
-      },
-      {
-        email,
-        name: input.customerName,
-        phone: input.customerPhone,
-      }
+      normalizePhone(input.customerPhone)
     );
+    const customerData = {
+      email,
+      name: input.customerName,
+      phone: input.customerPhone,
+    };
+    // Never silently choose one of several historical customers sharing a
+    // phone number. Only reuse an unambiguous match; otherwise create new.
+    customer = matched
+      ? await customerUpsert(
+          prisma,
+          { id: matched.id },
+          {
+            name: input.customerName,
+            ...(email ? { email } : {}),
+          },
+          customerData
+        )
+      : await prisma.customer.create({ data: customerData });
   }
 
   let brandId = input.deviceBrandId;
