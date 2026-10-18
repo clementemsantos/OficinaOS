@@ -248,7 +248,12 @@ export async function syncKeymasterEntity(
         if (fresh.operationalId) {
           return;
         }
-        const operationalId = await createOperational(tx, entity, source, userId);
+        const operationalId = await createOperational(
+            tx,
+            entity,
+            source,
+            userId
+          );
         await tx.externalImportRecord.update({
           where: { id: source.id },
           data: { operationalId, syncedAt: new Date() },
