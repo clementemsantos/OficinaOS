@@ -2445,7 +2445,7 @@
     "keymaster_missing_links": "Sem ligação ao cliente",
     "keymaster_missing_prices": "Sem preço",
     "keymaster_no_warnings": "Sem avisos",
-    "keymaster_safe_notice": "A importação guarda todos os campos num arquivo privado da base de dados Misto e pode ser repetida sem duplicar IDs. Ainda NÃO coloca automaticamente clientes, equipamentos, serviços ou stock nos módulos operacionais: essa transferência exige reconciliação para proteger telefones repetidos, equipamentos sem cliente e preços desconhecidos. A migração das obras, notas e anexos permanece por preparar.",
+    "keymaster_safe_notice": "Os ficheiros são primeiro guardados no arquivo Keymaster, com todas as referências originais. Para aparecerem nos módulos normais da plataforma, utilize «Colocar dados nos módulos do OficinaOS». A operação é retomável e não duplica IDs. As obras de reparação, estados, notas e anexos serão migrados separadamente quando o Keymaster disponibilizar a exportação completa.",
     "keymaster_import_archive": "Importar dados para o Misto (arquivo Keymaster)",
     "keymaster_import_progress": "A importar {{current}} de {{total}}: {{file}}",
     "keymaster_import_result": "Guardados: {{stored}} · Já existentes: {{unchanged}} · Conflitos: {{conflicts}}",
