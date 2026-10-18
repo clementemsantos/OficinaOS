@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,9 @@ interface ArchiveStatus {
 }
 
 interface ChunkResult {
+  conflicts: number;
   stored: number;
   unchanged: number;
-  conflicts: number;
 }
 
 const CHUNK_SIZE = 50;
@@ -48,7 +48,9 @@ export default function KeymasterPreviewCard() {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<KeymasterPreview[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus | null>(null);
+  const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus | null>(
+    null
+  );
   const [importResult, setImportResult] = useState<ChunkResult | null>(null);
   const [importProgress, setImportProgress] = useState("");
   const [progress, setProgress] = useState<{
@@ -57,17 +59,17 @@ export default function KeymasterPreviewCard() {
     fileName: string;
   } | null>(null);
 
-  const refreshArchiveStatus = async () => {
+  const refreshArchiveStatus = useCallback(async () => {
     const response = await api.get<ArchiveStatus>("/import/keymaster/status");
     setArchiveStatus(response.data);
-  };
+  }, []);
 
   useEffect(() => {
     refreshArchiveStatus().catch(() => {
       // The preview still works if the optional archive API isn't installed.
       setArchiveStatus(null);
     });
-  }, []);
+  }, [refreshArchiveStatus]);
 
   const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
@@ -132,7 +134,11 @@ export default function KeymasterPreviewCard() {
           })
         );
         const archive = await readKeymasterArchive(file);
-        for (let index = 0; index < archive.records.length; index += CHUNK_SIZE) {
+        for (
+          let index = 0;
+          index < archive.records.length;
+          index += CHUNK_SIZE
+        ) {
           const response = await api.post<ChunkResult>(
             "/import/keymaster/archive",
             {
@@ -149,9 +155,11 @@ export default function KeymasterPreviewCard() {
       }
       setImportResult(summary);
       if (summary.conflicts > 0) {
-        toast.warning(t("data_io.keymaster_conflicts", {
-          count: summary.conflicts,
-        }));
+        toast.warning(
+          t("data_io.keymaster_conflicts", {
+            count: summary.conflicts,
+          })
+        );
       } else {
         toast.success(t("data_io.keymaster_import_success"));
       }
@@ -188,9 +196,9 @@ export default function KeymasterPreviewCard() {
       />
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
+          disabled={importing}
           icon="upload"
           loading={busy}
-          disabled={importing}
           onClick={() => fileInput.current?.click()}
           size="sm"
           type="button"
@@ -244,7 +252,9 @@ export default function KeymasterPreviewCard() {
                   <td className="max-w-52 break-words py-2 pe-3">
                     {preview.fileName}
                   </td>
-                  <td className="py-2 pe-3">{t(ENTITY_KEYS[preview.entity])}</td>
+                  <td className="py-2 pe-3">
+                    {t(ENTITY_KEYS[preview.entity])}
+                  </td>
                   <td className="py-2 pe-3">{preview.recordCount}</td>
                   <td className="py-2 pe-3">
                     {preview.missingReferences > 0 &&
@@ -268,7 +278,10 @@ export default function KeymasterPreviewCard() {
         </div>
       )}
       {importResult && (
-        <p aria-live="polite" className="mt-3 font-medium text-on-surface text-sm">
+        <p
+            aria-live="polite"
+            className="mt-3 font-medium text-on-surface text-sm"
+          >
           {t("data_io.keymaster_import_result", {
             stored: importResult.stored,
             unchanged: importResult.unchanged,
