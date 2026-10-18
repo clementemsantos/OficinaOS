@@ -1,34 +1,42 @@
 import { timingSafeEqual } from "node:crypto";
 import { AppError } from "@shared/errors/app-error.js";
-import type {
-  FastifyPluginAsync,
-  FastifyReply,
-  FastifyRequest,
-} from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { loadEnv } from "../config/env.js";
 import { requirePermission } from "../middlewares/rbac.js";
 import { normalizeInovitoPhone } from "../utils/inovito-phone.js";
 
-const callerSchema = z.object({
-  callerPhone: z.string().min(1).max(40),
-}).strict();
+const callerSchema = z
+  .object({
+    callerPhone: z.string().min(1).max(40),
+  })
+  .strict();
 
-const callEventSchema = callerSchema.extend({
-  providerCallId: z.string().min(4).max(150).regex(/^[a-zA-Z0-9:._-]+$/),
-  calledPhone: z.string().max(40).optional(),
-  status: z.enum(["ringing", "answered", "completed", "failed"]),
-  durationSeconds: z.number().int().min(0).max(86_400).optional(),
-  summary: z.string().max(2000).optional(),
-}).strict();
+const callEventSchema = callerSchema
+  .extend({
+    providerCallId: z
+      .string()
+      .min(4)
+      .max(150)
+      .regex(/^[a-zA-Z0-9:._-]+$/),
+    calledPhone: z.string().max(40).optional(),
+    status: z.enum(["ringing", "answered", "completed", "failed"]),
+    durationSeconds: z.number().int().min(0).max(86_400).optional(),
+    summary: z.string().max(2000).optional(),
+  })
+  .strict();
 
-const exclusionSchema = z.object({
-  phone: z.string().min(4).max(40),
-}).strict();
+const exclusionSchema = z
+  .object({
+    phone: z.string().min(4).max(40),
+  })
+  .strict();
 
-const customerAssociationSchema = z.object({
-  customerId: z.string().min(1).nullable(),
-}).strict();
+const customerAssociationSchema = z
+  .object({
+    customerId: z.string().min(1).nullable(),
+  })
+  .strict();
 
 const statusRank = {
   ringing: 1,
@@ -47,7 +55,7 @@ function equalsSecret(provided: unknown, expected: string): boolean {
 }
 
 /** Gateway-only. Does not use a user session and must not expose secrets. */
-async function requireVoiceGateway(
+function requireVoiceGateway(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -149,10 +157,10 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
         data: {
           status: event.status,
           eventRank: rank,
-          ...(event.durationSeconds !== undefined
-            ? { durationSeconds: event.durationSeconds }
-            : {}),
-          ...(event.summary !== undefined ? { summary: event.summary } : {}),
+          ...(event.durationSeconds === undefined
+            ? {}
+            : { durationSeconds: event.durationSeconds }),
+          ...(event.summary === undefined ? {} : { summary: event.summary }),
           ...(completedAt ? { completedAt } : {}),
         },
       });
@@ -175,7 +183,10 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch("/calls/:id/customer", {
     preHandler: [requirePermission({ customers: ["edit"] })],
-    schema: { tags: ["inovito-voice"], summary: "Link a verified customer to a call" },
+    schema: {
+      tags: ["inovito-voice"],
+      summary: "Link a verified customer to a call",
+    },
     handler: async (request, reply) => {
       const { id } = request.params as { id: string };
       const parsed = customerAssociationSchema.safeParse(request.body);
@@ -204,7 +215,10 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/exclusions", {
     preHandler: [requirePermission({ settings: ["view"] })],
-    schema: { tags: ["inovito-voice"], summary: "List numbers excluded from AI" },
+    schema: {
+      tags: ["inovito-voice"],
+      summary: "List numbers excluded from AI",
+    },
     handler: async (_request, reply) => {
       const numbers = await app.prisma.inovitoExcludedNumber.findMany({
         orderBy: { createdAt: "desc" },
@@ -215,7 +229,10 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/exclusions", {
     preHandler: [requirePermission({ settings: ["edit"] })],
-    schema: { tags: ["inovito-voice"], summary: "Exclude a number from voice AI" },
+    schema: {
+      tags: ["inovito-voice"],
+      summary: "Exclude a number from voice AI",
+    },
     handler: async (request, reply) => {
       const parsed = exclusionSchema.safeParse(request.body);
       if (!parsed.success) {
