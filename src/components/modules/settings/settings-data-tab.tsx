@@ -6,6 +6,7 @@ import {
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import KeymasterPreviewCard from "@/components/modules/settings/keymaster-preview-card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
@@ -20,7 +21,6 @@ import {
   readTableFile,
   remapChunkErrors,
 } from "@/lib/import-table";
-import KeymasterPreviewCard from "@/components/modules/settings/keymaster-preview-card";
 import { useSettingsStore } from "@/stores/settings";
 
 type Entity = "parts" | "repairs" | "jobs";
@@ -387,7 +387,9 @@ const ENTITIES: Entity[] = ["parts", "repairs", "jobs"];
 export default function SettingsDataTab() {
   const { t } = useTranslation();
   const [importEntity, setImportEntity] = useState<Entity>("parts");
-  const [importSource, setImportSource] = useState<"generic" | "keymaster">("generic");
+  const [importSource, setImportSource] = useState<"generic" | "keymaster">(
+    "generic"
+  );
 
   const entityLabel = (e: Entity) => t(ENTITY_LABELS[e]);
 
@@ -431,20 +433,20 @@ export default function SettingsDataTab() {
           <KeymasterPreviewCard />
         ) : (
           <>
-        <div className="mb-4 max-w-xs">
-          <Select
-            aria-label={t("data_io.import_what")}
-            onChange={(e) => setImportEntity(e.target.value as Entity)}
-            value={importEntity}
-          >
-            {ENTITIES.map((e) => (
-              <option key={e} value={e}>
-                {entityLabel(e)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <ImportCard entity={importEntity} />
+            <div className="mb-4 max-w-xs">
+              <Select
+                aria-label={t("data_io.import_what")}
+                onChange={(e) => setImportEntity(e.target.value as Entity)}
+                value={importEntity}
+              >
+                {ENTITIES.map((e) => (
+                  <option key={e} value={e}>
+                    {entityLabel(e)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <ImportCard entity={importEntity} />
           </>
         )}
       </section>
