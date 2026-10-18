@@ -4,8 +4,8 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import { createAuditLog } from "../services/audit.service.js";
-import { getUserId } from "../utils/request.js";
 import { syncKeymasterEntity } from "../services/keymaster-sync.service.js";
+import { getUserId } from "../utils/request.js";
 
 // This archive is deliberately separate from the live operational entities:
 // source IDs, duplicate customer phones, stock costs and unknown service
