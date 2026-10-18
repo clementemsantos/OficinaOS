@@ -1,3 +1,8 @@
+const PT_NATIONAL = /^[29]\\d{8}$/;
+const PT_COUNTRY_PREFIX = /^351[29]\\d{8}$/;
+const INTERNATIONAL_00 = /^00[1-9]\\d{7,14}$/;
+const INTERNATIONAL_PLUS = /^\\+[1-9]\\d{7,14}$/;
+
 /** Normalize phone numbers for voice gateway lookup.
  *  Reject withheld, malformed and unknown caller IDs — never guess an identity.
  */
