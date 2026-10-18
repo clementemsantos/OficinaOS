@@ -82,6 +82,7 @@ function required(value: string, fieldName: string): string {
   return value;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: audited mapping for five independent source entity types
 async function createOperational(
   tx: Prisma.TransactionClient,
   entity: KeymasterEntity,
@@ -89,7 +90,6 @@ async function createOperational(
   userId: string
 ): Promise<string> {
   const data = fields(source);
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: mapping of five audited Keymaster formats is kept together
   switch (entity) {
     case "customers": {
       const customer = await tx.customer.create({
