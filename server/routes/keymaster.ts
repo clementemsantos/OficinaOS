@@ -97,6 +97,58 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // Read-only browser for archived source rows, with paging. The imported
+  // records remain separate from operational customers, stock and jobs.
+  app.get(
+    "/import/keymaster/records",
+    { preHandler: guard },
+    async (req, reply) => {
+      if (!requireMisto()) {
+        return reply
+          .code(403)
+          .send({ message: "Disponível apenas no ambiente Misto." });
+      }
+      const query = z
+        .object({
+          entity: typeSchema,
+          page: z.coerce.number().int().min(1).max(100_000).default(1),
+        })
+        .safeParse(req.query);
+      if (!query.success) {
+        return reply.code(400).send({ message: "Consulta inválida." });
+      }
+      const where = {
+        sourceSystem: "KEYMASTER",
+        sourceEntity: query.data.entity,
+      };
+      const pageSize = 25;
+      const [total, items] = await Promise.all([
+        app.prisma.externalImportRecord.count({ where }),
+        app.prisma.externalImportRecord.findMany({
+          where,
+          orderBy: [{ sourceRow: "asc" }, { sourceId: "asc" }],
+          skip: (query.data.page - 1) * pageSize,
+          take: pageSize,
+          select: {
+            id: true,
+            sourceId: true,
+            sourceRow: true,
+            sourceFile: true,
+            headers: true,
+            values: true,
+          },
+        }),
+      ]);
+      return reply.send({
+        entity: query.data.entity,
+        page: query.data.page,
+        pageSize,
+        total,
+        items,
+      });
+    }
+  );
+
   app.post(
     "/import/keymaster/archive",
     { preHandler: guard, bodyLimit: 5 * 1024 * 1024 },
