@@ -289,7 +289,6 @@ export async function previewKeymasterFile(
   return inspectKeymasterRows(rows, file.name);
 }
 
-
 export interface KeymasterArchiveRecord {
   rowNumber: number;
   sourceId: string;
@@ -307,9 +306,13 @@ export interface KeymasterArchive {
  * Extract all original worksheet columns for archival staging, without
  * inferring missing phone numbers, unknown prices or customer associations.
  */
-export async function readKeymasterArchive(file: File): Promise<KeymasterArchive> {
+export async function readKeymasterArchive(
+  file: File
+): Promise<KeymasterArchive> {
   if (!XLSX.test(file.name) || file.size > MAX_FILE_BYTES) {
-    throw new Error("Selecione uma exportação Keymaster XLSX válida (até 10 MB).");
+    throw new Error(
+      "Selecione uma exportação Keymaster XLSX válida (até 10 MB)."
+    );
   }
   const rows = readKeymasterPreviewXlsx(await file.arrayBuffer());
   const preview = inspectKeymasterRows(rows, file.name);
@@ -318,7 +321,9 @@ export async function readKeymasterArchive(file: File): Promise<KeymasterArchive
     throw new Error("Tipo de exportação desconhecido.");
   }
   if (preview.missingReferences > 0 || preview.duplicateReferences > 0) {
-    throw new Error("O ficheiro tem referências vazias ou repetidas; corrija antes de importar.");
+    throw new Error(
+      "O ficheiro tem referências vazias ou repetidas; corrija antes de importar."
+    );
   }
   const headers = Array.from(rows[config.headerRow - 1] ?? [], (value) =>
     String(value ?? "")
