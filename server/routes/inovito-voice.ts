@@ -55,18 +55,17 @@ function equalsSecret(provided: unknown, expected: string): boolean {
 }
 
 /** Gateway-only. Does not use a user session and must not expose secrets. */
-// biome-ignore lint/suspicious/useAwait: Fastify async preHandler requires promise semantics, even without IO.
 async function requireVoiceGateway(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   const token = loadEnv().INOVITO_VOICE_TOKEN;
   if (!token) {
-    reply.code(503).send({ code: "INOVITO_VOICE_DISABLED" });
+    await reply.code(503).send({ code: "INOVITO_VOICE_DISABLED" });
     return;
   }
   if (!equalsSecret(request.headers["x-inovito-voice-token"], token)) {
-    reply.code(401).send({ code: "UNAUTHORIZED" });
+    await reply.code(401).send({ code: "UNAUTHORIZED" });
   }
 }
 
