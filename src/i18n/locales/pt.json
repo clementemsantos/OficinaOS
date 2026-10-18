@@ -2400,5 +2400,29 @@
     "copied": "Copiado",
     "copy_failed": "Não foi possível copiar",
     "jobs": "Reparações"
+  },
+  "inovito_voice": {
+    "title": "Inovito Voice",
+    "subtitle": "Chamadas comerciais e números excluídos da IA",
+    "refresh": "Atualizar",
+    "not_connected": "Atendimento telefónico ainda não ativado",
+    "not_connected_desc": "Este ecrã já pode receber registos do gateway; primeiro é necessário testar o desvio Amigo e o serviço de voz VoIP em separado.",
+    "calls": "Histórico de chamadas",
+    "loading": "A carregar chamadas...",
+    "no_calls": "Ainda não há chamadas comerciais registadas.",
+    "exclusions": "Números excluídos da IA",
+    "exclusions_explanation": "A IA não atenderá estes números quando a identificação do chamador chegar corretamente. O desvio da operadora pode ocorrer na mesma, pelo que é necessário definir um destino alternativo sem IA.",
+    "number": "Número de telefone (ex.: +351 912 345 678)",
+    "exclude": "Excluir número",
+    "remove": "Remover",
+    "no_exclusions": "Ainda não existem números excluídos.",
+    "load_error": "Não foi possível carregar a central de chamadas.",
+    "exclusion_saved": "Número excluído.",
+    "exclusion_removed": "Exclusão removida.",
+    "exclusion_error": "Não foi possível atualizar as exclusões.",
+    "status_ringing": "A chamar",
+    "status_answered": "Atendida pela IA",
+    "status_completed": "Concluída",
+    "status_failed": "Falhou"
   }
 }

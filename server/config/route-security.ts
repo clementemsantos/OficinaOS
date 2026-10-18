@@ -155,6 +155,18 @@ export const routeSecurity: [string, RouteSecurityOverride][] = [
     },
   ],
   ["/api/auth/*", { csrf: false, allowSensitiveKeys: true }],
+  // Gateway requests arrive without browser CSRF cookies, with an independent token.
+  [
+    "/api/inovito-voice/gateway/*",
+    {
+      csrf: false,
+      rateLimit: {
+        keyGenerator: lookupKeyGenerator,
+        max: 100,
+        timeWindow: "1 minute",
+      },
+    },
+  ],
   // First-run setup — unauthenticated by nature (no user exists yet), so it
   // is keyed on IP with a small budget. allowSensitiveKeys: the body carries
   // the new owner's password. CSRF stays on (the SPA fetches a token first).

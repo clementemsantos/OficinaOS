@@ -109,6 +109,9 @@ const schema = z
       .regex(GITHUB_REPO_REGEX, "must be owner/repo")
       .default("braindeadpt/OficinaOS"),
 
+    // ── Inovito Voice (disabled without token) ──────────────────
+    INOVITO_VOICE_TOKEN: secretString(40).optional(),
+
     // ── Timezone ──────────────────────────────────────────────
     TZ: z.string().optional(),
   })

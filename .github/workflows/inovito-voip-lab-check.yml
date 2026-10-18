@@ -1,0 +1,32 @@
+name: Inovito VoIP (sandbox validation)
+
+on:
+  pull_request:
+    paths:
+      - "infra/inovito-voip/**"
+      - ".github/workflows/inovito-voip-lab-check.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: bash -n infra/inovito-voip/start-lab.sh
+      - name: Validate Compose config without starting services
+        run: |
+          mkdir -p infra/inovito-voip/runtime
+          printf '[dummy]\n' > infra/inovito-voip/runtime/pjsip-peer.conf
+          docker compose -f infra/inovito-voip/compose.yml config --quiet
+      - name: Ensure SIP is bound to host loopback
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path("infra/inovito-voip/compose.yml").read_text()
+          assert '127.0.0.1:15060:5060/udp' in s
+          assert '8088:8088' not in s
+          assert '5060:5060/udp' in s
+          print("VoIP sandbox does not expose SIP/ARI publicly.")
+          PY
