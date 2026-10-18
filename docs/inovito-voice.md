@@ -46,3 +46,29 @@ A Vodafone é a prestadora do serviço Amigo, mas não há confirmação públic
 - Os registos são visíveis apenas a utilizadores autenticados com permissão apropriada.
 - O responsável pode gerir a lista de números excluídos.
 - Não existe ativação remota nem desvio do SIM neste ramo.
+
+## Contrato de API implementado neste ramo
+
+> NÃO configurar o gateway fora de ambiente de testes. O serviço responde 503 se INOVITO_VOICE_TOKEN não estiver definido. Os pedidos externos exigem HTTPS e header `x-inovito-voice-token` com o segredo configurado (pelo menos 40 caracteres aleatórios).
+
+- `POST /api/inovito-voice/gateway/decision`
+  `{"callerPhone":"+351912345678"}` → `{"allowAI":true,"reason":"allowed"}` ou `{"allowAI":false,"reason":"excluded"}`. Número oculto/inválido → `allowAI:false`. **O gateway é responsável por respeitar isto ANTES de enviar áudio à IA.**
+- `POST /api/inovito-voice/gateway/event`
+  `{"providerCallId":"test-001","callerPhone":"+351912345678","status":"completed","durationSeconds":55,"summary":"Pedido de informação sobre reparação"}`.
+  Estados: `ringing`, `answered`, `completed`, `failed`. ID único por chamada; eventos repetidos não criam novas linhas e eventos de ordem inferior não fazem regressar um estado terminal para `ringing`.
+- `GET /api/inovito-voice/calls` — utilizador autenticado com `customers:view`.
+- `PATCH /api/inovito-voice/calls/:id/customer` — atribuição manual de cliente validado; utilizador com `customers:edit`.
+- `GET /api/inovito-voice/exclusions` — `settings:view`.
+- `POST /api/inovito-voice/exclusions` — `{"phone":"+351912345678"}`, `settings:edit`, remove também registos anteriores desse número.
+- `DELETE /api/inovito-voice/exclusions/:id` — `settings:edit`.
+
+A página `/inovito-voice` permite consultar o histórico e gerir números excluídos. Apenas dados comerciais processados pelo gateway devem ser enviados para eventos.
+
+## Testes ainda obrigatórios antes de produção
+
+- `bun run db:generate` e `bun run db:migrate-deploy` na instalação de TESTES, com backup.
+- `bun run typecheck`, `bun run check` e `bun run test`. **Ainda não executados neste ramo**; requer ambiente Bun e instalação das dependências.
+- Teste manual de 30 segundos em número de TESTES e Caller ID real/oculto.
+- Teste de privacidade: número excluído nunca deve receber IA nem ser guardado, mesmo com webhook repetido.
+- Teste de separação de funções (técnico, atendimento, proprietário).
+- Testes de interrupção de áudio, transferência para humano, falhas de conectividade, consumo de API e limites de duração.
