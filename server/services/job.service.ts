@@ -390,6 +390,35 @@ async function remoteSignatureData(
   };
 }
 
+/** Only reuse a customer on intake when the phone uniquely identifies one. */
+async function resolveIntakeCustomer(
+  prisma: PrismaClient,
+  input: CreateJobInput
+) {
+  const email = input.customerEmail?.trim() || null;
+  const matched = await findByNormalizedPhone(
+    prisma,
+    normalizePhone(input.customerPhone)
+  );
+  const data = {
+    email,
+    name: input.customerName,
+    phone: input.customerPhone,
+  };
+  if (!matched) {
+    return await prisma.customer.create({ data });
+  }
+  return await customerUpsert(
+    prisma,
+    { id: matched.id },
+    {
+      name: input.customerName,
+      ...(email ? { email } : {}),
+    },
+    data
+  );
+}
+
 export async function create(
   prisma: PrismaClient,
   input: CreateJobInput,
@@ -423,29 +452,7 @@ export async function create(
     }
     customer = found;
   } else {
-    const email = input.customerEmail?.trim() || null;
-    const matched = await findByNormalizedPhone(
-      prisma,
-      normalizePhone(input.customerPhone)
-    );
-    const customerData = {
-      email,
-      name: input.customerName,
-      phone: input.customerPhone,
-    };
-    // Never silently choose one of several historical customers sharing a
-    // phone number. Only reuse an unambiguous match; otherwise create new.
-    customer = matched
-      ? await customerUpsert(
-          prisma,
-          { id: matched.id },
-          {
-            name: input.customerName,
-            ...(email ? { email } : {}),
-          },
-          customerData
-        )
-      : await prisma.customer.create({ data: customerData });
+    customer = await resolveIntakeCustomer(prisma, input);
   }
 
   let brandId = input.deviceBrandId;
