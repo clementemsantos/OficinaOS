@@ -34,6 +34,7 @@ const MarketPricesPage = lazy(() => import("@/pages/market-prices"));
 const JobsPage = lazy(() => import("@/pages/jobs"));
 const JobDetailPage = lazy(() => import("@/pages/jobs/detail"));
 const NotificationsPage = lazy(() => import("@/pages/notifications"));
+const InovitoVoicePage = lazy(() => import("@/pages/inovito-voice"));
 const PartsCatalogPage = lazy(() => import("@/pages/parts"));
 const PosPage = lazy(() => import("@/pages/pos"));
 const PreCheckPage = lazy(() => import("@/pages/pre-check"));
@@ -322,6 +323,18 @@ export default function App() {
               }
               path="/profile/:userId"
             />
+            <Route
+              element={<RequirePermission perm={{ customers: ["view"] }} />}
+            >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <InovitoVoicePage />
+                  </DashboardLayout>
+                }
+                path="/inovito-voice"
+              />
+            </Route>
             <Route
               element={<RequirePermission perm={{ customers: ["view"] }} />}
             >
