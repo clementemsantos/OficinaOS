@@ -225,10 +225,16 @@ export const inovitoVoiceRoutes: FastifyPluginAsync = async (app) => {
       if (!phone) {
         throw new AppError("VALIDATION_ERROR");
       }
-      const exclusion = await app.prisma.inovitoExcludedNumber.upsert({
-        where: { phone },
-        create: { phone },
-        update: {},
+      // When a number is marked personal, purge any earlier commercial
+      // call records for it so private history is not retained by mistake.
+      const exclusion = await app.prisma.$transaction(async (tx) => {
+        const entry = await tx.inovitoExcludedNumber.upsert({
+          where: { phone },
+          create: { phone },
+          update: {},
+        });
+        await tx.inovitoCall.deleteMany({ where: { callerPhone: phone } });
+        return entry;
       });
       return reply.send(exclusion);
     },
