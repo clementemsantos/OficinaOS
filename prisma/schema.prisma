@@ -272,6 +272,7 @@ model Customer {
   sales Sale[]
 
   tradeIns TradeIn[]
+  inovitoCalls InovitoCall[]
 
   @@index([email])
   @@map("customers")
@@ -1450,4 +1451,35 @@ model JobReferral {
   @@index([jobId])
   @@index([status])
   @@map("job_referrals")
+}
+
+ 
+// Inovito Voice — commercial calls only. Personal/excluded calls are never stored.
+model InovitoCall {
+  id              String    @id @default(cuid())
+  providerCallId  String    @unique
+  callerPhone     String
+  calledPhone     String?
+  status          String    @default("ringing")
+  durationSeconds Int?
+  summary         String?   @db.Text
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  startedAt       DateTime  @default(now()) @db.Timestamptz
+  completedAt     DateTime? @db.Timestamptz
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @db.Timestamptz
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@map("inovito_calls")
+}
+
+// Only a phone number is required. Never upload the Android contact book.
+model InovitoExcludedNumber {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@map("inovito_excluded_numbers")
 }
