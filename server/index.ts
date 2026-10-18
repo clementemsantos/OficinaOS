@@ -151,23 +151,29 @@ await app.register(websocketPlugin);
 );
 
 setAppInstance(app);
-const stopOverdue = startOverdueScheduler(app);
-const stopCloudPoller = startCloudPoller(app);
-const stopLowStock = startLowStockScheduler(app);
-const stopRemarketing = startRemarketingScheduler(app);
-const stopOutboxWorker = startOutboxWorker(app.prisma);
+// An isolated restore-test must never send queued customer messages, trigger
+// remarketing, poll cloud integrations or mutate historical tasks on startup.
+const isSandbox = process.env.OFICINAOS_SANDBOX === "true";
+const stopNoop = () => {};
+const stopOverdue = isSandbox ? stopNoop : startOverdueScheduler(app);
+const stopCloudPoller = isSandbox ? stopNoop : startCloudPoller(app);
+const stopLowStock = isSandbox ? stopNoop : startLowStockScheduler(app);
+const stopRemarketing = isSandbox ? stopNoop : startRemarketingScheduler(app);
+const stopOutboxWorker = isSandbox ? stopNoop : startOutboxWorker(app.prisma);
 const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
-const cleanupHandle = setInterval(() => {
+const cleanupHandle = isSandbox
+  ? null
+  : setInterval(() => {
+      cleanupReadNotifications(app.prisma).catch((err) => {
+        app.log.error(err, "Notification cleanup error");
+      });
+    }, CLEANUP_INTERVAL_MS);
+cleanupHandle?.unref();
+if (!isSandbox) {
   cleanupReadNotifications(app.prisma).catch((err) => {
-    app.log.error(err, "Notification cleanup error");
+    app.log.warn(err, "Initial notification cleanup skipped");
   });
-}, CLEANUP_INTERVAL_MS);
-if (cleanupHandle.unref) {
-  cleanupHandle.unref();
 }
-cleanupReadNotifications(app.prisma).catch((err) => {
-  app.log.warn(err, "Initial notification cleanup skipped");
-});
 
 app.addHook("onReady", async () => {
   await initValidationI18n();
@@ -219,13 +225,15 @@ const reconcileTasks = async () => {
     tasksRunning = false;
   }
 };
-const taskTimer = setInterval(reconcileTasks, 30_000);
-taskTimer.unref();
-app.addHook("onReady", reconcileTasks);
-app.addHook("onClose", () => {
-  clearInterval(taskTimer);
-  return Promise.resolve();
-});
+if (!isSandbox) {
+  const taskTimer = setInterval(reconcileTasks, 30_000);
+  taskTimer.unref();
+  app.addHook("onReady", reconcileTasks);
+  app.addHook("onClose", () => {
+    clearInterval(taskTimer);
+    return Promise.resolve();
+  });
+}
 app.register(referralsRoutes, { prefix: "/api" });
 app.register(dataIoRoutes, { prefix: "/api" });
 
@@ -300,7 +308,9 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
     stopLowStock();
     stopRemarketing();
     stopOutboxWorker();
-    clearInterval(cleanupHandle);
+    if (cleanupHandle) {
+      clearInterval(cleanupHandle);
+    }
     mdns?.close();
     await app.close();
     process.exit(0);
