@@ -25,6 +25,8 @@ interface LegacyResult {
   total: number;
 }
 
+const XLSX_FILE = /\.xlsx$/i;
+
 const COLUMNS = [
   "Nº Folha Obra",
   "Data original",
@@ -41,7 +43,9 @@ function spreadsheetRows(matrix: unknown[][]): LegacyRow[] {
   const header = (matrix[0] ?? []).map((x) => String(x ?? "").trim());
   const indexes = COLUMNS.map((name) => header.indexOf(name));
   if (indexes.some((idx) => idx === -1)) {
-    throw new Error("Faltam colunas. Utiliza o ficheiro das folhas de obra preparado para o Misto.");
+    throw new Error(
+      "Faltam colunas. Utiliza o ficheiro das folhas de obra preparado para o Misto."
+    );
   }
   const rows: LegacyRow[] = [];
   for (const values of matrix.slice(1)) {
@@ -88,7 +92,7 @@ export default function KeymasterJobsImportCard() {
     setFileName(file.name);
     setRows([]);
     try {
-      if (!/\.xlsx$/i.test(file.name)) {
+      if (!XLSX_FILE.test(file.name)) {
         throw new Error("Seleciona o Excel .xlsx da listagem de obras.");
       }
       const parsed = spreadsheetRows(
@@ -96,7 +100,9 @@ export default function KeymasterJobsImportCard() {
       );
       setRows(parsed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível ler o Excel.");
+      setError(
+        err instanceof Error ? err.message : "Não foi possível ler o Excel."
+      );
     }
   };
 
@@ -107,16 +113,21 @@ export default function KeymasterJobsImportCard() {
     setBusy(true);
     setError("");
     try {
-      const response = await api.post<LegacyResult>("/import/keymaster/jobs-list", {
-        rows,
-        dryRun,
-      });
+      const response = await api.post<LegacyResult>(
+        "/import/keymaster/jobs-list",
+        {
+          rows,
+          dryRun,
+        }
+      );
       if (dryRun) {
         setPreview(response.data);
       } else {
         setResult(response.data);
         setPreview(null);
-        toast.success("Importação das folhas de obra terminada. Confirma as contagens.");
+        toast.success(
+          "Importação das folhas de obra terminada. Confirma as contagens."
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha na importação.");
@@ -192,7 +203,10 @@ export default function KeymasterJobsImportCard() {
           {summary.issues.length > 0 && (
             <div className="mt-2">
               {summary.issues.map((issue) => (
-                <p className="text-on-surface-variant text-xs" key={issue.jobRef}>
+                <p
+                  className="text-on-surface-variant text-xs"
+                  key={issue.jobRef}
+                >
                   {issue.jobRef}: {issue.reason}
                 </p>
               ))}
