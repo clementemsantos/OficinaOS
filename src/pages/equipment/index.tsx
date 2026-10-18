@@ -116,9 +116,9 @@ export default function EquipmentPage() {
                     <td className="p-2">
                       {item.customer ? (
                         <Link
-                            className="text-primary underline"
-                            to={`/customers/${item.customer.id}`}
-                          >
+                          className="text-primary underline"
+                          to={`/customers/${item.customer.id}`}
+                        >
                           {item.customer.name}
                         </Link>
                       ) : (
