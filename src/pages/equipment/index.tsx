@@ -63,8 +63,9 @@ export default function EquipmentPage() {
           Equipamentos
         </h1>
         <p className="mt-1 text-on-surface-variant text-sm">
-          Equipamentos físicos da loja, incluindo referências históricas do Keymaster.
-          A associação a clientes em falta deve ser confirmada manualmente.
+          Equipamentos físicos da loja, incluindo referências históricas do
+          Keymaster. A associação a clientes em falta deve ser confirmada
+          manualmente.
         </p>
       </div>
       <form
@@ -104,14 +105,20 @@ export default function EquipmentPage() {
               <tbody>
                 {result.items.map((item) => (
                   <tr className="border-outline-variant border-b" key={item.id}>
-                    <td className="p-2">{item.sourceSystem}: {item.sourceId}</td>
                     <td className="p-2">
-                      {[item.brand, item.model].filter(Boolean).join(" ") || "—"}
+                      {item.sourceSystem}: {item.sourceId}
+                    </td>
+                    <td className="p-2">
+                      {[item.brand, item.model].filter(Boolean).join(" ") ||
+                        "—"}
                     </td>
                     <td className="p-2">{item.serialNumber || "—"}</td>
                     <td className="p-2">
                       {item.customer ? (
-                        <Link className="text-primary underline" to={`/customers/${item.customer.id}`}>
+                        <Link
+                            className="text-primary underline"
+                            to={`/customers/${item.customer.id}`}
+                          >
                           {item.customer.name}
                         </Link>
                       ) : (
