@@ -154,7 +154,7 @@ setAppInstance(app);
 // An isolated restore-test must never send queued customer messages, trigger
 // remarketing, poll cloud integrations or mutate historical tasks on startup.
 const isSandbox = process.env.OFICINAOS_SANDBOX === "true";
-const stopNoop = () => {};
+const stopNoop = () => undefined;
 const stopOverdue = isSandbox ? stopNoop : startOverdueScheduler(app);
 const stopCloudPoller = isSandbox ? stopNoop : startCloudPoller(app);
 const stopLowStock = isSandbox ? stopNoop : startLowStockScheduler(app);
