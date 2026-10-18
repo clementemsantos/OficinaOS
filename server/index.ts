@@ -30,6 +30,7 @@ import { healthRoutes } from "./routes/health.js";
 import { intakeRequestsRoutes } from "./routes/intake-requests.js";
 import { invoicingRoutes } from "./routes/invoicing.js";
 import { jobRoutes } from "./routes/jobs.js";
+import { keymasterRoutes } from "./routes/keymaster.js";
 import { marketPricesRoutes } from "./routes/market-prices.js";
 import { notificationsRoutes } from "./routes/notifications.js";
 import { partRequestsRoutes } from "./routes/part-requests.js";
@@ -236,6 +237,7 @@ if (!isSandbox) {
 }
 app.register(referralsRoutes, { prefix: "/api" });
 app.register(dataIoRoutes, { prefix: "/api" });
+app.register(keymasterRoutes, { prefix: "/api" });
 
 if (IS_PROD) {
   const distRoot = path.resolve("dist");
