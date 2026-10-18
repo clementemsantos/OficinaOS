@@ -32,6 +32,61 @@
      completa ao fornecedor caso a interface não permita descarregar.
    - Referência sobre módulos: https://www.keymaster.pt/oficinas-auto-software/
 
+## Keymaster — requisitos obrigatórios confirmados pela loja (18/10/2026)
+
+**A referência antiga, os estados, as notas e os ficheiros são informação
+essencial e não podem ser perdidos, concatenados de modo irreversível ou
+omitidos na migração.** Incluir tanto obras abertas como concluídas.
+
+| Dado de origem | Preservação no OficinaOS | Regra de validação |
+| --- | --- | --- |
+| ID interno Keymaster + número visível da obra (ex. `2026/253`) | Identificador externo com origem `KEYMASTER`, código original pesquisável e ligação à obra | Reimportar o mesmo registo não pode criar duplicado; não alterar a referência apresentada |
+| Estado atual + todas as transições existentes | Estado operacional mapeado e estado literal original; eventos históricos com data, autor e observação | Desconhecidos ficam `por mapear`, nunca fingir que foram entregues/concluídos |
+| Notas, observações, diagnóstico, mensagens e decisões | Registos cronológicos separados, ordenados por data, com visibilidade privada por defeito | Guardar texto integral, origem, autor original e data se disponíveis; não divulgar automaticamente no portal do cliente |
+| Fotografias, vídeos, PDF, orçamentos, assinaturas e outros documentos | Arquivos físicos no volume de anexos do Misto e metadados associados à obra correspondente | Confirmar byte size, tipo, checksum SHA-256, nome original e ligação à obra; nunca considerar simples URL expirável como ficheiro importado |
+
+Outros campos que devem acompanhar cada reparação: cliente, contactos,
+equipamento/modelo/serial, problema, acessórios, data de entrada, prazos,
+técnico, orçamento dado e aprovado, peças usadas/encomendadas, custo,
+pagamentos, data de conclusão/entrega e documentos fiscais históricos.
+Respeitar consentimento e proteger dados sensíveis (códigos de desbloqueio
+e palavras-passe **não devem entrar em notas públicas**).
+
+**Lacunas técnicas que têm de ser resolvidas ANTES de importar o histórico:**
+
+- `Job.externalRef` existe e é único globalmente; para três origens,
+  definir chave composta `(sourceSystem, sourceEntity, sourceId)` em
+  tabela de proveniência, não assumir referências independentes únicas.
+- `Job.status` tem enum operacional reduzido; os estados personalizados
+  Keymaster precisam de um mapeamento configurável E de preservação
+  integral do valor e das transições históricas.
+- `JobNote` guarda conteúdo/data/autor de sistema e visibilidade. Exige
+  adaptação para preservar **autor externo, data original e fonte** sem
+  atribuir falsamente autoria ao técnico que executa a importação.
+- `JobPhoto` apenas guarda caminho/data/tipo de fotografia. Criar módulo
+  de **anexos genéricos** com MIME, nome original, tamanho, checksum,
+  origem e permissões, ligado à reparação; importar vídeo/PDF/documentos
+  como documentos, não como fotos falsas.
+- A rota atual `/api/import/jobs` só suporta campos-base de ficha,
+  não importa o histórico detalhado ou os anexos. **Não utilizar**
+  essa rota para fazer uma migração supostamente completa.
+- Exigir `dry-run` com relatório por obra: referências, número de
+  eventos de estado, notas e ficheiros esperados vs. importados, faltas,
+  erros, checksums e casos de correspondência ambígua.
+- Suportar importação reiniciável por lotes e auditoria de origem.
+  Em caso de falha, não deixar anexos órfãos nem obras parcialmente
+  importadas sem marcação explícita; aceitar retoma idempotente.
+
+**Como obter dados:** confirmar primeiro se a interface Keymaster
+permite exportar obras, estados, observações e galeria/media.
+A documentação comercial confirma que o produto armazena fotos,
+vídeos, notas e documentos ligados às obras, **mas não documenta
+uma exportação integral destes artefactos**. Se não houver função de
+exportação, solicitar ao suporte um pacote exportado com metadados
+(CSV/XLSX/JSON, conforme disponível) e ficheiros binários (ZIP) com
+manifesto `id_obra / id_ficheiro / nome`. Não presumir acesso à API
+nem efetuar recolha automática de portal privado sem método autorizado.
+
 ## Princípios de integração
 
 - Destino inicial **oficinaos-misto** (:4002) em sandbox, nunca a produção (:4000)
