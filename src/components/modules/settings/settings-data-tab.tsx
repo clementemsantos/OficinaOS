@@ -20,6 +20,7 @@ import {
   readTableFile,
   remapChunkErrors,
 } from "@/lib/import-table";
+import KeymasterPreviewCard from "@/components/modules/settings/keymaster-preview-card";
 import { useSettingsStore } from "@/stores/settings";
 
 type Entity = "parts" | "repairs" | "jobs";
@@ -386,6 +387,7 @@ const ENTITIES: Entity[] = ["parts", "repairs", "jobs"];
 export default function SettingsDataTab() {
   const { t } = useTranslation();
   const [importEntity, setImportEntity] = useState<Entity>("parts");
+  const [importSource, setImportSource] = useState<"generic" | "keymaster">("generic");
 
   const entityLabel = (e: Entity) => t(ENTITY_LABELS[e]);
 
@@ -413,6 +415,23 @@ export default function SettingsDataTab() {
           {t("data_io.import_hint")}
         </p>
         <div className="mb-4 max-w-xs">
+          <Field label={t("data_io.source_label")}>
+            <Select
+              onChange={(e) =>
+                setImportSource(e.target.value as "generic" | "keymaster")
+              }
+              value={importSource}
+            >
+              <option value="generic">{t("data_io.source_generic")}</option>
+              <option value="keymaster">Keymaster</option>
+            </Select>
+          </Field>
+        </div>
+        {importSource === "keymaster" ? (
+          <KeymasterPreviewCard />
+        ) : (
+          <>
+        <div className="mb-4 max-w-xs">
           <Select
             aria-label={t("data_io.import_what")}
             onChange={(e) => setImportEntity(e.target.value as Entity)}
@@ -426,6 +445,8 @@ export default function SettingsDataTab() {
           </Select>
         </div>
         <ImportCard entity={importEntity} />
+          </>
+        )}
       </section>
 
       <section>
