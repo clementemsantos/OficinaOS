@@ -214,7 +214,10 @@ const authPlugin: FastifyPluginAsync = async (app) => {
       pathname === "/api/setup" ||
       pathname === "/api/setup/status" ||
       pathname.startsWith("/api/jobs/lookup") ||
-      pathname.startsWith("/api/public")
+      pathname.startsWith("/api/public") ||
+      // Voice gateway uses a separate long shared secret, never session cookies.
+      pathname === "/api/inovito-voice/gateway/decision" ||
+      pathname === "/api/inovito-voice/gateway/event"
     ) {
       return;
     }
