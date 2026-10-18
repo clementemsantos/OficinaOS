@@ -2429,6 +2429,7 @@
     "keymaster_title": "Keymaster — export validation",
     "keymaster_preview_desc": "Choose the exported Excel files for customers, equipment, suppliers, services and stock. This step only checks structure and source references; it does not import any records.",
     "keymaster_pick_files": "Check Keymaster files...",
+    "keymaster_progress": "Checking {{current}} of {{total}}: {{file}}",
     "keymaster_file": "File",
     "keymaster_type": "Data type",
     "keymaster_rows": "Rows",
