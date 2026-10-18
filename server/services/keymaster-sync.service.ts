@@ -137,9 +137,13 @@ async function createOperational(
       const price = amount(field(data, "PVP UNITÁRIO", "PVP"));
       // RepairCatalog still requires a numeric default. Distinguish
       // UNKNOWN from an actual 0 price with the new priceKnown flag.
+      const existingName = await tx.repairCatalog.findUnique({
+        where: { name: label },
+        select: { id: true },
+      });
       const service = await tx.repairCatalog.create({
         data: {
-          name: `${label} [KM ${source.sourceId}]`,
+          name: existingName ? `${label} [KM ${source.sourceId}]` : label,
           category: "OTHER",
           defaultPrice: price ?? 0,
           priceKnown: price !== null,
@@ -200,6 +204,7 @@ export async function syncKeymasterEntity(
       sourceSystem: "KEYMASTER",
       sourceEntity: entity,
       operationalId: null,
+      syncError: null,
     },
     select: {
       id: true,
@@ -234,11 +239,15 @@ export async function syncKeymasterEntity(
         });
         created++;
       });
-    } catch {
-      errors.push({
-        reference: source.sourceId,
-        reason: "Incompatibilidade de dados: consultar o registo original.",
+    } catch (error) {
+      const reason = error instanceof Error && error.message.startsWith("Campo obrigatório")
+        ? error.message
+        : "Incompatibilidade de dados: consultar o registo original.";
+      await prisma.externalImportRecord.update({
+        where: { id: source.id },
+        data: { syncError: reason },
       });
+      errors.push({ reference: source.sourceId, reason });
     }
   }
   const remaining = await prisma.externalImportRecord.count({
@@ -246,6 +255,7 @@ export async function syncKeymasterEntity(
       sourceSystem: "KEYMASTER",
       sourceEntity: entity,
       operationalId: null,
+      syncError: null,
     },
   });
   return { created, errors, remaining };
