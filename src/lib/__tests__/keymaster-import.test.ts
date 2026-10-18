@@ -121,7 +121,6 @@ describe("Keymaster export preview", () => {
   });
 });
 
-
 describe("Keymaster fast XLSX preview reader", () => {
   it("reads the original worksheet row numbers and inline string values", () => {
     const sheet = [
@@ -135,7 +134,7 @@ describe("Keymaster fast XLSX preview reader", () => {
       '<c r="D3" t="inlineStr"><is><t>João &amp; Filhos</t></is></c></row>',
       '<row r="4"><c r="B4" t="inlineStr"><is><t>102</t></is></c>',
       '<c r="D4" t="inlineStr"><is><t>Cliente B</t></is></c></row>',
-      '</sheetData></worksheet>',
+      "</sheetData></worksheet>",
     ].join("");
     const archive = zipSync({
       "xl/worksheets/sheet1.xml": strToU8(sheet),
