@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 
 const querySchema = z.object({
-  page: z.coerce.number().int().min(1).max(10000).default(1),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
   search: z.string().trim().max(100).optional(),
 });
 
@@ -24,7 +24,9 @@ export const equipmentRoutes: FastifyPluginAsync = async (app) => {
             { brand: { contains: search, mode: "insensitive" as const } },
             { model: { contains: search, mode: "insensitive" as const } },
             { sourceId: { contains: search, mode: "insensitive" as const } },
-            { serialNumber: { contains: search, mode: "insensitive" as const } },
+            {
+              serialNumber: { contains: search, mode: "insensitive" as const },
+            },
           ],
         }
       : {};
