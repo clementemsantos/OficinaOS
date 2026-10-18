@@ -1,7 +1,6 @@
 
 import crypto from "node:crypto";
-import { AuditAction } from "@generated/client";
-import type { PrismaClient } from "@generated/client";
+import { AuditAction, type PrismaClient } from "@generated/client";
 import { generateJobCode } from "../utils/job-code.js";
 
 // Preserves the list supplied by the shop, but does NOT claim that it
@@ -39,6 +38,7 @@ const CLOCK = /^(\d{2}):(\d{2})$/;
 const MONEY = /^(\d{1,8}),([0-9]{2})$/;
 const UNCLASSIFIED_BRAND = "Keymaster (por classificar)";
 const RAW_FAULT = "Avaria não indicada na listagem importada do Keymaster.";
+const EURO_TOKEN = /\s*€/g;
 
 function normalize(value: string): string {
   return value
@@ -50,7 +50,7 @@ function normalize(value: string): string {
 }
 
 function money(raw: string): number | null {
-  const match = MONEY.exec(raw.trim().replace(/\s*€/g, ""));
+  const match = MONEY.exec(raw.trim().replace(EURO_TOKEN, ""));
   return match ? Number(match[1]) + Number(match[2]) / 100 : null;
 }
 
@@ -93,10 +93,9 @@ function sourceDate(row: KeymasterJobRow): Date | null {
   return new Date(naive.getTime() - Number(offset[1] ?? 0) * 3_600_000);
 }
 
-function mappedStatus(sourceStatus: string):
-  | "DONE"
-  | "WAITING_FOR_PARTS"
-  | "ON_HOLD" {
+function mappedStatus(
+  sourceStatus: string
+): "DONE" | "WAITING_FOR_PARTS" | "ON_HOLD" {
   const value = normalize(sourceStatus);
   if (value.includes("concluido") && value.includes("recolha")) {
     return "DONE";
@@ -115,7 +114,9 @@ function mappedStatus(sourceStatus: string):
 
 function provenance(row: KeymasterJobRow): string {
   const year = REFERENCE.exec(row.jobRef)?.[1];
-  const assumed = row.dateOriginal.includes(year ?? "/") ? "" : " (ano inferido do nº da obra)";
+  const assumed = row.dateOriginal.includes(year ?? "/")
+    ? ""
+    : " (ano inferido do nº da obra)";
   return [
     "Dados importados de uma LISTAGEM RESUMIDA do Keymaster.",
     "NÃO contém diagnóstico, histórico completo, pagamentos nem anexos.",
@@ -133,7 +134,13 @@ function validateRow(row: KeymasterJobRow): string | null {
   if (!REFERENCE.test(row.jobRef)) {
     return "Número de folha inválido.";
   }
-  if (!(row.customerName.trim() && row.deviceName.trim() && row.sourceStatus.trim())) {
+  if (
+    !(
+      row.customerName.trim() &&
+      row.deviceName.trim() &&
+      row.sourceStatus.trim()
+    )
+  ) {
     return "Cliente, equipamento ou estado em falta.";
   }
   if (row.deviceName.length > 120) {
@@ -148,7 +155,12 @@ function validateRow(row: KeymasterJobRow): string | null {
   return null;
 }
 
-type PreparedRow = { row: KeymasterJobRow; customerId: string; createdAt: Date; price: number };
+type PreparedRow = {
+  row: KeymasterJobRow;
+  customerId: string;
+  createdAt: Date;
+  price: number;
+};
 
 async function assess(prisma: PrismaClient, rows: KeymasterJobRow[]) {
   const references = rows.map((row) => `KEYMASTER:${row.jobRef.trim()}`);
@@ -254,7 +266,8 @@ export async function importKeymasterJobs(
           const identity = await generateJobCode(tx as PrismaClient);
           const job = await tx.job.create({
             data: {
-              accessCode: identity.accessCode || crypto.randomBytes(8).toString("hex"),
+              accessCode:
+                identity.accessCode || crypto.randomBytes(8).toString("hex"),
               jobCode: identity.jobCode,
               externalRef,
               customerId: item.customerId,
