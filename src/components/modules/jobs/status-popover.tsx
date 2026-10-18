@@ -11,6 +11,7 @@ import { WorkflowStateControl } from "@/components/modules/tasks/record-workflow
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useModalEffects } from "@/hooks/use-modal-effects";
@@ -312,9 +313,9 @@ export default function StatusPopover({
                 />
                 <StatusBadge status={pending} />
               </div>
-              <label className="sr-only" htmlFor="status-reason">
+              <Label className="sr-only" htmlFor="status-reason">
                 {t("jobs_status_change_reason_label")}
-              </label>
+              </Label>
               <textarea
                 aria-describedby={error ? "status-reason-error" : undefined}
                 aria-invalid={!!error}
