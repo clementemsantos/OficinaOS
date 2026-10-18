@@ -20,13 +20,13 @@ export type KeymasterEntity =
   | "services"
   | "stock";
 
-type KeymasterSheetConfig = {
+interface KeymasterSheetConfig {
   entity: KeymasterEntity;
-  marker: string;
   headerRow: number;
   idColumn: number;
+  marker: string;
   requiredHeaders: string[];
-};
+}
 
 const CONFIGS: KeymasterSheetConfig[] = [
   {
@@ -67,17 +67,17 @@ const CONFIGS: KeymasterSheetConfig[] = [
 ];
 
 export interface KeymasterPreview {
-  sourceSystem: "KEYMASTER";
+  duplicateReferences: number;
   entity: KeymasterEntity;
   fileName: string;
   headerRow: number;
-  recordCount: number;
-  missingReferences: number;
-  duplicateReferences: number;
   /** Records that cannot be directly associated with a customer. */
   missingCustomerLinks: number;
   /** Records without a selling price (not treated as a zero price). */
   missingPrices: number;
+  missingReferences: number;
+  recordCount: number;
+  sourceSystem: "KEYMASTER";
 }
 
 const NON_ALNUM = /[^A-Z0-9]/g;
@@ -101,7 +101,9 @@ export function inspectKeymasterRows(
   const marker = valueAt(rows[0] ?? [], 30).toUpperCase();
   const config = CONFIGS.find((c) => c.marker === marker);
   if (!config) {
-    throw new Error("Ficheiro não reconhecido como uma das cinco exportações Keymaster.");
+    throw new Error(
+      "Ficheiro não reconhecido como uma das cinco exportações Keymaster."
+    );
   }
 
   const header = rows[config.headerRow - 1] ?? [];
@@ -111,12 +113,14 @@ export function inspectKeymasterRows(
       (needed) => !headers.has(normalizeHeader(needed))
     )
   ) {
-    throw new Error("As colunas deste ficheiro não correspondem ao modelo Keymaster esperado.");
+    throw new Error(
+      "As colunas deste ficheiro não correspondem ao modelo Keymaster esperado."
+    );
   }
 
-  const records = rows.slice(config.headerRow).filter((r) =>
-    r.some((cell) => String(cell ?? "").trim() !== "")
-  );
+  const records = rows
+    .slice(config.headerRow)
+    .filter((r) => r.some((cell) => String(cell ?? "").trim() !== ""));
   if (records.length > MAX_IMPORT_ROWS) {
     throw new ImportFileError("data_io.too_many_rows");
   }
@@ -160,7 +164,9 @@ export function inspectKeymasterRows(
 const XLSX = /\.xlsx$/i;
 
 /** Browser-only preview — never uploads customers or suppliers to a server. */
-export async function previewKeymasterFile(file: File): Promise<KeymasterPreview> {
+export async function previewKeymasterFile(
+  file: File
+): Promise<KeymasterPreview> {
   if (!XLSX.test(file.name)) {
     throw new Error("As exportações Keymaster devem estar em formato .xlsx.");
   }
