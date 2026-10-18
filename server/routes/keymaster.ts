@@ -17,7 +17,13 @@ const ENTITY_CONFIG = {
   stock: { idColumn: 4, required: ["REF.", "DESCRIÇÃO DA PEÇA"] },
 } as const;
 
-const types = ["customers", "equipment", "suppliers", "services", "stock"] as const;
+const types = [
+  "customers",
+  "equipment",
+  "suppliers",
+  "services",
+  "stock",
+] as const;
 const typeSchema = z.enum(types);
 const recordSchema = z.object({
   sourceId: z.string().trim().min(1).max(200),
@@ -31,10 +37,28 @@ const chunkSchema = z.object({
   records: z.array(recordSchema).min(1).max(50),
 });
 const normal = (text: string) =>
-  text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 
 function requireMisto() {
   return process.env.OFICINAOS_SANDBOX === "true";
+}
+
+function invalidReferences(
+  records: z.infer<typeof recordSchema>[],
+  idColumn: number
+): boolean {
+  const ids = new Set<string>();
+  for (const row of records) {
+    if (row.values[idColumn]?.trim() !== row.sourceId || ids.has(row.sourceId)) {
+      return true;
+    }
+    ids.add(row.sourceId);
+  }
+  return false;
 }
 
 // All routes are OWNER-only. The sandbox guard prevents accidentally enabling
@@ -43,9 +67,14 @@ function requireMisto() {
 export const keymasterRoutes: FastifyPluginAsync = async (app) => {
   const guard = requirePermission({ settings: ["edit"] });
 
-  app.get("/import/keymaster/status", { preHandler: guard }, async (_req, reply) => {
+  app.get(
+    "/import/keymaster/status",
+    { preHandler: guard },
+    async (_req, reply) => {
     if (!requireMisto()) {
-      return reply.code(403).send({ message: "Disponível apenas no ambiente Misto." });
+      return reply
+        .code(403)
+        .send({ message: "Disponível apenas no ambiente Misto." });
     }
     const groups = await app.prisma.externalImportRecord.groupBy({
       by: ["sourceEntity"],
@@ -58,7 +87,10 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
         counts[group.sourceEntity] = group._count._all;
       }
     }
-    return reply.send({ counts, total: Object.values(counts).reduce((a, b) => a + b, 0) });
+    return reply.send({
+        counts,
+        total: Object.values(counts).reduce((a, b) => a + b, 0),
+      });
   });
 
   app.post(
@@ -70,27 +102,31 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
       }
       const parsed = chunkSchema.safeParse(req.body);
       if (!parsed.success) {
-        return reply.code(400).send({ message: "Lote inválido: revise colunas, referências ou tamanho." });
+        return reply
+          .code(400)
+          .send({ message: "Lote inválido: revise colunas, referências ou tamanho." });
       }
       const { entity, headers, records, sourceFile } = parsed.data;
       const config = ENTITY_CONFIG[entity];
       const headerSet = new Set(headers.map(normal));
       if (config.required.some((column) => !headerSet.has(normal(column)))) {
-        return reply.code(400).send({ message: "Cabeçalhos Keymaster não reconhecidos." });
+        return reply
+          .code(400)
+          .send({ message: "Cabeçalhos Keymaster não reconhecidos." });
       }
-      const ids = new Set<string>();
-      for (const row of records) {
-        if (
-          row.values[config.idColumn]?.trim() !== row.sourceId ||
-          ids.has(row.sourceId)
-        ) {
-          return reply.code(400).send({ message: "Referência vazia, repetida ou incoerente no lote." });
-        }
-        ids.add(row.sourceId);
+      if (invalidReferences(records, config.idColumn)) {
+        return reply
+          .code(400)
+          .send({ message: "Referência vazia, repetida ou incoerente no lote." });
       }
+      const ids = records.map((r) => r.sourceId);
 
       const original = await app.prisma.externalImportRecord.findMany({
-        where: { sourceSystem: "KEYMASTER", sourceEntity: entity, sourceId: { in: [...ids] } },
+        where: {
+          sourceSystem: "KEYMASTER",
+          sourceEntity: entity,
+          sourceId: { in: ids },
+        },
         select: { sourceId: true, checksum: true },
       });
       const seen = new Map(original.map((r) => [r.sourceId, r.checksum]));
@@ -108,7 +144,7 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
       }));
       let unchanged = 0;
       let conflicts = 0;
-      const candidates = [];
+      const candidates: typeof incoming = [];
       for (const record of incoming) {
         const oldHash = seen.get(record.sourceId);
         if (oldHash === undefined) {
