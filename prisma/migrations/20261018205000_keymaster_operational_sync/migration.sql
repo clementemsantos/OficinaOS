@@ -6,7 +6,8 @@ CREATE INDEX IF NOT EXISTS "customers_phone_idx" ON "customers"("phone");
 
 ALTER TABLE "external_import_records"
   ADD COLUMN IF NOT EXISTS "operationalId" TEXT,
-  ADD COLUMN IF NOT EXISTS "syncedAt" TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS "syncedAt" TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS "syncError" TEXT;
 
 ALTER TABLE "parts_catalog"
   ADD COLUMN IF NOT EXISTS "acquisitionCost" DECIMAL(10, 2),
