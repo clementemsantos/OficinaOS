@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import("@/pages/auth/login"));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password"));
 const SetupPage = lazy(() => import("@/pages/auth/setup"));
 const CustomersPage = lazy(() => import("@/pages/customers"));
+const EquipmentPage = lazy(() => import("@/pages/equipment"));
 const CustomerDetailPage = lazy(() => import("@/pages/customers/detail"));
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FrontDeskPage = lazy(() => import("@/pages/dashboard/front-desk"));
@@ -386,6 +387,16 @@ export default function App() {
               }
               path="/profile/:userId"
             />
+            <Route element={<RequirePermission perm={{ jobs: ["view"] }} />}>
+              <Route
+                element={
+                  <DashboardLayout>
+                    <EquipmentPage />
+                  </DashboardLayout>
+                }
+                path="/equipment"
+              />
+            </Route>
             <Route
               element={<RequirePermission perm={{ customers: ["view"] }} />}
             >
