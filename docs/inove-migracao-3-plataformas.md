@@ -2,6 +2,59 @@
 
 **Estado: levantamento / preparação. Nenhuma importação destas plataformas foi efetuada.**
 
+## Decisão confirmada: migração INTEGRAL de reparações Keymaster (18/10/2026)
+
+**O OficinaOS Misto é o destino principal.** A loja confirmou que devem ser
+migradas **todas as obras de reparação**, não só 18 referências partilhadas:
+**63 em curso** no momento da consulta, mais **todas as concluídas**, de
+qualquer ano que ainda esteja disponível. A contagem definitiva de obras
+fechadas ainda não foi fornecida; a contagem 63 pode variar enquanto o
+Keymaster estiver a ser utilizado.
+
+**Obrigatório por obra:**
+- ID imutável e referência visível (ex. `2026/255`), cliente e equipamento
+  por ID de origem, entrada, previsão, conclusão e entrega, técnicos,
+  sintomas, orçamentos e decisões, valores e pagamentos históricos;
+- estado atual *e* cronologia de todas as transições com datas e autores
+  originais, preservando nomes dos estados personalizados do Keymaster;
+- texto integral de notas/diagnósticos/observações, autores, datas e
+  visibilidade privada por defeito;
+- todos os ficheiros disponíveis (fotos, vídeos, PDF, assinaturas, orçamentos,
+  documentos), incluindo binários físicos, nomes originais, MIME, tamanho,
+  checksums e ligação inequívoca à obra.
+
+**Exportação necessária do Keymaster:** pacotes estruturados `obras`,
+`historico_estados`, `notas` e `anexos_manifesto` (CSV/XLSX/JSON
+segundo a possibilidade real), bem como `anexos.zip`/transferência de
+binários. Caso não haja exportação disponível na UI de Migração de Dados
+(onde foram mostrados apenas cinco cadastros), solicitar ao suporte
+**info@keymaster.pt** um arquivo/backup **completo**, dicionário de
+relações, data-limite de retenção dos anexos e entrega segura.
+
+**Urgência de preservação:** os termos do Keymaster no módulo Folha de
+Obra Digital mencionam até *três anos de histórico das galerias*, período
+extensível mediante contratação. A disponibilidade histórica efetiva
+deve ser confirmada diretamente com o fornecedor, e o pedido deve
+abranger **todos os ficheiros ainda existentes**, inclusive anteriores
+a três anos. Fonte: https://www.keymaster.pt/termos-e-condicoes/ .
+
+**Não executar a migração através de `/api/import/jobs` ou do importador
+genérico:** não preservam a cronologia, notas e anexos completos. A fonte
+Keymaster atualmente disponibilizada em Definições → Dados é apenas
+pré-visualização local dos cinco ficheiros de cadastro, sem escrita.
+
+**Validação antes da passagem a produção:**
+1. Manifesto com quantidades de obras por estado/ano (e total concluídas),
+   eventos, notas e anexos na origem; identificação de exceções/ausências.
+2. Cópia isolada, dry-run sem escrita, resolução de mapeamentos e duplicados.
+3. Importação em lotes para 4002, idempotente por origem e ID, sem envios
+   de mensagens, faturação ou alterações de stock; contagem e checksums
+   por lote com relatórios de perdas/erros e retoma.
+4. Conferência manual de obras abertas e concluídas com estado, notas,
+   fotografias e PDFs; delta final das alterações entretanto feitas.
+5. **Não desligar o Keymaster** nem substituir as outras instalações antes
+   da aprovação explícita e cópia de segurança final.
+
 ## Fontes e evidências
 
 1. **HelloClient** — https://my.helloclient.app/
