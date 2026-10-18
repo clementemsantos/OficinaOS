@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import { createAuditLog } from "../services/audit.service.js";
 import { syncKeymasterEntity } from "../services/keymaster-sync.service.js";
+import { importKeymasterJobs } from "../services/keymaster-jobs.service.js";
 import { getUserId } from "../utils/request.js";
 
 // This archive is deliberately separate from the live operational entities:
@@ -37,6 +38,23 @@ const chunkSchema = z.object({
   headers: z.array(z.string().max(512)).max(128),
   records: z.array(recordSchema).min(1).max(50),
 });
+
+const legacyJobSchema = z.object({
+  jobRef: z.string().trim().min(3).max(50),
+  dateOriginal: z.string().trim().min(4).max(20),
+  timeOriginal: z.string().trim().min(4).max(12),
+  pvpText: z.string().trim().min(1).max(32),
+  deviceName: z.string().trim().min(1).max(120),
+  customerName: z.string().trim().min(1).max(160),
+  approval: z.string().trim().max(80),
+  sourceStatus: z.string().trim().min(1).max(160),
+  assignedTo: z.string().trim().max(80),
+});
+const legacyJobsSchema = z.object({
+  rows: z.array(legacyJobSchema).min(1).max(150),
+  dryRun: z.boolean(),
+});
+
 const normal = (text: string) =>
   text
     .normalize("NFD")
@@ -190,6 +208,28 @@ export const keymasterRoutes: FastifyPluginAsync = async (app) => {
         app.prisma,
         parsed.data.entity,
         getUserId(req)
+      );
+      return reply.send(result);
+    }
+  );
+
+
+  app.post(
+    "/import/keymaster/jobs-list",
+    { preHandler: guard, bodyLimit: 1024 * 1024 },
+    async (req, reply) => {
+      if (!requireMisto()) {
+        return reply.code(403).send({ message: "Apenas OficinaOS Misto." });
+      }
+      const parsed = legacyJobsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ message: "Listagem Keymaster inválida." });
+      }
+      const result = await importKeymasterJobs(
+        app.prisma,
+        parsed.data.rows,
+        getUserId(req),
+        parsed.data.dryRun
       );
       return reply.send(result);
     }
