@@ -7,6 +7,7 @@ function mockPrisma() {
     $queryRaw: vi.fn().mockResolvedValue([]),
     customer: {
       upsert: vi.fn(),
+      create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
       findMany: vi.fn(),
@@ -23,8 +24,8 @@ describe("create", () => {
     prisma = mockPrisma();
   });
 
-  it("upserts customer by phone number", async () => {
-    (prisma.customer.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it("creates a customer without merging by phone", async () => {
+    (prisma.customer.create as ReturnType<typeof vi.fn>).mockResolvedValue({
       email: "test@example.com",
       id: "cust-1",
       name: "John Doe",
@@ -38,11 +39,12 @@ describe("create", () => {
     });
 
     expect(result).toHaveProperty("id", "cust-1");
-    expect(prisma.customer.upsert).toHaveBeenCalled();
+    expect(prisma.customer.create).toHaveBeenCalled();
+    expect(prisma.customer.upsert).not.toHaveBeenCalled();
   });
 
   it("trims email and handles empty string as null", async () => {
-    (prisma.customer.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (prisma.customer.create as ReturnType<typeof vi.fn>).mockResolvedValue({
       email: undefined,
       id: "cust-1",
       name: "Jane Doe",
@@ -55,7 +57,7 @@ describe("create", () => {
       phone: "+0987654321",
     });
 
-    const upsertCall = (prisma.customer.upsert as ReturnType<typeof vi.fn>).mock
+    const createCall = (prisma.customer.create as ReturnType<typeof vi.fn>).mock
       .calls[0];
     expect(upsertCall[0].create.email).toBeNull();
   });
@@ -79,7 +81,7 @@ describe("create", () => {
   });
 
   it("looks the phone up by its normalized form", async () => {
-    (prisma.customer.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (prisma.customer.create as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "cust-1",
     });
 
@@ -111,7 +113,7 @@ describe("create", () => {
     expect(result).toHaveProperty("id", "cust-9");
     const call = (prisma.customer.upsert as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
-    expect(call.where).toEqual({ phone: "912345678" });
+    expect(call.where).toEqual({ id: "cust-9" });
     expect(call.update).not.toHaveProperty("name");
     expect(call.update).toHaveProperty("whatsappConsent", true);
   });
