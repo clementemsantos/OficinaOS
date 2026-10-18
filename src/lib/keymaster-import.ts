@@ -115,7 +115,7 @@ export function inspectKeymasterRows(
   }
 
   const records = rows.slice(config.headerRow).filter((r) =>
-    r.some((cell) => valueAt(r, r.indexOf(cell)) !== "")
+    r.some((cell) => String(cell ?? "").trim() !== "")
   );
   if (records.length > MAX_IMPORT_ROWS) {
     throw new ImportFileError("data_io.too_many_rows");
