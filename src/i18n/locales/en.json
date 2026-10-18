@@ -2464,6 +2464,15 @@
     "keymaster_archive_detail": "View record",
     "keymaster_archive_previous": "Previous",
     "keymaster_archive_next": "Next",
+    "keymaster_sync_title": "Transfer to operational modules",
+    "keymaster_sync_explanation": "Creates real records in Customers, Suppliers, Services and Stock, plus physical equipment records. Never merges customers by phone or overwrites existing records. Original archive is preserved.",
+    "keymaster_sync_action": "Add archived records to OficinaOS modules",
+    "keymaster_sync_progress": "Syncing {{entity}} — {{created}} records created",
+    "keymaster_synced_count": "Transferred records: {{count}} of {{total}}",
+    "keymaster_sync_result": "Created {{created}} records. Records requiring review: {{errors}}.",
+    "keymaster_sync_warnings": "Sync completed with {{count}} records requiring review.",
+    "keymaster_sync_success": "Data transferred to operational modules.",
+    "keymaster_sync_failed": "Sync could not complete. Already written data was kept; check totals before retrying.",
     "keymaster_conflicts": "{{count}} IDs have changed data. Existing records have not been overwritten."
   },
   "tasks": {
