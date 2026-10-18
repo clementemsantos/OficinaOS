@@ -90,6 +90,12 @@ export const NAV_ITEMS: NavItem[] = [
     perm: { repairs: ["viewCatalog"] },
   },
   {
+    icon: "call",
+    labelKey: "inovito_voice.title",
+    to: "/inovito-voice",
+    perm: { customers: ["view"] },
+  },
+  {
     icon: "notifications",
     labelKey: "notifications",
     to: "/notifications",
