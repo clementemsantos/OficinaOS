@@ -267,9 +267,10 @@ model Customer {
   businessMessages     BusinessMessage[]
   purchaseOrders       PurchaseOrder[]
   commercialAgreements CommercialAgreement[]
+  physicalEquipment CustomerEquipment[]
   id                   String                @id @default(cuid())
   name                 String
-  phone                String                @unique
+  phone                String
   email                String?
   // NIF — needed to issue proper invoices (fatura/fatura-recibo) instead
   // of a simplified "consumidor final" document.
@@ -289,6 +290,7 @@ model Customer {
   tradeIns TradeIn[]
 
   @@index([email])
+  @@index([phone])
   @@map("customers")
 }
 
@@ -704,6 +706,8 @@ model PartsCatalog {
   name                String
   category            PartCategory
   defaultPrice        Decimal         @db.Decimal(10, 2)
+  acquisitionCost     Decimal?        @db.Decimal(10, 2)
+  sourceReference     String?         @db.VarChar(200)
   supplier            String?
   // Link to a registered Supplier record — the free-text `supplier` field
   // stays for display/imports; the FK enables the supplier detail view.
@@ -799,6 +803,8 @@ model RepairCatalog {
   name         String         @unique
   category     RepairCategory
   defaultPrice Decimal        @db.Decimal(10, 2)
+  priceKnown   Boolean        @default(true)
+  sourceReference String?     @db.VarChar(200)
   isActive     Boolean        @default(true)
   warrantyDays Int? // null = inherit ShopSettings.defaultWarrantyDays
   createdAt    DateTime       @default(now()) @db.Timestamptz
@@ -1701,6 +1707,8 @@ model ExternalImportRecord {
   sourceId     String   @db.VarChar(200)
   sourceFile   String?  @db.VarChar(255)
   sourceRow    Int
+  operationalId String?
+  syncedAt     DateTime? @db.Timestamptz
   headers      Json
   values       Json
   checksum     String   @db.VarChar(64)
@@ -1709,4 +1717,25 @@ model ExternalImportRecord {
   @@unique([sourceSystem, sourceEntity, sourceId])
   @@index([sourceSystem, sourceEntity])
   @@map("external_import_records")
+}
+
+// A physical unit of equipment owned by a customer. Unlike Device (which
+// catalogs a brand+model), this entity preserves each distinct Keymaster
+// serial/unit even when customer association was missing in the export.
+model CustomerEquipment {
+  id           String   @id @default(cuid())
+  sourceSystem String   @db.VarChar(32)
+  sourceId     String   @db.VarChar(200)
+  brand        String?
+  model        String?
+  category     String?
+  serialNumber String?
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
+
+  @@unique([sourceSystem, sourceId])
+  @@index([customerId])
+  @@map("customer_equipment")
 }
