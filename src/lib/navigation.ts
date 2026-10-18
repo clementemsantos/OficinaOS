@@ -23,7 +23,12 @@ export const NAV_ITEMS: NavItem[] = [
     perm: { jobs: ["view"] },
   },
   { icon: "build", labelKey: "jobs", to: "/jobs", perm: { jobs: ["view"] } },
-  { icon: "devices", labelKey: "equipment_nav", to: "/equipment", perm: { jobs: ["view"] } },
+  {
+    icon: "devices",
+    labelKey: "equipment_nav",
+    to: "/equipment",
+    perm: { jobs: ["view"] },
+  },
   {
     icon: "shopping_cart",
     labelKey: "workflow.orders",
