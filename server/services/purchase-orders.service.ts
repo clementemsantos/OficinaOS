@@ -132,8 +132,10 @@ function storedLine(line: {
   costVatRate: { toString(): string };
   saleVatRate: { toString(): string };
   recoverInputVat: boolean;
+  costKnown?: boolean;
 }): OrderLineInput {
   return {
+    costKnown: line.costKnown ?? true,
     id: line.id,
     name: line.name,
     quantity: line.quantity,

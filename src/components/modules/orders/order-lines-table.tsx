@@ -66,7 +66,11 @@ export function OrderLinesTable({
               <td className="p-3">{line.quantity}</td>
               {financial && (
                 <>
-                  <td className="p-3">{fmt(Number(line.costGross ?? 0))}</td>
+                  <td className="p-3">
+                    {line.costKnown === false
+                      ? t("integrations.cost_missing")
+                      : fmt(Number(line.costGross ?? 0))}
+                  </td>
                   <td className="p-3">{fmt(Number(line.quoteGross ?? 0))}</td>
                   <td className="p-3">{line.saleVatRate}%</td>
                   <td className="p-3 font-bold">

@@ -81,8 +81,12 @@ export function OrderLinesEditor({
           <div>
             <dt>{t("business.margin")}</dt>
             <dd className="font-bold">
-              {fmt(Number(totals.margin.profitAfterVat))} ·{" "}
-              {totals.margin.marginPercent ?? "—"}%
+              {totals.costsComplete
+                ? fmt(Number(totals.margin.profitAfterVat))
+                : t("integrations.cost_missing")}{" "}
+              {totals.costsComplete && (
+                <>· {totals.margin.marginPercent ?? "—"}%</>
+              )}
             </dd>
           </div>
         </dl>

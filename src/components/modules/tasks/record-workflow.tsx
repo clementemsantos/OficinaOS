@@ -5,6 +5,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DocumentPanel } from "@/components/modules/documents/document-panel";
 import { Select } from "@/components/ui/select";
 import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
@@ -46,6 +47,7 @@ export function RecordWorkflow({
               onChanged={() => setRevision((value) => value + 1)}
             />
           )}
+          <DocumentPanel entityId={entityId} entityType={entityType} />
           <TaskPanel
             entityId={entityId}
             entityType={entityType}

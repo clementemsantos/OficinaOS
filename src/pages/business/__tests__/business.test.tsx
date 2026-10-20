@@ -21,6 +21,12 @@ vi.mock("@/hooks/use-can", () => ({ useCan: () => mocks.can() }));
 vi.mock("@/components/modules/tasks/record-workflow", () => ({
   RecordWorkflow: () => null,
 }));
+vi.mock("@/components/modules/documents/integration-panel", () => ({
+  IntegrationPanel: () => null,
+}));
+vi.mock("@/components/modules/documents/document-panel", () => ({
+  DocumentPanel: () => null,
+}));
 describe("business forms", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,13 +95,13 @@ describe("business forms", () => {
       )
     );
   });
-  it("saves outgoing messages as drafts and clearly states that channels are manual", async () => {
+  it("saves outgoing messages as drafts alongside the inbox connection", async () => {
     render(
       <MemoryRouter>
         <BusinessPage module="messages" />
       </MemoryRouter>
     );
-    expect(screen.getByText("business.manual_channels")).toBeInTheDocument();
+    expect(screen.getByText("integrations.inbox_hint")).toBeInTheDocument();
     fireEvent.click(screen.getByText("business.add"));
     fireEvent.change(screen.getByLabelText("business.fields.subject"), {
       target: { value: "Repair update" },

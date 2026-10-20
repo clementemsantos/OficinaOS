@@ -4,6 +4,7 @@ export interface RecordLabel {
   name: string;
 }
 type LineFinancialFields =
+  | "costKnown"
   | "costGross"
   | "quoteGross"
   | "costVatRate"
@@ -21,6 +22,7 @@ export type OrderLineView = Omit<
   };
 export interface PurchaseOrderView {
   costGross?: string;
+  costsComplete?: boolean;
   createdAt: string;
   customCategoryId: string | null;
   customer: RecordLabel | null;

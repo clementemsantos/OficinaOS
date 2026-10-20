@@ -11,6 +11,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import { validateCategory } from "../services/catalog-category.service.js";
+import { messageToTicket } from "../services/message-ticket.service.js";
 import { authorizeWorkflow } from "../services/workflow.service.js";
 import { parseInput } from "../utils/parse-input.js";
 import { getRole, getUserId } from "../utils/request.js";
@@ -368,6 +369,18 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
         connectionStatus: "MANUAL_CAPTURE_ONLY",
       };
     });
+    inbox.post(
+      "/messages/:id/ticket",
+      { preHandler: requirePermission({ jobs: ["edit"] }) },
+      async (req) => {
+        const { id } = parseInput(
+          z.object({ id: z.string().min(1) }),
+          req.params
+        );
+        await authorizeWorkflow(req, "MESSAGE", "edit", id);
+        return { data: await messageToTicket(app.prisma, id, getUserId(req)) };
+      }
+    );
     inbox.post("/messages", async (req, reply) => {
       const data = parseInput(messageFields, req.body);
       await parties(data);

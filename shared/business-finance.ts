@@ -46,6 +46,7 @@ export function commissionGross(
 
 export interface OrderLineMoney {
   costGross: string;
+  costKnown?: boolean;
   costVatRate: string;
   quantity: number;
   quoteGross: string;
@@ -77,6 +78,7 @@ export function orderLinesTotals(lines: readonly OrderLineMoney[]) {
   }
   const profit = revenueNet - costNet;
   return {
+    costsComplete: lines.every((line) => line.costKnown !== false),
     costGross: money(cost),
     quoteGross: money(quote),
     margin: {

@@ -31,6 +31,7 @@ describe("order product line calculations", () => {
       },
     ]);
     expect(result).toEqual({
+      costsComplete: true,
       costGross: "352.00",
       quoteGross: "704.00",
       margin: {
@@ -41,6 +42,16 @@ describe("order product line calculations", () => {
         marginPercent: 50,
       },
     });
+  });
+  it("distinguishes missing acquisition costs from a confirmed zero cost", () => {
+    expect(
+      orderLinesTotals([{ ...line, costGross: "0", costKnown: false }])
+        .costsComplete
+    ).toBe(false);
+    expect(
+      orderLinesTotals([{ ...line, costGross: "0", costKnown: true }])
+        .costsComplete
+    ).toBe(true);
   });
   it("rounds VAT on extended line amounts rather than each unit", () => {
     expect(

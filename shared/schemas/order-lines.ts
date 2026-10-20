@@ -12,6 +12,7 @@ export const orderLineFields = z
     supplierId: optionalId,
     reference: z.string().max(200).default(""),
     purchaseUrl: orderFields.shape.purchaseUrl,
+    costKnown: z.boolean().optional(),
     costGross: amount,
     quoteGross: amount,
     costVatRate: rate,

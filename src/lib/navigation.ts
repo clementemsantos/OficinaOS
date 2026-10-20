@@ -42,6 +42,12 @@ export const NAV_ITEMS: NavItem[] = [
     perm: { jobs: ["view"] },
   },
   {
+    icon: "folder_open",
+    labelKey: "documents.library",
+    to: "/documents",
+    perm: { settings: ["edit"] },
+  },
+  {
     icon: "forum",
     labelKey: "business.messages",
     to: "/messages",

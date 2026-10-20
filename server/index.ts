@@ -26,16 +26,19 @@ import { customersRoutes } from "./routes/customers.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { dataIoRoutes } from "./routes/data-io.js";
 import { devicesRoutes } from "./routes/devices.js";
+import { documentsRoutes } from "./routes/documents.js";
 import { equipmentRoutes } from "./routes/equipment.js";
 import { feedbackRoutes } from "./routes/feedback.js";
 import { healthRoutes } from "./routes/health.js";
 import { intakeRequestsRoutes } from "./routes/intake-requests.js";
+import { integrationsRoutes } from "./routes/integrations.js";
 import { invoicingRoutes } from "./routes/invoicing.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { keymasterRoutes } from "./routes/keymaster.js";
 import { keymasterActiveJobsRoutes } from "./routes/keymaster-active-jobs.js";
 import { marketPricesRoutes } from "./routes/market-prices.js";
 import { notificationsRoutes } from "./routes/notifications.js";
+import { onlineBackupRoutes } from "./routes/online-backup.js";
 import { partRequestsRoutes } from "./routes/part-requests.js";
 import { partsRoutes } from "./routes/parts.js";
 import { paymentRoutes } from "./routes/payments.js";
@@ -56,6 +59,7 @@ import { tasksRoutes } from "./routes/tasks.js";
 import { tradeInsRoutes } from "./routes/trade-ins.js";
 import { usersRoutes } from "./routes/users.js";
 import { workflowRoutes } from "./routes/workflow.js";
+import { syncIntegration } from "./services/integrations.service.js";
 import { startLowStockScheduler } from "./services/low-stock.service.js";
 import { cleanupReadNotifications } from "./services/notification-inapp.service.js";
 import { startOutboxWorker } from "./services/notification-outbox.service.js";
@@ -212,10 +216,50 @@ app.register(feedbackRoutes, { prefix: "/api/feedback" });
 app.register(suppliersRoutes, { prefix: "/api/suppliers" });
 app.register(supplierRmasRoutes, { prefix: "/api/supplier-rmas" });
 app.register(workflowRoutes, { prefix: "/api/workflow" });
+app.register(onlineBackupRoutes, { prefix: "/api/online-backup" });
+app.register(integrationsRoutes, { prefix: "/api/integrations" });
+app.register(documentsRoutes, { prefix: "/api/documents" });
 app.register(businessRoutes, { prefix: "/api/business" });
 app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
 app.register(purchaseOrdersRoutes, { prefix: "/api/purchase-orders" });
 app.register(tasksRoutes, { prefix: "/api/tasks" });
+
+// Opt-in integrations work in Misto too; restoring a copy requires disabling them.
+let integrationsRunning = false;
+const integrationTimer = setInterval(async () => {
+  if (
+    integrationsRunning ||
+    (isSandbox && process.env.OFICINAOS_ENABLE_INTEGRATION_POLLING !== "true")
+  ) {
+    return;
+  }
+  integrationsRunning = true;
+  try {
+    const enabled = await app.prisma.integrationConnection.findMany({
+      where: { enabled: true },
+      select: { kind: true },
+    });
+    for (const connection of enabled) {
+      try {
+        await syncIntegration(app.prisma, connection.kind, true);
+      } catch {
+        app.log.warn(
+          { kind: connection.kind },
+          "Integration sync failed; inspect connection status"
+        );
+      }
+    }
+  } catch {
+    app.log.warn("Integration scheduler unavailable; will retry");
+  } finally {
+    integrationsRunning = false;
+  }
+}, 5 * 60_000);
+integrationTimer.unref();
+app.addHook("onClose", () => {
+  clearInterval(integrationTimer);
+  return Promise.resolve();
+});
 
 let tasksRunning = false;
 const reconcileTasks = async () => {
@@ -295,6 +339,7 @@ if (IS_PROD) {
 await app.register(staticPlugin, {
   root: path.resolve(env.UPLOAD_DIR),
   prefix: "/api/uploads/",
+  dotfiles: "deny",
   decorateReply: false,
 });
 

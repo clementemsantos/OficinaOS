@@ -9,6 +9,7 @@ export function orderLineInput(line: OrderLineView): OrderLineInput {
     supplierId: line.supplierId ?? null,
     reference: line.reference ?? "",
     purchaseUrl: line.purchaseUrl ?? "",
+    costKnown: line.costKnown ?? true,
     costGross: line.costGross ?? "0",
     quoteGross: line.quoteGross ?? "0",
     costVatRate: line.costVatRate ?? "0",

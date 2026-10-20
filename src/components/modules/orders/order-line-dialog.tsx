@@ -125,7 +125,10 @@ export function OrderLineDialog({
                   if (name === "costVatRate") {
                     rateChanged();
                   }
-                  set({ [name]: event.target.value });
+                  set({
+                    [name]: event.target.value,
+                    ...(name === "costGross" ? { costKnown: true } : {}),
+                  });
                 }}
                 step="0.01"
                 type="number"
@@ -134,6 +137,12 @@ export function OrderLineDialog({
             </Field>
           ))}
         </div>
+        <Field horizontal label={t("integrations.cost_known")}>
+          <Checkbox
+            checked={form.costKnown !== false}
+            onChange={(event) => set({ costKnown: event.target.checked })}
+          />
+        </Field>
         <SupplierPicker
           onChange={(id) => set({ supplierId: id || null })}
           onSelect={(supplier) => {

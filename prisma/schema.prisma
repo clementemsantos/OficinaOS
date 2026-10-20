@@ -1806,6 +1806,7 @@ model CatalogCategory {
 }
 
 model PurchaseOrderLine {
+  costKnown       Boolean       @default(true)
   id              String        @id @default(cuid())
   orderId         String
   order           PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -1828,4 +1829,51 @@ model PurchaseOrderLine {
   @@index([partId])
   @@index([supplierId])
   @@map("purchase_order_lines")
+}
+
+// Private files live in uploads/.documents; downloads always check record access.
+model DocumentAsset {
+  id         String         @id @default(cuid())
+  storageKey String         @unique
+  name       String
+  size       Int
+  checksum   String
+  createdAt  DateTime       @default(now()) @db.Timestamptz
+  links      DocumentLink[]
+
+  @@map("document_assets")
+}
+
+model DocumentLink {
+  id         String        @id @default(cuid())
+  documentId String
+  document   DocumentAsset @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+
+  @@unique([documentId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("document_links")
+}
+
+model IntegrationConnection {
+  kind       String    @id
+  settings   String    @db.Text
+  enabled    Boolean   @default(false)
+  cursor     String?
+  leaseUntil DateTime? @db.Timestamptz
+  lastSyncAt DateTime? @db.Timestamptz
+  lastError  String?
+
+  @@map("integration_connections")
+}
+
+model IntegrationReceipt {
+  id         String @id @default(cuid())
+  source     String
+  externalId String
+  recordId   String
+
+  @@unique([source, externalId])
+  @@map("integration_receipts")
 }

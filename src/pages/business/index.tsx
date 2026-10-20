@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { CategoryField } from "@/components/modules/catalog/category-field";
 import { CustomerPicker } from "@/components/modules/catalog/customer-picker";
 import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
+import { DocumentPanel } from "@/components/modules/documents/document-panel";
+import { IntegrationPanel } from "@/components/modules/documents/integration-panel";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { Field, type FieldControlProps } from "@/components/ui/field";
@@ -112,6 +114,10 @@ function empty(module: Module): Record<string, string> {
 }
 export default function BusinessPage({ module }: { module: Module }) {
   const { t } = useTranslation();
+  const integrationAdmin = useCan({
+    settings: ["edit"],
+    parts: ["manageCatalog", "viewCost"],
+  });
   const [params] = useSearchParams();
   const recordId = params.get("recordId") || undefined;
   const customerId = params.get("customerId") || undefined;
@@ -125,6 +131,7 @@ export default function BusinessPage({ module }: { module: Module }) {
   }));
   const [editing, setEditing] = useState("");
   const [busy, setBusy] = useState(false);
+  const ticketEdit = useCan({ jobs: ["edit"] });
   const edit = useCan(
     module === "tickets" ? { jobs: ["edit"] } : { settings: ["edit"] }
   );
@@ -193,8 +200,14 @@ export default function BusinessPage({ module }: { module: Module }) {
       <h1 className="font-bold text-2xl">{t(`business.${module}`)}</h1>
       {module === "messages" && (
         <p className="rounded-xl bg-surface-container p-4">
-          {t("business.manual_channels")}
+          {t("integrations.inbox_hint")}
         </p>
+      )}
+      {module === "messages" && edit && (
+        <DocumentPanel entityId="library" entityType="GENERAL" />
+      )}
+      {module === "messages" && integrationAdmin && (
+        <IntegrationPanel kind="EMAIL" onSynced={() => load()} />
       )}
       {module === "agreements" && <p>{t("business.agreement_hint")}</p>}
       {edit && (
@@ -337,6 +350,29 @@ export default function BusinessPage({ module }: { module: Module }) {
                       <p className="whitespace-pre-wrap">
                         {String(entry.body)}
                       </p>
+                      {edit && ticketEdit && (
+                        <Button
+                          disabled={busy}
+                          onClick={async () => {
+                            setBusy(true);
+                            try {
+                              const { data } = await api.post(
+                                `/business/messages/${entry.id}/ticket`
+                              );
+                              window.location.assign(
+                                `/tickets?recordId=${data.data.id}`
+                              );
+                            } catch {
+                              toast.error(t("tasks.failed"));
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                          variant="secondary"
+                        >
+                          {t("integrations.to_ticket")}
+                        </Button>
+                      )}
                       <MessageLinks
                         links={entry.links ?? []}
                         messageId={entry.id}

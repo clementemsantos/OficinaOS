@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { IntegrationPanel } from "@/components/modules/documents/integration-panel";
 import { OrderEditor } from "@/components/modules/orders/order-editor";
 import { OrderLinesTable } from "@/components/modules/orders/order-lines-table";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
@@ -15,6 +16,10 @@ import { BusinessHistory } from "@/pages/business/history";
 const HTTP_URL = /^https?:/;
 export default function PurchaseOrdersPage() {
   const { t } = useTranslation();
+  const integrationAdmin = useCan({
+    settings: ["edit"],
+    parts: ["manageCatalog", "viewCost"],
+  });
   const failure = t("tasks.failed");
   const fmt = useFormatCurrency();
   const [params, setParams] = useSearchParams();
@@ -52,6 +57,9 @@ export default function PurchaseOrdersPage() {
           </Button>
         )}
       </div>
+      {integrationAdmin && (
+        <IntegrationPanel kind="WOOCOMMERCE" onSynced={() => load()} />
+      )}
       {edit && editing !== undefined && (
         <OrderEditor
           customerId={customerId}
@@ -107,6 +115,12 @@ export default function PurchaseOrdersPage() {
               .join(" · ")}
           </p>
           <OrderLinesTable financial={financial} lines={order.lines} />
+          {financial && order.costsComplete === false && (
+            <p>
+              {t("integrations.cost_missing")} · {t("order_lines.total_quote")}:{" "}
+              {fmt(Number(order.quoteGross))}
+            </p>
+          )}
           {financial && order.margin && (
             <dl className="grid gap-3 sm:grid-cols-4">
               <div>

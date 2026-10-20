@@ -34,6 +34,7 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
     } = order;
     const publicLines = lines.map(
       ({
+        costKnown: _known,
         costGross: _cost,
         quoteGross: _quote,
         costVatRate: _costVat,
@@ -68,7 +69,10 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       costGross: totals.costGross,
       quoteGross: totals.quoteGross,
       lines: pricedLines,
-      margin: totals.margin,
+      costsComplete: pricedLines.every((line) => line.costKnown !== false),
+      margin: pricedLines.some((line) => line.costKnown === false)
+        ? undefined
+        : totals.margin,
     };
   };
   app.get("/", async (req) => {
