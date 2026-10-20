@@ -1,4 +1,3 @@
-import { PartCategory } from "@shared/constants";
 import type { PartsCatalog } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,8 +13,6 @@ import type { ApiError } from "@/lib/api";
 import api from "@/lib/api";
 import { useJobsStore } from "@/stores/jobs";
 import { usePartsCatalogStore } from "@/stores/parts-catalog";
-
-const PART_CATEGORIES = Object.values(PartCategory);
 
 type Mode = "catalog" | "custom";
 
@@ -326,31 +323,6 @@ export default function AddPartDialog({
                 />
               </div>
 
-              {!form.partId && (
-                <div>
-                  <label
-                    className="mb-1.5 block font-bold font-label text-on-surface-variant text-xs uppercase tracking-wide"
-                    htmlFor="add-part-category"
-                  >
-                    {t("jobs_parts_category")}
-                  </label>
-                  <select
-                    className="h-12 w-full appearance-none rounded-xl bg-surface-container-highest px-4 text-on-surface"
-                    id="add-part-category"
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, category: e.target.value }))
-                    }
-                    value={form.category}
-                  >
-                    {PART_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {t(`part_category.${c}`)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label
@@ -416,6 +388,11 @@ export default function AddPartDialog({
               </div>
 
               <CategoryField
+                base={{
+                  value: form.category,
+                  onChange: (value) =>
+                    setForm((old) => ({ ...old, category: value })),
+                }}
                 onChange={(id) =>
                   setForm((old) => ({ ...old, customCategoryId: id }))
                 }

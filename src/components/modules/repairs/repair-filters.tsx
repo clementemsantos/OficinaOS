@@ -1,6 +1,7 @@
 import type { RepairCategoryType } from "@shared/constants";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CategoryField } from "@/components/modules/catalog/category-field";
 
 export type SortOption =
   | "recently_added"
@@ -11,19 +12,13 @@ export type SortOption =
 interface RepairFiltersProps {
   activeCategory: RepairCategoryType | "ALL";
   activeSort: SortOption;
+  customCategory: string;
   onCategoryChange: (category: RepairCategoryType | "ALL") => void;
+  onCustomCategoryChange: (id: string) => void;
   onSearchChange: (query: string) => void;
   onSortChange: (sort: SortOption) => void;
   searchQuery: string;
 }
-
-const CATEGORIES: (RepairCategoryType | "ALL")[] = [
-  "ALL",
-  "HARDWARE",
-  "SOFTWARE",
-  "DIAGNOSTIC",
-  "OTHER",
-];
 
 const SORT_OPTIONS: { key: SortOption; labelKey: string }[] = [
   { key: "recently_added", labelKey: "recently_added" },
@@ -34,6 +29,8 @@ const SORT_OPTIONS: { key: SortOption; labelKey: string }[] = [
 
 export default function RepairFilters({
   activeCategory,
+  customCategory,
+  onCustomCategoryChange,
   activeSort,
   onCategoryChange,
   onSearchChange,
@@ -83,48 +80,18 @@ export default function RepairFilters({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative sm:hidden">
-          <select
-            aria-label={t("filter_by_category")}
-            className="h-10 w-full appearance-none rounded-xl border-none bg-surface-container-highest px-4 pe-10 text-on-surface text-sm"
-            onChange={(e) =>
-              onCategoryChange(
-                e.target.value === "ALL"
-                  ? "ALL"
-                  : (e.target.value as RepairCategoryType)
-              )
-            }
-            value={activeCategory}
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === "ALL" ? t("all_repairs") : t(`repair_category.${cat}`)}
-              </option>
-            ))}
-          </select>
-          <span className="material-symbols-outlined pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">
-            expand_more
-          </span>
-        </div>
-
-        <div
-          className="hidden items-center gap-2 overflow-x-auto pb-1 sm:flex"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {CATEGORIES.map((cat) => (
-            <button
-              className={`shrink-0 rounded-full px-4 py-2 font-headline font-medium text-xs uppercase tracking-wide transition-all ${
-                activeCategory === cat
-                  ? "bg-primary text-on-primary"
-                  : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
-              }`}
-              key={cat}
-              onClick={() => onCategoryChange(cat)}
-              type="button"
-            >
-              {cat === "ALL" ? t("all_repairs") : t(`repair_category.${cat}`)}
-            </button>
-          ))}
+        <div className="min-w-0 flex-1">
+          <CategoryField
+            base={{
+              value: activeCategory,
+              onChange: (value) =>
+                onCategoryChange(value as RepairCategoryType | "ALL"),
+            }}
+            filter
+            onChange={onCustomCategoryChange}
+            scope="REPAIR"
+            value={customCategory}
+          />
         </div>
 
         <span className="material-symbols-outlined text-base text-on-surface-variant">

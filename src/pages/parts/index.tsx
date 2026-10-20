@@ -1,5 +1,4 @@
 import type { PartCategoryType } from "@shared/constants";
-import { PartCategory } from "@shared/constants";
 import type { PartsCatalog } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,11 +20,6 @@ import { PART_CATEGORY_TONES } from "@/lib/category-display";
 import { usePartsCatalogStore } from "@/stores/parts-catalog";
 
 type SortField = "name" | "category" | "defaultPrice" | "supplier";
-
-const CATEGORIES: (PartCategoryType | "ALL")[] = [
-  "ALL",
-  ...Object.values(PartCategory),
-];
 
 function getAriaSort(
   currentSortBy: SortField,
@@ -577,69 +571,6 @@ function RestockForecastDialogWrapper({
   );
 }
 
-function CategoryFilterPills({
-  activeFilter,
-  onFilterChange,
-  showAllCategories,
-  onToggleAll,
-  t,
-}: {
-  activeFilter: PartCategoryType | "ALL";
-  onFilterChange: (cat: PartCategoryType | "ALL") => void;
-  onToggleAll: (show: boolean) => void;
-  showAllCategories: boolean;
-  t: (key: string) => string;
-}) {
-  const visibleCats = CATEGORIES.filter(
-    (cat) => showAllCategories || cat === "ALL" || CATEGORIES.indexOf(cat) <= 4
-  );
-
-  return (
-    <fieldset
-      aria-label={t("filters")}
-      className="hide-scrollbar flex flex-wrap items-center gap-2"
-    >
-      <legend className="sr-only">{t("filter_by_category")}</legend>
-      {visibleCats.map((cat) => {
-        const isActive = activeFilter === cat;
-        return (
-          <button
-            aria-pressed={isActive}
-            className={`min-h-[44px] shrink-0 rounded-full px-4 py-2.5 font-bold text-xs uppercase tracking-wide transition-all ${
-              isActive
-                ? "bg-primary text-on-primary"
-                : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
-            }`}
-            key={cat}
-            onClick={() => onFilterChange(cat)}
-            type="button"
-          >
-            {cat === "ALL" ? t("all_categories") : t(`part_category.${cat}`)}
-          </button>
-        );
-      })}
-      {!showAllCategories && CATEGORIES.length > 5 && (
-        <button
-          className="min-h-[44px] shrink-0 rounded-full px-4 py-2.5 font-bold text-primary text-xs uppercase tracking-wide transition-all hover:bg-surface-container-high"
-          onClick={() => onToggleAll(true)}
-          type="button"
-        >
-          {t("show_more")}
-        </button>
-      )}
-      {showAllCategories && (
-        <button
-          className="min-h-[44px] shrink-0 rounded-full px-4 py-2.5 font-bold text-on-surface-variant text-xs uppercase tracking-wide transition-all hover:bg-surface-container-high"
-          onClick={() => onToggleAll(false)}
-          type="button"
-        >
-          {t("show_less")}
-        </button>
-      )}
-    </fieldset>
-  );
-}
-
 function PartsDesktopTable({
   confirmingId,
   deletingId,
@@ -909,7 +840,6 @@ export default function PartsCatalogPage() {
   const [needsRestockFilter, setNeedsRestockFilter] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPart, setEditingPart] = useState<PartsCatalog | null>(null);
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const [confirmingPartId, setConfirmingPartId] = useState<string | null>(null);
   const [deletingPartId, setDeletingPartId] = useState<string | null>(null);
   const [movementsPart, setMovementsPart] = useState<PartsCatalog | null>(null);
@@ -1103,11 +1033,6 @@ export default function PartsCatalogPage() {
 
   return (
     <>
-      <CategoryField
-        onChange={setCustomCategory}
-        scope="PART"
-        value={customCategory}
-      />
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h2 className="font-extrabold font-headline text-2xl text-on-surface tracking-tight md:text-3xl">
@@ -1179,12 +1104,16 @@ export default function PartsCatalogPage() {
             value={search}
           />
           <div className="mt-3">
-            <CategoryFilterPills
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-              onToggleAll={setShowAllCategories}
-              showAllCategories={showAllCategories}
-              t={t}
+            <CategoryField
+              base={{
+                value: activeFilter,
+                onChange: (value) =>
+                  setActiveFilter(value as PartCategoryType | "ALL"),
+              }}
+              filter
+              onChange={setCustomCategory}
+              scope="PART"
+              value={customCategory}
             />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">

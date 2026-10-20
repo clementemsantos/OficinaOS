@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Can } from "@/components/modules/can";
+import { JobCodePicker } from "@/components/modules/catalog/job-code-picker";
 import {
   type TaskRecord,
   TaskTable,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCan } from "@/hooks/use-can";
@@ -222,8 +224,8 @@ export default function TasksPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {mode === "task" && (!entityType || entityType === "JOB") && (
               <Field label={t("rmas.job_code")}>
-                <Input
-                  onChange={(e) => set({ jobCode: e.target.value })}
+                <JobCodePicker
+                  onChange={(code) => set({ jobCode: code })}
                   value={form.jobCode}
                 />
               </Field>
@@ -277,17 +279,15 @@ export default function TasksPage() {
               </Field>
             )}
             <Field label={t("tasks.assignee")}>
-              <Select
-                onChange={(e) => set({ assigneeId: e.target.value })}
+              <SearchPicker
+                label={t("tasks.assignee")}
+                onChange={(id) => set({ assigneeId: id })}
+                options={technicians.map((user) => ({
+                  id: user.id,
+                  name: user.name,
+                }))}
                 value={form.assigneeId}
-              >
-                <option value="">{t("tasks.unassigned")}</option>
-                {technicians.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </Field>
             <Field label={t("tasks.priority")}>
               <Select

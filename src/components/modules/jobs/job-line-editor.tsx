@@ -1,4 +1,3 @@
-import { PartCategory, RepairCategory } from "@shared/constants";
 import type { JobPart, JobRepair } from "@shared/types";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { useCan } from "@/hooks/use-can";
 import api, { getErrorMessage } from "@/lib/api";
 export function JobLineEditor({
@@ -83,23 +81,12 @@ export function JobLineEditor({
             value={name}
           />
         </Field>
-        <Field label={t("catalog.base_category")}>
-          <Select
-            onChange={(event) => setCategory(event.target.value)}
-            value={category}
-          >
-            {Object.values(isPart ? PartCategory : RepairCategory).map(
-              (value) => (
-                <option key={value} value={value}>
-                  {t(
-                    `${isPart ? "part_category" : "repair_category"}.${value}`
-                  )}
-                </option>
-              )
-            )}
-          </Select>
-        </Field>
-        <CategoryField onChange={setCustom} scope={kind} value={custom} />
+        <CategoryField
+          base={{ value: category, onChange: setCategory }}
+          onChange={setCustom}
+          scope={kind}
+          value={custom}
+        />
         {(!isPart || cost) && (
           <Field label={t("catalog.price")}>
             <Input

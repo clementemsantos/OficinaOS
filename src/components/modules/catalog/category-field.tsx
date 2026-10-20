@@ -1,3 +1,4 @@
+import { PartCategory, RepairCategory } from "@shared/constants";
 import type { CategoryScope } from "@shared/schemas/catalog-category";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,11 +35,17 @@ export function CategoryField({
   value,
   onChange,
   disabled = false,
+  base,
+  filter = false,
+  clearOnSearch = true,
 }: {
   scope: CategoryScope;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  filter?: boolean;
+  clearOnSearch?: boolean;
+  base?: { value: string; onChange: (value: string) => void };
 }) {
   const { t } = useTranslation();
   const failureMessage = t("tasks.failed");
@@ -101,7 +108,7 @@ export function CategoryField({
         ? await api.patch(`/catalog-categories/${form.id}`, data)
         : await api.post("/catalog-categories", data);
       await load();
-      onChange(response.data.data.id);
+      change(form.isActive ? response.data.data.id : "");
       setForm(null);
       window.dispatchEvent(
         new CustomEvent("catalog-categories-changed", { detail: scope })
@@ -112,23 +119,55 @@ export function CategoryField({
       setBusy(false);
     }
   };
+  const baseOptions =
+    base && (scope === "PART" || scope === "REPAIR")
+      ? Object.values(scope === "PART" ? PartCategory : RepairCategory).map(
+          (key) => ({
+            id: `base:${key}`,
+            name: t(
+              `${scope === "PART" ? "part_category" : "repair_category"}.${key}`
+            ),
+          })
+        )
+      : [];
+  const change = (id: string) => {
+    if (base && id.startsWith("base:")) {
+      base.onChange(id.slice(5));
+      onChange("");
+      return;
+    }
+    if (base && filter) {
+      base.onChange("ALL");
+    }
+    // Preserve the historical base type when assigning a custom category.
+    if (base && id && !base.value) {
+      base.onChange("OTHER");
+    }
+    onChange(id);
+  };
+  const pickerValue =
+    value || (base?.value && base.value !== "ALL" ? `base:${base.value}` : "");
   const selected = rows.find((row) => row.id === value);
   return (
     <div className="my-3 space-y-2">
       <p className="font-medium text-sm">{t("catalog.category")}</p>
       <SearchPicker
+        clearOnSearch={clearOnSearch}
         disabled={disabled}
         label={t("catalog.category")}
-        onChange={(id) => onChange(id)}
+        onChange={change}
         onCreate={
           edit
             ? (name) => setForm({ name, parentId: "", isActive: true })
             : undefined
         }
-        options={rows
-          .filter((row) => row.isActive || row.id === value)
-          .map((row) => ({ id: row.id, name: categoryPath(row, rows) }))}
-        value={value}
+        options={[
+          ...baseOptions,
+          ...rows
+            .filter((row) => row.isActive || row.id === value)
+            .map((row) => ({ id: row.id, name: categoryPath(row, rows) })),
+        ]}
+        value={pickerValue}
       />
       {edit && selected && (
         <Button

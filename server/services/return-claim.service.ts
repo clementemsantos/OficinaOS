@@ -542,3 +542,31 @@ export async function removePhoto(
   }
   return { removed: true };
 }
+
+/** Correct the customer's complaint while the claim remains open. */
+export async function editReason(
+  prisma: DbClient,
+  id: string,
+  returnReason: string,
+  scopeUserId?: string
+): Promise<ServiceResult<{ id: string }>> {
+  const scope = scopeUserId ? selfScopeWhere(scopeUserId) : {};
+  const existing = await prisma.returnClaim.findFirst({
+    where: { id, ...scope },
+    select: { id: true, status: true },
+  });
+  if (!existing) {
+    return { error: "RETURN_CLAIM_NOT_FOUND" };
+  }
+  if (existing.status !== "OPEN") {
+    return { error: "RETURN_CLAIM_NOT_OPEN" };
+  }
+  const updated = await prisma.returnClaim.updateMany({
+    where: { id, status: "OPEN", ...scope },
+    data: { returnReason },
+  });
+  if (!updated.count) {
+    return { error: "RETURN_CLAIM_NOT_OPEN" };
+  }
+  return { id };
+}

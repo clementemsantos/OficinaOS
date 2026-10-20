@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTechnicians } from "@/hooks/use-technicians";
@@ -83,25 +84,29 @@ export function TaskEditor({
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("tasks.assignee")}>
-            <Select
-              onChange={(e) => set({ assigneeId: e.target.value })}
+            <SearchPicker
+              label={t("tasks.assignee")}
+              onChange={(id) => set({ assigneeId: id })}
+              options={[
+                ...(form.assigneeId &&
+                !technicians.some((user) => user.id === form.assigneeId)
+                  ? [
+                      {
+                        id: form.assigneeId,
+                        name:
+                          task.assignee?.name ||
+                          task.assignee?.username ||
+                          t("tasks.unassigned"),
+                      },
+                    ]
+                  : []),
+                ...technicians.map((user) => ({
+                  id: user.id,
+                  name: user.name,
+                })),
+              ]}
               value={form.assigneeId}
-            >
-              <option value="">{t("tasks.unassigned")}</option>
-              {form.assigneeId &&
-                !technicians.some((user) => user.id === form.assigneeId) && (
-                  <option value={form.assigneeId}>
-                    {task.assignee?.name ||
-                      task.assignee?.username ||
-                      t("tasks.unassigned")}
-                  </option>
-                )}
-              {technicians.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name}
-                </option>
-              ))}
-            </Select>
+            />
           </Field>
           <Field label={t("tasks.priority")}>
             <Select

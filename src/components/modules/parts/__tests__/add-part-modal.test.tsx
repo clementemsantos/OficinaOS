@@ -25,9 +25,10 @@ describe("AddPartModal", () => {
     fireEvent.change(screen.getByLabelText("add_part_modal.part_name"), {
       target: { value: "Ecrã iPhone 11" },
     });
-    fireEvent.change(screen.getByLabelText("add_part_modal.category"), {
-      target: { value: "SCREEN" },
-    });
+    fireEvent.focus(screen.getByRole("combobox", { name: "catalog.category" }));
+    fireEvent.click(
+      screen.getByRole("option", { name: "part_category.SCREEN" })
+    );
     fireEvent.change(screen.getByLabelText("add_part_modal.default_price"), {
       target: { value: "34.9" },
     });

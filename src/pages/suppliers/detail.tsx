@@ -3,11 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 import { RecordCategory } from "@/components/modules/catalog/record-category";
+import { Button } from "@/components/ui/button";
+import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
 import {
   BusinessHistory,
   SupplierCustomerLink,
 } from "@/pages/business/history";
+import { SupplierModal } from "@/pages/suppliers";
 
 interface SupplierPart {
   category: string;
@@ -45,6 +48,8 @@ export default function SupplierDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [supplier, setSupplier] = useState<SupplierDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const canEdit = useCan({ parts: ["manageCatalog"] });
 
   const load = useCallback(async () => {
     if (!id) {
@@ -97,6 +102,18 @@ export default function SupplierDetailPage() {
 
   return (
     <>
+      {editing && (
+        <SupplierModal
+          onClose={() => setEditing(false)}
+          onSaved={load}
+          supplier={supplier}
+        />
+      )}
+      {canEdit && (
+        <Button onClick={() => setEditing(true)} variant="secondary">
+          {t("suppliers.edit")}
+        </Button>
+      )}
       <RecordCategory
         id={supplier.id}
         initialId={supplier.customCategoryId}

@@ -82,3 +82,41 @@ describe("searchable record selection", () => {
     expect(onChange).toHaveBeenCalledWith("", "");
   });
 });
+
+it("keeps server matches when the search matches a contact number instead of the displayed name", () => {
+  const onQuery = vi.fn();
+  render(
+    <SearchPicker
+      label="Customer"
+      onChange={vi.fn()}
+      onQuery={onQuery}
+      options={[{ id: "c1", name: "Maria" }]}
+      value=""
+    />
+  );
+  fireEvent.change(screen.getByRole("combobox"), {
+    target: { value: "910000000" },
+  });
+  expect(onQuery).toHaveBeenCalledWith("910000000");
+  expect(screen.getByRole("option", { name: "Maria" })).toBeInTheDocument();
+});
+
+it("does not persist intermediate search text when used by an auto-saving field", () => {
+  const onChange = vi.fn();
+  render(
+    <SearchPicker
+      clearOnSearch={false}
+      label="Category"
+      onChange={onChange}
+      options={options}
+      value="s1"
+    />
+  );
+  fireEvent.change(screen.getByRole("combobox"), {
+    target: { value: "Maria" },
+  });
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("option", { name: "Maria Informática" }));
+  expect(onChange).toHaveBeenCalledOnce();
+  expect(onChange).toHaveBeenCalledWith("s2", "Maria Informática");
+});

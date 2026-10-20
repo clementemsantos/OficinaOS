@@ -32,7 +32,7 @@ const EMPTY = {
   notes: "",
 };
 
-function SupplierModal({
+export function SupplierModal({
   supplier,
   onClose,
   onSaved,

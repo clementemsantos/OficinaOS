@@ -14,7 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCustomerSearch } from "@/hooks/use-customer-search";
 import { useModalEffects } from "@/hooks/use-modal-effects";
 import { getErrorMessage } from "@/lib/api";
-import { createTradeIn, type TradeIn } from "@/lib/api-trade-ins";
+import {
+  createTradeIn,
+  type TradeIn,
+  updateTradeIn,
+} from "@/lib/api-trade-ins";
 
 const labelCls = "mb-1.5 block font-medium text-on-surface text-sm";
 
@@ -31,27 +35,54 @@ const PAYMENT_METHODS = ["CASH", "TRANSFER", "STORE_CREDIT"] as const;
 const ID_TYPES = ["CC", "PASSPORT", "NIF", "OTHER"] as const;
 
 interface Props {
+  editing?: TradeIn;
   onClose: () => void;
   onCreated: (tradeIn: TradeIn) => void;
 }
 
-export default function TradeInModal({ onClose, onCreated }: Props) {
+function tradeInInitial(editing?: TradeIn) {
+  return {
+    customerId: editing?.customerId ?? "",
+    sellerIdType: editing?.sellerIdType ?? "CC",
+    sellerIdNumber: editing?.sellerIdNumber ?? "",
+    deviceBrand: editing?.deviceBrand ?? "",
+    deviceModel: editing?.deviceModel ?? "",
+    imei: editing?.imei ?? "",
+    storage: editing?.storage ?? "",
+    condition: editing?.condition ?? "GOOD",
+    checklist: (editing?.functionalChecklist ?? {}) as IntakeChecklist,
+    notes: editing?.notes ?? "",
+    purchasePrice: editing?.purchasePrice ?? "",
+    paymentMethod: editing?.paymentMethod ?? "CASH",
+  };
+}
+
+export default function TradeInModal({ onClose, onCreated, editing }: Props) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [customerId, setCustomerId] = useState("");
-  const [customerLabel, setCustomerLabel] = useState("");
+  const [initial] = useState(() => tradeInInitial(editing));
+  const [customerId, setCustomerId] = useState(initial.customerId);
+  const [customerLabel, setCustomerLabel] = useState(
+    editing?.customer.name ?? ""
+  );
   const [showCreateCustomer, setShowCreateCustomer] = useState(false);
-  const [sellerIdType, setSellerIdType] = useState<string>("CC");
-  const [sellerIdNumber, setSellerIdNumber] = useState("");
-  const [deviceBrand, setDeviceBrand] = useState("");
-  const [deviceModel, setDeviceModel] = useState("");
-  const [imei, setImei] = useState("");
-  const [storage, setStorage] = useState("");
-  const [condition, setCondition] = useState<string>("GOOD");
-  const [checklist, setChecklist] = useState<IntakeChecklist>({});
-  const [notes, setNotes] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
+  const [sellerIdType, setSellerIdType] = useState<string>(
+    initial.sellerIdType
+  );
+  const [sellerIdNumber, setSellerIdNumber] = useState(initial.sellerIdNumber);
+  const [deviceBrand, setDeviceBrand] = useState(initial.deviceBrand);
+  const [deviceModel, setDeviceModel] = useState(initial.deviceModel);
+  const [imei, setImei] = useState(initial.imei);
+  const [storage, setStorage] = useState(initial.storage);
+  const [condition, setCondition] = useState<string>(initial.condition);
+  const [checklist, setChecklist] = useState<IntakeChecklist>(
+    initial.checklist
+  );
+  const [notes, setNotes] = useState(initial.notes);
+  const [purchasePrice, setPurchasePrice] = useState(initial.purchasePrice);
+  const [paymentMethod, setPaymentMethod] = useState<string>(
+    initial.paymentMethod
+  );
   const [signature, setSignature] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,19 +94,21 @@ export default function TradeInModal({ onClose, onCreated }: Props) {
   const showDropdown = searchFocused && query.length >= 1 && !customerId;
 
   const isDirty =
-    customerId !== "" ||
-    sellerIdType !== "CC" ||
-    sellerIdNumber.trim() !== "" ||
-    deviceBrand.trim() !== "" ||
-    deviceModel.trim() !== "" ||
-    imei.trim() !== "" ||
-    storage.trim() !== "" ||
-    condition !== "GOOD" ||
-    Object.keys(checklist).length > 0 ||
-    notes.trim() !== "" ||
-    purchasePrice.trim() !== "" ||
-    paymentMethod !== "CASH" ||
-    signature !== null;
+    signature !== null ||
+    JSON.stringify({
+      customerId,
+      sellerIdType,
+      sellerIdNumber,
+      deviceBrand,
+      deviceModel,
+      imei,
+      storage,
+      condition,
+      checklist,
+      notes,
+      purchasePrice,
+      paymentMethod,
+    }) !== JSON.stringify(initial);
 
   const handleClose = useCallback(() => {
     if (isDirty) {
@@ -103,26 +136,25 @@ export default function TradeInModal({ onClose, onCreated }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const tradeIn = await createTradeIn({
+      const input = {
         condition,
-        customerId,
         deviceBrand: deviceBrand.trim(),
         deviceModel: deviceModel.trim(),
-        functionalChecklist:
-          Object.keys(checklist).length > 0
-            ? (Object.fromEntries(
-                Object.entries(checklist).filter(([, v]) => v != null)
-              ) as Record<string, "ok" | "fail">)
-            : undefined,
-        imei: imei.trim() || undefined,
-        notes: notes.trim() || undefined,
+        functionalChecklist: Object.fromEntries(
+          Object.entries(checklist).filter(([, value]) => value != null)
+        ) as Record<string, "ok" | "fail">,
+        imei: imei.trim(),
+        notes: notes.trim(),
         paymentMethod,
         purchasePrice: price,
         sellerIdNumber: sellerIdNumber.trim(),
         sellerIdType,
         signatureDataUrl: signature ?? undefined,
-        storage: storage.trim() || undefined,
-      });
+        storage: storage.trim(),
+      };
+      const tradeIn = editing
+        ? await updateTradeIn(editing.id, input)
+        : await createTradeIn({ ...input, customerId });
       onCreated(tradeIn);
     } catch (err) {
       setError(getErrorMessage(err, t("tradeins.create_failed")));
@@ -160,7 +192,7 @@ export default function TradeInModal({ onClose, onCreated }: Props) {
               className="font-bold font-headline text-lg text-on-surface"
               id="ti-title"
             >
-              {t("tradeins.new")}
+              {t(editing ? "edit" : "tradeins.new")}
             </h2>
             <p className="font-label text-on-surface-variant text-xs">
               {t("tradeins.new_subtitle")}
@@ -177,53 +209,62 @@ export default function TradeInModal({ onClose, onCreated }: Props) {
         </header>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
-          <div className="relative" id="ti-customer-wrap">
+          {editing ? (
             <Field label={t("tradeins.seller")}>
-              <Input
-                autoComplete="off"
-                iconStart={customerId ? "check_circle" : "search"}
-                id="ti-customer"
-                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setCustomerId("");
-                  setCustomerLabel("");
-                }}
-                onFocus={() => setSearchFocused(true)}
-                placeholder={t("intake.customer_search_placeholder")}
-                type="text"
-                value={customerId ? customerLabel : query}
-              />
+              <p>{editing.customer.name}</p>
             </Field>
-            <CustomerSearchDropdown
-              isSearching={isSearching}
-              onCreateNew={() => setShowCreateCustomer(true)}
-              onSelect={(c) => {
-                setCustomerId(c.id);
-                setCustomerLabel(`${c.name} · ${c.phone}`);
-                setSearchFocused(false);
-              }}
-              query={query}
-              results={results}
-              searchError={searchError}
-              t={t}
-              visible={showDropdown}
-            />
-          </div>
+          ) : (
+            <>
+              <div className="relative" id="ti-customer-wrap">
+                <Field label={t("tradeins.seller")}>
+                  <Input
+                    autoComplete="off"
+                    iconStart={customerId ? "check_circle" : "search"}
+                    id="ti-customer"
+                    onBlur={() =>
+                      setTimeout(() => setSearchFocused(false), 150)
+                    }
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setCustomerId("");
+                      setCustomerLabel("");
+                    }}
+                    onFocus={() => setSearchFocused(true)}
+                    placeholder={t("intake.customer_search_placeholder")}
+                    type="text"
+                    value={customerId ? customerLabel : query}
+                  />
+                </Field>
+                <CustomerSearchDropdown
+                  isSearching={isSearching}
+                  onCreateNew={() => setShowCreateCustomer(true)}
+                  onSelect={(c) => {
+                    setCustomerId(c.id);
+                    setCustomerLabel(`${c.name} · ${c.phone}`);
+                    setSearchFocused(false);
+                  }}
+                  query={query}
+                  results={results}
+                  searchError={searchError}
+                  t={t}
+                  visible={showDropdown}
+                />
+              </div>
 
-          {showCreateCustomer && (
-            <div className="rounded-xl bg-surface-container-low p-4">
-              <QuickAddCustomer
-                onAdd={(c) => {
-                  setCustomerId(c.id);
-                  setCustomerLabel(`${c.name} · ${c.phone}`);
-                  setShowCreateCustomer(false);
-                }}
-                onClose={() => setShowCreateCustomer(false)}
-              />
-            </div>
+              {showCreateCustomer && (
+                <div className="rounded-xl bg-surface-container-low p-4">
+                  <QuickAddCustomer
+                    onAdd={(c) => {
+                      setCustomerId(c.id);
+                      setCustomerLabel(`${c.name} · ${c.phone}`);
+                      setShowCreateCustomer(false);
+                    }}
+                    onClose={() => setShowCreateCustomer(false)}
+                  />
+                </div>
+              )}
+            </>
           )}
-
           <div className="grid grid-cols-2 gap-3">
             <Field endAdornment={chevron} label={t("tradeins.id_type")}>
               <Select
@@ -367,7 +408,7 @@ export default function TradeInModal({ onClose, onCreated }: Props) {
             onClick={submit}
             type="button"
           >
-            {saving ? t("saving") : t("tradeins.create")}
+            {saving ? t("saving") : t(editing ? "save" : "tradeins.create")}
           </button>
         </footer>
       </div>

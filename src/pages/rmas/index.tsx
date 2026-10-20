@@ -2,6 +2,8 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { JobCodePicker } from "@/components/modules/catalog/job-code-picker";
+import { PartPicker } from "@/components/modules/catalog/part-picker";
 import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
 
 interface Supplier {
@@ -39,27 +42,30 @@ interface Rma {
 
 const STATUSES = ["OPEN", "SENT", "RECEIVED", "RESOLVED", "CANCELLED"];
 
-function RmaModal({
+function optionalRmaField(value: string, editing: boolean, cleared: null | "") {
+  return value.trim() || (editing ? cleared : undefined);
+}
+
+export function RmaModal({
   jobCode,
-  parts,
+  editing,
   onClose,
   onSaved,
 }: {
   jobCode: string;
-  suppliers: Supplier[];
-  parts: Part[];
+  editing?: Rma;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({
-    supplierId: "",
-    jobCode,
-    partId: "",
-    description: "",
-    quantity: "1",
-    reference: "",
-    reason: "",
+    supplierId: editing?.supplier?.id ?? "",
+    jobCode: editing?.job?.jobCode ?? jobCode,
+    partId: editing?.part?.id ?? "",
+    description: editing?.description ?? "",
+    quantity: String(editing?.quantity ?? 1),
+    reference: editing?.reference ?? "",
+    reason: editing?.reason ?? "",
   });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) =>
@@ -72,15 +78,20 @@ function RmaModal({
     }
     setBusy(true);
     try {
-      await api.post("/supplier-rmas", {
+      const payload = {
         supplierId: form.supplierId,
-        jobCode: form.jobCode.trim() || undefined,
-        partId: form.partId || undefined,
+        jobCode: optionalRmaField(form.jobCode, !!editing, null),
+        partId: optionalRmaField(form.partId, !!editing, null),
         description: form.description.trim(),
         quantity: Number.parseInt(form.quantity, 10) || 1,
-        reference: form.reference.trim() || undefined,
-        reason: form.reason.trim() || undefined,
-      });
+        reference: optionalRmaField(form.reference, !!editing, ""),
+        reason: optionalRmaField(form.reason, !!editing, ""),
+      };
+      if (editing) {
+        await api.patch(`/supplier-rmas/${editing.id}`, payload);
+      } else {
+        await api.post("/supplier-rmas", payload);
+      }
       toast.success(t("rmas.saved"));
       onSaved();
       onClose();
@@ -106,7 +117,7 @@ function RmaModal({
       <div className="modal-surface relative z-10 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-b-none bg-surface-container-lowest shadow-2xl sm:max-h-[80vh] sm:max-w-md sm:rounded-xl">
         <div className="flex items-center justify-between px-6 py-4">
           <h2 className="font-bold font-headline text-lg text-on-surface">
-            {t("rmas.add")}
+            {editing ? t("edit") : t("rmas.add")}
           </h2>
           <button
             className="flex h-10 w-10 items-center justify-center rounded-full text-outline hover:bg-surface-container-high"
@@ -127,23 +138,17 @@ function RmaModal({
             />
           </Field>
           <Field label={t("rmas.job_code")}>
-            <Input
-              onChange={(e) => set({ jobCode: e.target.value })}
+            <JobCodePicker
+              onChange={(code) => set({ jobCode: code })}
               value={form.jobCode}
             />
           </Field>
           <Field label={t("rmas.part")}>
-            <Select
-              onChange={(e) => set({ partId: e.target.value })}
+            <PartPicker
+              initialPart={editing?.part}
+              onChange={(id) => set({ partId: id })}
               value={form.partId}
-            >
-              <option value="">{t("rmas.no_part")}</option>
-              {parts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
+            />
           </Field>
           <Field label={t("rmas.description")} required>
             <Input
@@ -195,8 +200,8 @@ export default function SupplierRmasPage() {
   const jobId = params.get("jobId") || undefined;
   const jobCode = params.get("jobCode") || "";
   const [rmas, setRmas] = useState<Rma[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [parts, setParts] = useState<Part[]>([]);
+  const canEdit = useCan({ parts: ["manageCatalog"] });
+  const [editing, setEditing] = useState<Rma | undefined>();
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -204,23 +209,15 @@ export default function SupplierRmasPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [r, s, p] = await Promise.allSettled([
+      const [r] = await Promise.allSettled([
         api.get("/supplier-rmas", {
           params: { status: statusFilter || undefined, jobId },
         }),
-        api.get("/suppliers"),
-        api.get("/parts", { params: { limit: 100 } }),
       ]);
       if (r.status === "fulfilled") {
         setRmas(r.value.data?.data ?? []);
       }
-      if (s.status === "fulfilled") {
-        setSuppliers(s.value.data?.data ?? []);
-      }
-      if (p.status === "fulfilled") {
-        setParts(p.value.data?.parts ?? []);
-      }
-      if ([r, s, p].some((result) => result.status === "rejected")) {
+      if (r.status === "rejected") {
         toast.error(t("rmas.load_failed"));
       }
     } catch {
@@ -262,8 +259,12 @@ export default function SupplierRmasPage() {
           </p>
         </div>
         <Button
+          disabled={!canEdit}
           icon="add"
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditing(undefined);
+            setShowModal(true);
+          }}
           size="md"
           type="button"
           variant="primary-gradient"
@@ -344,9 +345,21 @@ export default function SupplierRmasPage() {
                       .join(" · ")}
                   </p>
                 </div>
+                {canEdit && (
+                  <Button
+                    onClick={() => {
+                      setEditing(rma);
+                      setShowModal(true);
+                    }}
+                    variant="ghost"
+                  >
+                    {t("edit")}
+                  </Button>
+                )}
                 <Select
                   aria-label={t("rmas.status")}
                   className="sm:w-44"
+                  disabled={!canEdit}
                   onChange={(e) => setStatus(rma, e.target.value)}
                   value={rma.status}
                 >
@@ -364,11 +377,10 @@ export default function SupplierRmasPage() {
 
       {showModal && (
         <RmaModal
+          editing={editing}
           jobCode={jobCode}
           onClose={() => setShowModal(false)}
           onSaved={load}
-          parts={parts}
-          suppliers={suppliers}
         />
       )}
     </>

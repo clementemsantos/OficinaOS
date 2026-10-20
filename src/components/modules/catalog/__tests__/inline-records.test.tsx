@@ -175,3 +175,83 @@ describe("creating related records without leaving the form", () => {
     expect(mocks.change).toHaveBeenCalledWith("child");
   });
 });
+
+describe("one selector for historical and custom categories", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.can.mockReturnValue(true);
+  });
+  function Form({
+    initialCustom = "",
+    initialBase = "SCREEN",
+    filter = false,
+  }) {
+    const [base, setBase] = useState(initialBase);
+    const [custom, setCustom] = useState(initialCustom);
+    return (
+      <>
+        <CategoryField
+          base={{ value: base, onChange: setBase }}
+          filter={filter}
+          onChange={setCustom}
+          scope="PART"
+          value={custom}
+        />
+        <output>{`${base}|${custom}`}</output>
+      </>
+    );
+  }
+  it("shows one category field and switches from custom to historical without retaining an invisible custom filter", async () => {
+    mocks.get.mockResolvedValue({
+      data: {
+        data: [
+          { id: "c1", name: "Computer parts", parentId: null, isActive: true },
+        ],
+      },
+    });
+    render(<Form initialCustom="c1" />);
+    const input = screen.getByRole("combobox", { name: "catalog.category" });
+    await waitFor(() => expect(input).toHaveValue("Computer parts"));
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    fireEvent.focus(input);
+    fireEvent.click(
+      screen.getByRole("option", { name: "part_category.BATTERY" })
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("BATTERY|");
+    expect(input).toHaveValue("part_category.BATTERY");
+  });
+  it("gives a newly selected custom category a valid internal base type", async () => {
+    mocks.get.mockResolvedValue({
+      data: {
+        data: [
+          { id: "c1", name: "Computer parts", parentId: null, isActive: true },
+        ],
+      },
+    });
+    render(<Form initialBase="" />);
+    fireEvent.focus(screen.getByRole("combobox"));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Computer parts" })
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("OTHER|c1");
+  });
+  it("clears the historical filter when selecting a custom category and clears both with the clear button", async () => {
+    mocks.get.mockResolvedValue({
+      data: {
+        data: [
+          { id: "c1", name: "Computer parts", parentId: null, isActive: true },
+        ],
+      },
+    });
+    render(<Form filter />);
+    fireEvent.focus(screen.getByRole("combobox"));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Computer parts" })
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("ALL|c1");
+    fireEvent.focus(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("button", { name: "catalog.clear" }));
+    expect(screen.getByRole("status")).toHaveTextContent("ALL|");
+    expect(screen.getByRole("combobox")).toHaveValue("");
+  });
+});

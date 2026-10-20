@@ -742,3 +742,79 @@ describe("data-io routes", () => {
     expect(res.json().code).toBe("VALIDATION_ERROR");
   });
 });
+
+describe("editing RMA record associations", () => {
+  function setup() {
+    const prisma = {
+      supplierRma: {
+        findUnique: vi.fn().mockResolvedValue({ id: "r1", status: "OPEN" }),
+        update: vi.fn().mockResolvedValue({ id: "r1" }),
+      },
+      supplier: { findUnique: vi.fn().mockResolvedValue({ id: "s2" }) },
+      partsCatalog: { findUnique: vi.fn().mockResolvedValue({ id: "p2" }) },
+      job: {
+        findUnique: vi.fn().mockResolvedValue({ id: "j2", jobCode: "2026/2" }),
+      },
+    };
+    return {
+      prisma,
+      app: buildApp(prisma, [
+        { plugin: supplierRmasRoutes, prefix: "/api/supplier-rmas" },
+      ]),
+    };
+  }
+  it("updates supplier, part and job links on the same RMA without changing its state", async () => {
+    const { app, prisma } = setup();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/supplier-rmas/r1",
+      payload: {
+        supplierId: "s2",
+        partId: "p2",
+        jobCode: "2026/2",
+        description: "Updated",
+        quantity: 2,
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(prisma.supplierRma.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "r1" },
+        data: {
+          supplierId: "s2",
+          partId: "p2",
+          jobId: "j2",
+          description: "Updated",
+          quantity: 2,
+        },
+      })
+    );
+  });
+  it("allows explicitly clearing optional associations", async () => {
+    const { app, prisma } = setup();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/supplier-rmas/r1",
+      payload: { partId: null, jobCode: null },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(prisma.supplierRma.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { partId: null, jobId: null } })
+    );
+  });
+  it.each([
+    "supplier",
+    "partsCatalog",
+    "job",
+  ] as const)("rejects a missing %s association without modifying the RMA", async (model) => {
+    const { app, prisma } = setup();
+    prisma[model].findUnique.mockResolvedValue(null);
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/supplier-rmas/r1",
+      payload: { supplierId: "s2", partId: "p2", jobCode: "2026/2" },
+    });
+    expect(res.statusCode).toBe(404);
+    expect(prisma.supplierRma.update).not.toHaveBeenCalled();
+  });
+});

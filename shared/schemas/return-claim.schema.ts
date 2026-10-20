@@ -24,6 +24,12 @@ export const createReturnClaimSchema = z.object({
   returnReason: z.string().min(1).max(2000),
 });
 
+export const editReturnClaimSchema = z
+  .object({
+    returnReason: z.string().trim().min(1).max(2000),
+  })
+  .strict();
+
 export const triageReturnClaimSchema = z.object({
   faultCategory: FaultCategoryEnum,
 });

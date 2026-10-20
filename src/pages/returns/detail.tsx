@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import ClaimHeader from "@/components/modules/returns/claim-header";
 import ClaimPhotosSection from "@/components/modules/returns/claim-photos-section";
+import { ClaimReasonEditor } from "@/components/modules/returns/claim-reason-editor";
 import ResolutionSection from "@/components/modules/returns/resolution-section";
 import TriageSection from "@/components/modules/returns/triage-section";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
@@ -86,9 +87,7 @@ export default function ReturnDetailPage() {
         <h3 className="mt-3 font-medium text-on-surface-variant text-sm">
           {t("returns_detail_customer_complaint")}
         </h3>
-        <p className="mt-1 whitespace-pre-wrap text-on-surface">
-          {claim.returnReason}
-        </p>
+        <ClaimReasonEditor claim={claim} onSaved={refreshClaim} />
       </section>
 
       <TriageSection claim={claim} />

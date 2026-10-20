@@ -36,6 +36,7 @@ export function RecordCategory({
   }
   return (
     <CategoryField
+      clearOnSearch={false}
       disabled={busy}
       onChange={save}
       scope={scope}

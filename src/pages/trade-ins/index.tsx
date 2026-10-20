@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import TradeInModal from "@/components/modules/trade-ins/trade-in-modal";
+import { Button } from "@/components/ui/button";
 import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
 import { useCan } from "@/hooks/use-can";
@@ -42,6 +43,7 @@ export default function TradeInsPage() {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<TradeIn>();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pending, setPending] = useState<{
     item: TradeIn;
@@ -99,7 +101,10 @@ export default function TradeInsPage() {
         {canCreate && (
           <button
             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 font-bold font-headline text-on-primary text-sm transition-colors hover:bg-primary-container hover:text-on-primary-container"
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditing(undefined);
+              setShowModal(true);
+            }}
             type="button"
           >
             <Icon name="add" size="sm" />
@@ -245,6 +250,18 @@ export default function TradeInsPage() {
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-1">
                         {item.status === "OFFERED" && canEdit && (
+                          <Button
+                            onClick={() => {
+                              setEditing(item);
+                              setShowModal(true);
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            {t("edit")}
+                          </Button>
+                        )}
+                        {item.status === "OFFERED" && canEdit && (
                           <button
                             className="rounded-lg p-2 text-primary transition-colors hover:bg-surface-container disabled:opacity-50"
                             disabled={busyId === item.id}
@@ -353,6 +370,7 @@ export default function TradeInsPage() {
 
       {showModal && (
         <TradeInModal
+          editing={editing}
           onClose={() => setShowModal(false)}
           onCreated={() => {
             setShowModal(false);

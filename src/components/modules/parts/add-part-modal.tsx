@@ -1,5 +1,4 @@
 import type { PartCategoryType } from "@shared/constants";
-import { PartCategory } from "@shared/constants";
 import type { PartsCatalog } from "@shared/types";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +10,6 @@ import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useModalEffects } from "@/hooks/use-modal-effects";
 
@@ -52,7 +50,6 @@ interface AddPartModalProps {
   onSubmit: (data: AddPartSubmitData) => Promise<void> | void;
 }
 
-const CATEGORIES: PartCategoryType[] = Object.values(PartCategory);
 const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
 const INT_REGEX = /^\d{0,6}$/;
 
@@ -283,46 +280,21 @@ export default function AddPartModal({
               )}
             </div>
 
-            <div>
-              <Label className="mb-2 block" htmlFor="part-category">
-                {t("add_part_modal.category")}
-              </Label>
-              <div className="relative">
-                <Select
-                  aria-describedby={
-                    errors.category ? "error-part-category" : undefined
-                  }
-                  aria-invalid={!!errors.category || undefined}
-                  id="part-category"
-                  onChange={(e) =>
-                    update("category", e.target.value as PartCategoryType)
-                  }
-                  required
-                  value={form.category}
-                >
-                  <option disabled value="">
-                    {t("add_part_modal.category_placeholder")}
-                  </option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {t(`part_category.${cat}`)}
-                    </option>
-                  ))}
-                </Select>
-                <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
-                  <Icon name="expand_more" size="sm" />
-                </span>
-              </div>
-              {errors.category && (
-                <p
-                  className="mt-1.5 rounded-lg bg-error-container px-3 py-1.5 font-bold text-on-error-container text-xs"
-                  id="error-part-category"
-                  role="alert"
-                >
-                  {errors.category}
-                </p>
-              )}
-            </div>
+            <CategoryField
+              base={{
+                value: form.category,
+                onChange: (value) =>
+                  update("category", value as PartCategoryType),
+              }}
+              onChange={(id) => update("customCategoryId", id)}
+              scope="PART"
+              value={form.customCategoryId}
+            />
+            {errors.category && (
+              <p className="text-error text-sm" role="alert">
+                {errors.category}
+              </p>
+            )}
 
             <div>
               <Label className="mb-2 block" htmlFor="part-price">
@@ -403,11 +375,6 @@ export default function AddPartModal({
               </div>
             </div>
 
-            <CategoryField
-              onChange={(id) => update("customCategoryId", id)}
-              scope="PART"
-              value={form.customCategoryId}
-            />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {!isEditing && (
                 <div>

@@ -9,7 +9,6 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useModalEffects } from "@/hooks/use-modal-effects";
-import { REPAIR_CATEGORY_ICONS } from "@/lib/category-display";
 
 export interface RepairFormData {
   basePrice: string;
@@ -33,16 +32,6 @@ interface AddRepairModalProps {
   onSubmit: (data: RepairFormData) => Promise<void>;
   open: boolean;
 }
-
-const REPAIR_CATEGORIES: {
-  key: RepairCategoryType;
-  labelKey: string;
-}[] = [
-  { key: "HARDWARE", labelKey: "repair_category.HARDWARE" },
-  { key: "SOFTWARE", labelKey: "repair_category.SOFTWARE" },
-  { key: "DIAGNOSTIC", labelKey: "repair_category.DIAGNOSTIC" },
-  { key: "OTHER", labelKey: "repair_category.OTHER" },
-];
 
 function isDirty(
   form: RepairFormData,
@@ -190,11 +179,6 @@ export default function AddRepairModal({
         role="dialog"
       >
         <form onSubmit={handleSubmit}>
-          <CategoryField
-            onChange={(id) => update("customCategoryId", id)}
-            scope="REPAIR"
-            value={form.customCategoryId}
-          />
           <div className="bg-surface-container-low px-6 py-5">
             <div className="flex items-center justify-between">
               <div>
@@ -222,32 +206,16 @@ export default function AddRepairModal({
           </div>
 
           <div className="flex flex-col gap-5 px-6 py-6">
-            <div>
-              <Label className="mb-2 block" htmlFor="repair-category">
-                {t("repair_modal.category_section")}
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {REPAIR_CATEGORIES.map((cat) => (
-                  <button
-                    className={`min-h-[44px] rounded-xl px-4 py-2.5 font-bold font-label text-xs transition-all ${
-                      form.category === cat.key
-                        ? "bg-primary text-on-primary shadow-sm"
-                        : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant"
-                    }`}
-                    key={cat.key}
-                    onClick={() => update("category", cat.key)}
-                    type="button"
-                  >
-                    <Icon
-                      className="me-1 -mt-0.5 inline align-middle"
-                      name={REPAIR_CATEGORY_ICONS[cat.key].icon}
-                      size="sm"
-                    />
-                    {t(cat.labelKey)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <CategoryField
+              base={{
+                value: form.category,
+                onChange: (value) =>
+                  update("category", value as RepairCategoryType),
+              }}
+              onChange={(id) => update("customCategoryId", id)}
+              scope="REPAIR"
+              value={form.customCategoryId}
+            />
 
             <div>
               <Label className="mb-2 block" htmlFor="repair-name">

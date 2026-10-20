@@ -3,7 +3,6 @@ import type { RepairCatalog } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
-import { CategoryField } from "@/components/modules/catalog/category-field";
 import type { RepairFormData } from "@/components/modules/repairs/add-repair-modal";
 import AddRepairModal from "@/components/modules/repairs/add-repair-modal";
 import CategoryHealth from "@/components/modules/repairs/category-health";
@@ -307,11 +306,6 @@ export default function RepairsPage() {
 
   return (
     <>
-      <CategoryField
-        onChange={setCustomCategory}
-        scope="REPAIR"
-        value={customCategory}
-      />
       <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h2 className="font-extrabold font-headline text-2xl text-on-surface tracking-tight md:text-3xl">
@@ -383,7 +377,9 @@ export default function RepairsPage() {
         <RepairFilters
           activeCategory={activeCategory}
           activeSort={activeSort}
+          customCategory={customCategory}
           onCategoryChange={setActiveCategory}
+          onCustomCategoryChange={setCustomCategory}
           onSearchChange={setSearchQuery}
           onSortChange={setActiveSort}
           searchQuery={searchQuery}
@@ -395,6 +391,7 @@ export default function RepairsPage() {
         {!isLoading && sorted.length === 0 && (
           <RepairListEmpty
             onClearFilters={() => {
+              setCustomCategory("");
               setActiveCategory("ALL");
               setSearchQuery("");
               setActiveSort("recently_added");

@@ -156,6 +156,34 @@ const RMA_TRANSITIONS: Record<string, string[]> = {
   CANCELLED: ["OPEN"],
 };
 
+async function rmaEditFields(prisma: PrismaClient, input: UpdateRmaInput) {
+  const { jobCode, ...fields } = input;
+  const data: Record<string, unknown> = { ...fields };
+  if (
+    input.supplierId &&
+    !(await prisma.supplier.findUnique({ where: { id: input.supplierId } }))
+  ) {
+    throw new AppError("NOT_FOUND");
+  }
+  if (
+    input.partId &&
+    !(await prisma.partsCatalog.findUnique({ where: { id: input.partId } }))
+  ) {
+    throw new AppError("NOT_FOUND");
+  }
+  if (jobCode !== undefined) {
+    const job = jobCode
+      ? await prisma.job.findUnique({ where: { jobCode } })
+      : null;
+    if (jobCode && !job) {
+      throw new AppError("JOB_NOT_FOUND");
+    }
+    data.jobId = job?.id ?? null;
+  }
+
+  return data;
+}
+
 export async function updateRma(
   prisma: PrismaClient,
   id: string,
@@ -169,7 +197,7 @@ export async function updateRma(
     supplier: { select: { id: true, name: true } },
     part: { select: { id: true, name: true } },
   };
-  const data: Record<string, unknown> = { ...input };
+  const data = await rmaEditFields(prisma, input);
   if (input.status && input.status !== existing.status) {
     if (!RMA_TRANSITIONS[existing.status]?.includes(input.status)) {
       throw new AppError("INVALID_TRANSITION");

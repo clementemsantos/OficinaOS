@@ -15,6 +15,7 @@ export function SearchPicker({
   onQuery,
   onCreate,
   disabled = false,
+  clearOnSearch = true,
 }: {
   id?: string;
   label: string;
@@ -24,6 +25,7 @@ export function SearchPicker({
   onQuery?: (query: string) => void;
   onCreate?: (name: string) => void;
   disabled?: boolean;
+  clearOnSearch?: boolean;
 }) {
   const { t } = useTranslation();
   const generated = useId();
@@ -33,18 +35,20 @@ export function SearchPicker({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const selected = options.find((option) => option.id === value);
-  const filtered = options.filter((option) =>
-    option.name
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLocaleLowerCase()
-      .includes(
-        query
+  const filtered = onQuery
+    ? options
+    : options.filter((option) =>
+        option.name
           .normalize("NFD")
           .replace(/\p{Diacritic}/gu, "")
           .toLocaleLowerCase()
-      )
-  );
+          .includes(
+            query
+              .normalize("NFD")
+              .replace(/\p{Diacritic}/gu, "")
+              .toLocaleLowerCase()
+          )
+      );
   useEffect(() => {
     const outside = (event: MouseEvent) => {
       if (!root.current?.contains(event.target as Node)) {
@@ -76,7 +80,9 @@ export function SearchPicker({
           setQuery(event.target.value);
           setOpen(true);
           setActive(0);
-          onChange("", "");
+          if (clearOnSearch) {
+            onChange("", "");
+          }
           onQuery?.(event.target.value);
         }}
         onFocus={() => {
