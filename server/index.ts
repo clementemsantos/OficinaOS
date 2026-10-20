@@ -21,6 +21,7 @@ import { websocketPlugin, wsBroadcast } from "./plugins/websocket.js";
 import { aiRoutes } from "./routes/ai.js";
 import { authRoutes } from "./routes/auth.js";
 import { businessRoutes } from "./routes/business.js";
+import { catalogCategoriesRoutes } from "./routes/catalog-categories.js";
 import { customersRoutes } from "./routes/customers.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { dataIoRoutes } from "./routes/data-io.js";
@@ -212,6 +213,7 @@ app.register(suppliersRoutes, { prefix: "/api/suppliers" });
 app.register(supplierRmasRoutes, { prefix: "/api/supplier-rmas" });
 app.register(workflowRoutes, { prefix: "/api/workflow" });
 app.register(businessRoutes, { prefix: "/api/business" });
+app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
 app.register(purchaseOrdersRoutes, { prefix: "/api/purchase-orders" });
 app.register(tasksRoutes, { prefix: "/api/tasks" });
 

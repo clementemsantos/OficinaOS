@@ -10,6 +10,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { CategoryField } from "@/components/modules/catalog/category-field";
+import { CustomerPicker } from "@/components/modules/catalog/customer-picker";
+import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { Field, type FieldControlProps } from "@/components/ui/field";
@@ -89,6 +92,9 @@ const types: Record<Module, WorkflowType> = {
 };
 function empty(module: Module): Record<string, string> {
   const result: Record<string, string> = { customerId: "", supplierId: "" };
+  if (module !== "messages") {
+    result.customCategoryId = "";
+  }
   for (const field of fields[module]) {
     result[field.name] =
       field.options?.[0] ??
@@ -112,10 +118,6 @@ export default function BusinessPage({ module }: { module: Module }) {
   const supplierId = params.get("supplierId") || undefined;
   const [entries, setEntries] = useState<Entry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [parties, setParties] = useState<{
-    customers: { id: string; name: string }[];
-    suppliers: { id: string; name: string }[];
-  }>({ customers: [], suppliers: [] });
   const [form, setForm] = useState<Record<string, string>>(() => ({
     ...empty(module),
     customerId: customerId ?? "",
@@ -148,27 +150,12 @@ export default function BusinessPage({ module }: { module: Module }) {
     });
     setEditing("");
     load();
-    api
-      .get("/business/parties")
-      .then(({ data }) => setParties(data))
-      .catch(() => toast.error(t("tasks.failed")));
-  }, [load, module, customerId, supplierId, t]);
+  }, [load, module, customerId, supplierId]);
   const save = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     try {
-      const data: Record<string, unknown> = {
-        ...form,
-        customerId: form.customerId || null,
-        supplierId: form.supplierId || null,
-      };
-      for (const field of fields[module]) {
-        if (field.type === "date") {
-          data[field.name] = form[field.name]
-            ? new Date(`${form[field.name]}T00:00:00Z`).toISOString()
-            : null;
-        }
-      }
+      const data = businessFormBody(module, form);
       if (editing) {
         await api.patch(`/business/${module}/${editing}`, data);
       } else {
@@ -229,25 +216,31 @@ export default function BusinessPage({ module }: { module: Module }) {
                 value={form[field.name]}
               />
             ))}
-            {(["customerId", "supplierId"] as const).map((name) => (
-              <Field key={name} label={t(`business.fields.${name}`)}>
-                <Select
-                  onChange={(event) =>
-                    setForm((old) => ({ ...old, [name]: event.target.value }))
-                  }
-                  value={form[name]}
-                >
-                  <option value="">—</option>
-                  {parties[
-                    name === "customerId" ? "customers" : "suppliers"
-                  ].map((party) => (
-                    <option key={party.id} value={party.id}>
-                      {party.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ))}
+            <Field label={t("business.fields.customerId")}>
+              <CustomerPicker
+                onChange={(id) =>
+                  setForm((old) => ({ ...old, customerId: id }))
+                }
+                value={form.customerId}
+              />
+            </Field>
+            <Field label={t("business.fields.supplierId")}>
+              <SupplierPicker
+                onChange={(id) =>
+                  setForm((old) => ({ ...old, supplierId: id }))
+                }
+                value={form.supplierId}
+              />
+            </Field>
+            {module !== "messages" && (
+              <CategoryField
+                onChange={(id) =>
+                  setForm((old) => ({ ...old, customCategoryId: id }))
+                }
+                scope={module === "tickets" ? "TICKET" : "AGREEMENT"}
+                value={form.customCategoryId}
+              />
+            )}
             {commission && (
               <p>
                 {t("business.commission_total")}: {commission} €
@@ -445,4 +438,24 @@ function BusinessFormField({
     );
   }
   return <Field label={t(`business.fields.${field.name}`)}>{control}</Field>;
+}
+
+function businessFormBody(module: Module, form: Record<string, string>) {
+  const data: Record<string, unknown> = {
+    ...form,
+    customerId: form.customerId || null,
+    supplierId: form.supplierId || null,
+    ...(module === "messages"
+      ? {}
+      : { customCategoryId: form.customCategoryId || null }),
+  };
+  for (const field of fields[module]) {
+    if (field.type === "date") {
+      data[field.name] = form[field.name]
+        ? new Date(`${form[field.name]}T00:00:00Z`).toISOString()
+        : null;
+    }
+  }
+
+  return data;
 }

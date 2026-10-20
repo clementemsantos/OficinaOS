@@ -27,19 +27,29 @@ describe("business forms", () => {
     mocks.can.mockReturnValue(true);
     mocks.post.mockResolvedValue({});
     mocks.put.mockResolvedValue({});
-    mocks.get.mockImplementation((url: string) =>
-      Promise.resolve({
-        data:
-          url === "/business/parties"
-            ? {
-                customers: [{ id: "c1", name: "Example customer" }],
-                suppliers: [
-                  { id: "s1", name: "Example supplier", customerId: null },
-                ],
-              }
-            : { data: [], nextCursor: null },
-      })
-    );
+    mocks.get.mockImplementation((url: string) => {
+      if (url === "/customers") {
+        return Promise.resolve({
+          data: { customers: [{ id: "c1", name: "Example customer" }] },
+        });
+      }
+      if (url === "/suppliers") {
+        return Promise.resolve({
+          data: { data: [{ id: "s1", name: "Example supplier" }] },
+        });
+      }
+      if (url === "/business/parties") {
+        return Promise.resolve({
+          data: {
+            customers: [{ id: "c1", name: "Example customer" }],
+            suppliers: [
+              { id: "s1", name: "Example supplier", customerId: null },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { data: [], nextCursor: null } });
+    });
   });
   it("creates a support ticket in a chosen area with existing customer and supplier", async () => {
     render(
@@ -47,7 +57,6 @@ describe("business forms", () => {
         <BusinessPage module="tickets" />
       </MemoryRouter>
     );
-    await screen.findByRole("option", { name: "Example customer" });
     fireEvent.click(screen.getByText("business.add"));
     fireEvent.change(screen.getByLabelText("business.fields.title"), {
       target: { value: "Website unavailable" },
@@ -58,12 +67,14 @@ describe("business forms", () => {
     fireEvent.change(screen.getByLabelText("business.fields.description"), {
       target: { value: "Check platform configuration" },
     });
-    fireEvent.change(screen.getByLabelText("business.fields.customerId"), {
-      target: { value: "c1" },
-    });
-    fireEvent.change(screen.getByLabelText("business.fields.supplierId"), {
-      target: { value: "s1" },
-    });
+    fireEvent.focus(screen.getByRole("combobox", { name: "catalog.customer" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Example customer" })
+    );
+    fireEvent.focus(screen.getByRole("combobox", { name: "catalog.supplier" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Example supplier" })
+    );
     fireEvent.click(screen.getByRole("button", { name: "save" }));
     await waitFor(() =>
       expect(mocks.post).toHaveBeenCalledWith(

@@ -2,6 +2,7 @@ import type { RepairCategoryType } from "@shared/constants";
 import type { RepairCatalog } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CategoryField } from "@/components/modules/catalog/category-field";
 import { Button } from "@/components/ui/button";
 import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
@@ -13,12 +14,14 @@ import { REPAIR_CATEGORY_ICONS } from "@/lib/category-display";
 export interface RepairFormData {
   basePrice: string;
   category: RepairCategoryType;
+  customCategoryId: string;
   name: string;
 }
 
 const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
 
 const INITIAL_FORM: RepairFormData = {
+  customCategoryId: "",
   basePrice: "",
   category: "HARDWARE",
   name: "",
@@ -47,6 +50,7 @@ function isDirty(
 ): boolean {
   if (editingRepair) {
     return (
+      form.customCategoryId !== (editingRepair.customCategoryId ?? "") ||
       form.name !== editingRepair.name ||
       form.category !== (editingRepair.category as RepairCategoryType) ||
       Number.parseFloat(form.basePrice) !==
@@ -54,6 +58,7 @@ function isDirty(
     );
   }
   return (
+    form.customCategoryId !== INITIAL_FORM.customCategoryId ||
     form.name !== INITIAL_FORM.name ||
     form.category !== INITIAL_FORM.category ||
     form.basePrice !== INITIAL_FORM.basePrice
@@ -73,6 +78,7 @@ export default function AddRepairModal({
   const [form, setForm] = useState<RepairFormData>(() => {
     if (editingRepair) {
       return {
+        customCategoryId: editingRepair.customCategoryId ?? "",
         name: editingRepair.name,
         category: editingRepair.category as RepairCategoryType,
         basePrice: String(editingRepair.defaultPrice),
@@ -89,6 +95,7 @@ export default function AddRepairModal({
   useEffect(() => {
     if (editingRepair) {
       setForm({
+        customCategoryId: editingRepair.customCategoryId ?? "",
         name: editingRepair.name,
         category: editingRepair.category as RepairCategoryType,
         basePrice: String(editingRepair.defaultPrice),
@@ -183,6 +190,11 @@ export default function AddRepairModal({
         role="dialog"
       >
         <form onSubmit={handleSubmit}>
+          <CategoryField
+            onChange={(id) => update("customCategoryId", id)}
+            scope="REPAIR"
+            value={form.customCategoryId}
+          />
           <div className="bg-surface-container-low px-6 py-5">
             <div className="flex items-center justify-between">
               <div>

@@ -6,6 +6,7 @@ import api, { getErrorMessage } from "@/lib/api";
 interface PartsCatalogState {
   clearError: () => void;
   createPart: (data: {
+    customCategoryId?: string | null;
     name: string;
     category: string;
     defaultPrice: number;
@@ -19,6 +20,7 @@ interface PartsCatalogState {
   error: string | null;
   fetchPartById: (id: string) => Promise<PartsCatalog | null>;
   fetchParts: (params?: {
+    customCategoryId?: string;
     cursor?: string;
     limit?: number;
     search?: string;
@@ -29,6 +31,7 @@ interface PartsCatalogState {
   isLoading: boolean;
   isLoadingMore: boolean;
   loadMoreParts: (params?: {
+    customCategoryId?: string;
     search?: string;
     category?: string;
     isActive?: boolean;

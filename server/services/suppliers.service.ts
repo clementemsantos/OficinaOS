@@ -7,6 +7,7 @@ import type {
   updateSupplierSchema,
 } from "@shared/schemas/supplier.schema";
 import type { z } from "zod";
+import { validateCategory } from "./catalog-category.service.js";
 
 type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
 type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
@@ -30,10 +31,11 @@ export function listSuppliers(
   });
 }
 
-export function createSupplier(
+export async function createSupplier(
   prisma: PrismaClient,
   input: CreateSupplierInput
 ) {
+  await validateCategory(prisma, "SUPPLIER", input.customCategoryId);
   return prisma.supplier.create({ data: input });
 }
 
@@ -45,6 +47,9 @@ export async function updateSupplier(
   const existing = await prisma.supplier.findUnique({ where: { id } });
   if (!existing) {
     throw new AppError("NOT_FOUND");
+  }
+  if (input.customCategoryId !== existing.customCategoryId) {
+    await validateCategory(prisma, "SUPPLIER", input.customCategoryId);
   }
   return prisma.supplier.update({ where: { id }, data: input });
 }

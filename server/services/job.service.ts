@@ -115,11 +115,18 @@ const JOB_INCLUDE = {
     },
     orderBy: { createdAt: "desc" as const },
   },
-  partsUsed: true,
+  partsUsed: {
+    include: { customCategory: { select: { id: true, name: true } } },
+  },
   partsWaiting: true,
   payments: { select: { amount: true, method: true, createdAt: true } },
   photos: true,
-  repairs: { include: { repair: { select: { warrantyDays: true } } } },
+  repairs: {
+    include: {
+      customCategory: { select: { id: true, name: true } },
+      repair: { select: { warrantyDays: true } },
+    },
+  },
   technician: { select: { id: true, name: true, username: true } },
 } as const satisfies Prisma.JobInclude;
 

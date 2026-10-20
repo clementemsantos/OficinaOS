@@ -2651,5 +2651,27 @@
       "PART": "Parts order"
     },
     "open_record": "Open record"
+  },
+  "catalog": {
+    "search": "Type to search…",
+    "no_matches": "No matching records.",
+    "clear": "Clear selection",
+    "create": "Create new…",
+    "supplier": "Supplier",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "category": "Category and subcategory",
+    "parent_category": "Parent category (optional)",
+    "edit_category": "Edit selected category",
+    "active": "Active",
+    "edit_line": "Edit applied item",
+    "base_category": "Part / service type",
+    "price": "Unit price (€)",
+    "quantity": "Quantity",
+    "new_inventory_part": "Create inventory part",
+    "new_service": "Create catalog service",
+    "created": "Created and selected.",
+    "customer": "Customer"
   }
 }

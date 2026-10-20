@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Select } from "@/components/ui/select";
+import { useDebounce } from "@/hooks/use-debounce";
 import api from "@/lib/api";
 import { businessRecordPath } from "@/lib/business-links";
 export function MessageLinks({
@@ -19,6 +21,8 @@ export function MessageLinks({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("JOB");
+  const [query, setQuery] = useState("");
+  const search = useDebounce(query, 250);
   const [target, setTarget] = useState("");
   const [choices, setChoices] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -27,10 +31,11 @@ export function MessageLinks({
       return;
     }
     let active = true;
-    setTarget("");
     setChoices([]);
     api
-      .get("/business/targets", { params: { entityType: type } })
+      .get("/business/targets", {
+        params: { entityType: type, search: search || undefined },
+      })
       .then(({ data }) => {
         if (active) {
           setChoices(data.data);
@@ -40,7 +45,7 @@ export function MessageLinks({
     return () => {
       active = false;
     };
-  }, [type, t, open]);
+  }, [type, t, open, search]);
   const add = async () => {
     setBusy(true);
     try {
@@ -99,7 +104,11 @@ export function MessageLinks({
       </ul>
       <Select
         aria-label={t("business.link_type")}
-        onChange={(event) => setType(event.target.value)}
+        onChange={(event) => {
+          setType(event.target.value);
+          setTarget("");
+          setQuery("");
+        }}
         value={type}
       >
         {["JOB", "ORDER", "TICKET", "CUSTOMER", "SUPPLIER", "AGREEMENT"].map(
@@ -110,18 +119,14 @@ export function MessageLinks({
           )
         )}
       </Select>
-      <Select
-        aria-label={t("business.link_record")}
-        onChange={(event) => setTarget(event.target.value)}
+      <SearchPicker
+        label={t("business.link_record")}
+        onChange={(id) => setTarget(id)}
+        onQuery={setQuery}
+        options={choices}
         value={target}
-      >
-        <option value="">—</option>
-        {choices.map((choice) => (
-          <option key={choice.id} value={choice.id}>
-            {choice.name}
-          </option>
-        ))}
-      </Select>
+      />
+
       <Button disabled={!target} loading={busy} onClick={add} size="sm">
         {t("business.link")}
       </Button>

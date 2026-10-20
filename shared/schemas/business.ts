@@ -5,8 +5,12 @@ const HTTP_URL = /^https?:/;
 export const amount = z.string().regex(/^\d{1,10}(\.\d{1,2})?$/);
 export const rate = z.string().regex(/^\d{1,2}(\.\d{1,2})?$|^100(\.0{1,2})?$/);
 const id = z.string().min(1).max(100).nullable().optional();
-export const parties = { customerId: id, supplierId: id };
+export const parties = {
+  customerId: id,
+  supplierId: id,
+};
 export const ticketFields = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   title: z.string().trim().min(1).max(200),
   description: z.string().max(20_000),
   area: z.string().trim().min(1).max(100),
@@ -38,6 +42,7 @@ export const messageLink = z.object({
 });
 export const agreementFields = z
   .object({
+    customCategoryId: z.string().min(1).nullable().optional(),
     kind: z.enum(["COMMISSION", "LICENSE", "RETAINER", "OTHER"]),
     title: z.string().trim().min(1).max(200),
     ...parties,
@@ -60,6 +65,7 @@ export const agreementFields = z
     { path: ["endsAt"], message: "Invalid date range" }
   );
 export const orderFields = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   title: z.string().trim().min(1).max(200),
   ...parties,
   notes: z.string().max(8000).optional(),

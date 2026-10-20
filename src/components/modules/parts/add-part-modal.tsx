@@ -1,8 +1,11 @@
 import type { PartCategoryType } from "@shared/constants";
 import { PartCategory } from "@shared/constants";
 import type { PartsCatalog } from "@shared/types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { CategoryField } from "@/components/modules/catalog/category-field";
+import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
 import { Button } from "@/components/ui/button";
 import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
@@ -11,15 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useModalEffects } from "@/hooks/use-modal-effects";
-import api from "@/lib/api";
-
-interface SupplierOption {
-  id: string;
-  name: string;
-}
 
 interface AddPartFormData {
   category: PartCategoryType | "";
+  customCategoryId: string;
   defaultPrice: string;
   isActive: boolean;
   listedOnline: boolean;
@@ -34,8 +32,13 @@ interface AddPartFormData {
 
 export type AddPartSubmitData = Omit<
   AddPartFormData,
-  "defaultPrice" | "reorderLevel" | "stockQuantity" | "supplierId"
+  | "customCategoryId"
+  | "defaultPrice"
+  | "reorderLevel"
+  | "stockQuantity"
+  | "supplierId"
 > & {
+  customCategoryId: string | null;
   defaultPrice: number;
   reorderLevel: number;
   stockQuantity?: number;
@@ -46,7 +49,7 @@ export type AddPartSubmitData = Omit<
 interface AddPartModalProps {
   editingPart?: PartsCatalog | null;
   onClose: () => void;
-  onSubmit: (data: AddPartSubmitData) => void;
+  onSubmit: (data: AddPartSubmitData) => Promise<void> | void;
 }
 
 const CATEGORIES: PartCategoryType[] = Object.values(PartCategory);
@@ -54,6 +57,7 @@ const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
 const INT_REGEX = /^\d{0,6}$/;
 
 const INITIAL_FORM: AddPartFormData = {
+  customCategoryId: "",
   name: "",
   category: "",
   defaultPrice: "",
@@ -71,6 +75,7 @@ function isDirty(
 ): boolean {
   if (editingPart) {
     return (
+      form.customCategoryId !== (editingPart.customCategoryId ?? "") ||
       form.name !== editingPart.name ||
       form.category !== editingPart.category ||
       Number.parseFloat(form.defaultPrice) !==
@@ -83,6 +88,7 @@ function isDirty(
     );
   }
   return (
+    form.customCategoryId !== INITIAL_FORM.customCategoryId ||
     form.name !== INITIAL_FORM.name ||
     form.category !== INITIAL_FORM.category ||
     form.defaultPrice !== INITIAL_FORM.defaultPrice ||
@@ -108,6 +114,7 @@ export default function AddPartModal({
   const [form, setForm] = useState<AddPartFormData>(() => {
     if (editingPart) {
       return {
+        customCategoryId: editingPart.customCategoryId ?? "",
         name: editingPart.name,
         category: editingPart.category as PartCategoryType,
         defaultPrice: String(editingPart.defaultPrice),
@@ -125,16 +132,7 @@ export default function AddPartModal({
     Partial<Record<"name" | "category" | "defaultPrice", string>>
   >({});
   const [showConfirmClose, setShowConfirmClose] = useState(false);
-  const [supplierOptions, setSupplierOptions] = useState<SupplierOption[]>([]);
-
-  // Active suppliers for the link select — failure is non-fatal, the
-  // free-text supplier field still works.
-  useEffect(() => {
-    api
-      .get("/suppliers")
-      .then((res) => setSupplierOptions(res.data?.data ?? []))
-      .catch(() => setSupplierOptions([]));
-  }, []);
+  const [submitting, setSubmitting] = useState(false);
 
   const update = useCallback(
     <K extends keyof AddPartFormData>(key: K, value: AddPartFormData[K]) => {
@@ -167,7 +165,10 @@ export default function AddPartModal({
   // Escape goes through the dirty-check confirm, not straight to onClose.
   useModalEffects(true, handleRequestClose, dialogRef);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
+    if (submitting) {
+      return;
+    }
     e.preventDefault();
     const newErrors: Partial<
       Record<"name" | "category" | "defaultPrice", string>
@@ -179,26 +180,34 @@ export default function AddPartModal({
       newErrors.category = t("add_part_modal.error_category_required");
     }
     const priceVal = Number.parseFloat(form.defaultPrice);
-    if (!form.defaultPrice || Number.isNaN(priceVal) || priceVal <= 0) {
+    if (!form.defaultPrice || Number.isNaN(priceVal) || priceVal < 0) {
       newErrors.defaultPrice = t("add_part_modal.error_price_invalid");
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    onSubmit({
-      name: form.name,
-      category: form.category as PartCategoryType,
-      defaultPrice: priceVal,
-      supplier: form.supplier,
-      supplierId: form.supplierId || null,
-      isActive: form.isActive,
-      listedOnline: form.listedOnline,
-      reorderLevel: Number.parseInt(form.reorderLevel, 10) || 0,
-      stockQuantity: isEditing
-        ? undefined
-        : Number.parseInt(form.stockQuantity, 10) || 0,
-    });
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        customCategoryId: form.customCategoryId || null,
+        name: form.name,
+        category: form.category as PartCategoryType,
+        defaultPrice: priceVal,
+        supplier: form.supplier,
+        supplierId: form.supplierId || null,
+        isActive: form.isActive,
+        listedOnline: form.listedOnline,
+        reorderLevel: Number.parseInt(form.reorderLevel, 10) || 0,
+        stockQuantity: isEditing
+          ? undefined
+          : Number.parseInt(form.stockQuantity, 10) || 0,
+      });
+    } catch {
+      toast.error(t("tasks.failed"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -380,31 +389,25 @@ export default function AddPartModal({
                 </span>
               </Label>
               <div className="relative">
-                <Select
+                <SupplierPicker
                   id="part-supplier-link"
-                  onChange={(e) => {
-                    const id = e.target.value;
+                  onChange={(id, name) => {
                     update("supplierId", id);
-                    const picked = supplierOptions.find((s) => s.id === id);
-                    if (picked) {
-                      update("supplier", picked.name);
-                    }
+                    update("supplier", name);
                   }}
                   value={form.supplierId}
-                >
-                  <option value="">{t("add_part_modal.supplier_none")}</option>
-                  {supplierOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </Select>
+                />
                 <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
                   <Icon name="expand_more" size="sm" />
                 </span>
               </div>
             </div>
 
+            <CategoryField
+              onChange={(id) => update("customCategoryId", id)}
+              scope="PART"
+              value={form.customCategoryId}
+            />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {!isEditing && (
                 <div>
@@ -506,7 +509,11 @@ export default function AddPartModal({
             >
               {t("add_part_modal.cancel")}
             </Button>
-            <Button icon={isEditing ? "check" : "add"} type="submit">
+            <Button
+              icon={isEditing ? "check" : "add"}
+              loading={submitting}
+              type="submit"
+            >
               {isEditing ? t("save") : t("add_part_modal.add_part")}
             </Button>
           </div>

@@ -58,7 +58,11 @@ describe("RMA supplier selection", () => {
       expect(screen.queryByText("rmas.empty")).toBeInTheDocument()
     );
     fireEvent.click(screen.getByRole("button", { name: "rmas.add" }));
-    expect(screen.getByRole("option", { name: "ACME" })).toHaveValue("s1");
+    fireEvent.focus(screen.getByRole("combobox", { name: "catalog.supplier" }));
+    fireEvent.click(await screen.findByRole("option", { name: "ACME" }));
+    expect(
+      screen.getByRole("combobox", { name: "catalog.supplier" })
+    ).toHaveValue("ACME");
     if (partsFail) {
       expect(mocks.error).toHaveBeenCalledWith("rmas.load_failed");
     }

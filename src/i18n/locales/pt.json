@@ -2651,5 +2651,27 @@
       "PART": "Encomenda de peças"
     },
     "open_record": "Abrir registo"
+  },
+  "catalog": {
+    "search": "Escreva para pesquisar…",
+    "no_matches": "Sem registos correspondentes.",
+    "clear": "Limpar seleção",
+    "create": "Criar novo…",
+    "supplier": "Fornecedor",
+    "name": "Nome",
+    "email": "E-mail",
+    "phone": "Telefone",
+    "category": "Categoria e subcategoria",
+    "parent_category": "Categoria principal (opcional)",
+    "edit_category": "Editar categoria selecionada",
+    "active": "Ativa",
+    "edit_line": "Editar linha aplicada",
+    "base_category": "Tipo de peça / serviço",
+    "price": "Valor unitário (€)",
+    "quantity": "Quantidade",
+    "new_inventory_part": "Criar peça no inventário",
+    "new_service": "Criar serviço no catálogo",
+    "created": "Criado e selecionado.",
+    "customer": "Cliente"
   }
 }

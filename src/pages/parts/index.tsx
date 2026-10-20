@@ -4,6 +4,7 @@ import type { PartsCatalog } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
+import { CategoryField } from "@/components/modules/catalog/category-field";
 import AddPartModal, {
   type AddPartSubmitData,
 } from "@/components/modules/parts/add-part-modal";
@@ -175,7 +176,7 @@ function DesktopPartRow({
         <span
           className={`rounded-full px-2.5 py-1 font-bold text-xs uppercase ${PART_CATEGORY_TONES[part.category]}`}
         >
-          {t(`part_category.${part.category}`)}
+          {part.customCategory?.name ?? t(`part_category.${part.category}`)}
         </span>
       </td>
       <td className="px-5 py-4">
@@ -355,7 +356,7 @@ function MobilePartCard({
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 font-bold text-xs uppercase ${PART_CATEGORY_TONES[part.category]}`}
         >
-          {t(`part_category.${part.category}`)}
+          {part.customCategory?.name ?? t(`part_category.${part.category}`)}
         </span>
       </div>
       <div className="mb-3 flex items-center justify-between">
@@ -899,6 +900,7 @@ export default function PartsCatalogPage() {
     },
     [setSearchParams]
   );
+  const [customCategory, setCustomCategory] = useState("");
   const [sortBy, setSortBy] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [activeFilter, setActiveFilter] = useState<PartCategoryType | "ALL">(
@@ -929,10 +931,11 @@ export default function PartsCatalogPage() {
   const fetchParams = useMemo(
     () => ({
       search: debouncedSearch || undefined,
+      customCategoryId: customCategory || undefined,
       category: activeFilter === "ALL" ? undefined : activeFilter,
       needsRestock: needsRestockFilter || undefined,
     }),
-    [debouncedSearch, activeFilter, needsRestockFilter]
+    [debouncedSearch, activeFilter, needsRestockFilter, customCategory]
   );
 
   useEffect(() => {
@@ -998,6 +1001,7 @@ export default function PartsCatalogPage() {
     }
     try {
       await createPart({
+        customCategoryId: data.customCategoryId,
         category: data.category,
         defaultPrice: data.defaultPrice,
         name: data.name,
@@ -1043,6 +1047,7 @@ export default function PartsCatalogPage() {
     try {
       await updatePart(editingPart.id, {
         name: data.name,
+        customCategoryId: data.customCategoryId,
         category: data.category,
         defaultPrice: data.defaultPrice,
         supplier: data.supplier || undefined,
@@ -1080,10 +1085,17 @@ export default function PartsCatalogPage() {
   const handleLoadMore = useCallback(() => {
     loadMoreParts({
       search: debouncedSearch || undefined,
+      customCategoryId: customCategory || undefined,
       category: activeFilter === "ALL" ? undefined : activeFilter,
       needsRestock: needsRestockFilter || undefined,
     });
-  }, [loadMoreParts, debouncedSearch, activeFilter, needsRestockFilter]);
+  }, [
+    loadMoreParts,
+    debouncedSearch,
+    activeFilter,
+    needsRestockFilter,
+    customCategory,
+  ]);
 
   const metricGridCols = canViewCost
     ? "grid-cols-2 sm:grid-cols-4"
@@ -1091,6 +1103,11 @@ export default function PartsCatalogPage() {
 
   return (
     <>
+      <CategoryField
+        onChange={setCustomCategory}
+        scope="PART"
+        value={customCategory}
+      />
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h2 className="font-extrabold font-headline text-2xl text-on-surface tracking-tight md:text-3xl">

@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -40,7 +41,6 @@ const STATUSES = ["OPEN", "SENT", "RECEIVED", "RESOLVED", "CANCELLED"];
 
 function RmaModal({
   jobCode,
-  suppliers,
   parts,
   onClose,
   onSaved,
@@ -121,18 +121,10 @@ function RmaModal({
           onSubmit={submit}
         >
           <Field label={t("rmas.supplier")} required>
-            <Select
-              onChange={(e) => set({ supplierId: e.target.value })}
-              required
+            <SupplierPicker
+              onChange={(id) => set({ supplierId: id })}
               value={form.supplierId}
-            >
-              <option value="">{t("rmas.pick_supplier")}</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
+            />
           </Field>
           <Field label={t("rmas.job_code")}>
             <Input

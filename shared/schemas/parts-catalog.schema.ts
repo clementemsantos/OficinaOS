@@ -5,6 +5,7 @@ import { z } from "zod";
 const stringBoolean = z.enum(["true", "false"]).transform((v) => v === "true");
 
 export const createPartSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1, { error: "validations.part_name_required" }).max(120),
   category: z.enum([
     PartCategory.SCREEN,
@@ -31,6 +32,7 @@ export const createPartSchema = z.object({
 });
 
 export const updatePartSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(120).optional(),
   category: z
     .enum([
@@ -57,6 +59,7 @@ export const updatePartSchema = z.object({
 });
 
 export const listPartsQuerySchema = z.object({
+  customCategoryId: z.string().min(1).max(100).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),

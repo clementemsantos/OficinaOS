@@ -3,14 +3,20 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { CategoryField } from "@/components/modules/catalog/category-field";
+import { CustomerPicker } from "@/components/modules/catalog/customer-picker";
+import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
+import AddPartModal from "@/components/modules/parts/add-part-modal";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCan } from "@/hooks/use-can";
+import { useDebounce } from "@/hooks/use-debounce";
 import api from "@/lib/api";
 import { BusinessHistory } from "@/pages/business/history";
 
@@ -21,9 +27,11 @@ interface Order {
   costVatRate?: string;
 
   createdAt: string;
+  customCategoryId: string | null;
   customer: { id: string; name: string } | null;
   customerId: string | null;
   id: string;
+  job?: { id: string; jobCode: string } | null;
   jobId: string | null;
   kind: string;
   margin?: {
@@ -34,6 +42,7 @@ interface Order {
     marginPercent: number | null;
   };
   notes: string | null;
+  part?: { id: string; name: string } | null;
   partId: string | null;
   purchaseUrl: string | null;
   quoteGross?: string;
@@ -45,6 +54,7 @@ interface Order {
   title: string;
 }
 const EMPTY = {
+  customCategoryId: "",
   title: "",
   supplierId: "",
   reference: "",
@@ -66,16 +76,15 @@ export default function PurchaseOrdersPage() {
   const recordId = params.get("recordId") || undefined;
   const supplierId = params.get("supplierId") || undefined;
   const customerId = params.get("customerId") || undefined;
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>(
-    []
-  );
+  const [partQuery, setPartQuery] = useState("");
+  const [jobQuery, setJobQuery] = useState("");
+  const [creatingPart, setCreatingPart] = useState(false);
+  const partSearch = useDebounce(partQuery, 250);
+  const jobSearch = useDebounce(jobQuery, 250);
   const [jobs, setJobs] = useState<{ id: string; name: string }[]>([]);
   const [parts, setParts] = useState<{ id: string; name: string }[]>([]);
   const financial = useCan({ parts: ["viewCost"] });
   const [orders, setOrders] = useState<Order[]>([]);
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>(
-    []
-  );
   const [cursor, setCursor] = useState<string | null>(null);
   const [form, setForm] = useState({
     ...EMPTY,
@@ -98,33 +107,59 @@ export default function PurchaseOrdersPage() {
   }, [supplierId, customerId, recordId, t]);
   useEffect(() => {
     load();
+  }, [load]);
+  useEffect(() => {
+    if (!edit) {
+      return;
+    }
+    let active = true;
     api
-      .get("/business/parties")
+      .get("/parts", {
+        params: { limit: 100, search: partSearch || undefined },
+      })
       .then(({ data }) => {
-        setCustomers(data.customers);
+        if (active) {
+          setParts((old) => retainSelected(data.parts, old, form.partId));
+        }
       })
       .catch(() => toast.error(t("tasks.failed")));
-    if (edit) {
-      api
-        .get("/business/targets", { params: { entityType: "JOB" } })
-        .then(({ data }) => setJobs(data.data))
-        .catch(() => toast.error(t("tasks.failed")));
-      api
-        .get("/parts", { params: { limit: 100 } })
-        .then(({ data }) => setParts(data.data ?? data.parts ?? []))
-        .catch(() => toast.error(t("tasks.failed")));
+    return () => {
+      active = false;
+    };
+  }, [edit, partSearch, form.partId, t]);
+  useEffect(() => {
+    if (!edit) {
+      return;
     }
+    let active = true;
     api
-      .get("/suppliers")
-      .then(({ data }) => setSuppliers(data.data))
+      .get("/jobs", { params: { limit: 100, search: jobSearch || undefined } })
+      .then(({ data }) => {
+        if (active) {
+          setJobs((old) =>
+            retainSelected(
+              data.jobs.map((row: { id: string; jobCode: string }) => ({
+                id: row.id,
+                name: row.jobCode,
+              })),
+              old,
+              form.jobId
+            )
+          );
+        }
+      })
       .catch(() => toast.error(t("tasks.failed")));
-  }, [load, t, edit]);
+    return () => {
+      active = false;
+    };
+  }, [edit, jobSearch, form.jobId, t]);
   const save = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     try {
       const data = {
         ...form,
+        customCategoryId: form.customCategoryId || null,
         supplierId: form.supplierId || null,
         customerId: form.customerId || null,
         jobId: form.jobId || null,
@@ -150,6 +185,20 @@ export default function PurchaseOrdersPage() {
   };
   return (
     <div className="space-y-5">
+      {creatingPart && (
+        <AddPartModal
+          onClose={() => setCreatingPart(false)}
+          onSubmit={async (data) => {
+            const response = await api.post("/parts", data);
+            setParts((old) => [
+              response.data,
+              ...old.filter((row) => row.id !== response.data.id),
+            ]);
+            setForm((old) => ({ ...old, partId: response.data.id }));
+            setCreatingPart(false);
+          }}
+        />
+      )}
       <h1 className="font-bold text-2xl">{t("workflow.orders")}</h1>
       {edit && (
         <form
@@ -167,20 +216,23 @@ export default function PurchaseOrdersPage() {
             />
           </Field>
           <Field label={t("workflow.types.SUPPLIER")}>
-            <Select
-              onChange={(e) =>
-                setForm((old) => ({ ...old, supplierId: e.target.value }))
-              }
+            <SupplierPicker
+              onChange={(id) => setForm((old) => ({ ...old, supplierId: id }))}
               value={form.supplierId}
-            >
-              <option value="">{t("workflow.no_supplier")}</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </Select>
+            />
           </Field>
+          {form.kind === "PART" && (
+            <Button onClick={() => setCreatingPart(true)} variant="secondary">
+              {t("catalog.new_inventory_part")}
+            </Button>
+          )}
+          <CategoryField
+            onChange={(id) =>
+              setForm((old) => ({ ...old, customCategoryId: id }))
+            }
+            scope="ORDER"
+            value={form.customCategoryId}
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t("business.fields.kind")}>
               <Select
@@ -201,50 +253,31 @@ export default function PurchaseOrdersPage() {
               </Select>
             </Field>
             <Field label={t("business.fields.customerId")}>
-              <Select
-                onChange={(e) =>
-                  setForm((old) => ({ ...old, customerId: e.target.value }))
+              <CustomerPicker
+                onChange={(id) =>
+                  setForm((old) => ({ ...old, customerId: id }))
                 }
                 value={form.customerId}
-              >
-                <option value="">—</option>
-                {customers.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </Field>
             <Field label={t("business.fields.jobId")}>
-              <Select
-                onChange={(e) =>
-                  setForm((old) => ({ ...old, jobId: e.target.value }))
-                }
+              <SearchPicker
+                label={t("business.fields.jobId")}
+                onChange={(id) => setForm((old) => ({ ...old, jobId: id }))}
+                onQuery={setJobQuery}
+                options={jobs}
                 value={form.jobId}
-              >
-                <option value="">—</option>
-                {jobs.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </Field>
             {form.kind === "PART" && (
               <Field label={t("business.fields.partId")}>
-                <Select
-                  onChange={(e) =>
-                    setForm((old) => ({ ...old, partId: e.target.value }))
-                  }
+                <SearchPicker
+                  label={t("business.fields.partId")}
+                  onChange={(id) => setForm((old) => ({ ...old, partId: id }))}
+                  onQuery={setPartQuery}
+                  options={parts}
                   value={form.partId}
-                >
-                  <option value="">—</option>
-                  {parts.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </Select>
+                />
               </Field>
             )}
             <Field label={t("business.fields.purchaseUrl")}>
@@ -342,6 +375,7 @@ export default function PurchaseOrdersPage() {
                 onClick={() => {
                   setEditing(order.id);
                   setForm({
+                    customCategoryId: order.customCategoryId ?? "",
                     kind: order.kind,
                     purchaseUrl: order.purchaseUrl ?? "",
                     customerId: order.customerId ?? "",
@@ -357,6 +391,25 @@ export default function PurchaseOrdersPage() {
                     reference: order.reference ?? "",
                     notes: order.notes ?? "",
                   });
+                  if (order.part) {
+                    setParts((old) =>
+                      retainSelected(
+                        [order.part as { id: string; name: string }],
+                        old,
+                        order.partId ?? ""
+                      )
+                    );
+                  }
+                  const selectedJob = order.job;
+                  if (selectedJob) {
+                    setJobs((old) =>
+                      retainSelected(
+                        [{ id: selectedJob.id, name: selectedJob.jobCode }],
+                        old,
+                        order.jobId ?? ""
+                      )
+                    );
+                  }
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
@@ -439,4 +492,15 @@ export default function PurchaseOrdersPage() {
       )}
     </div>
   );
+}
+
+function retainSelected<T extends { id: string; name: string }>(
+  rows: T[],
+  old: T[],
+  id: string
+): T[] {
+  const selected = old.find((row) => row.id === id);
+  return selected && !rows.some((row) => row.id === id)
+    ? [selected, ...rows]
+    : rows;
 }

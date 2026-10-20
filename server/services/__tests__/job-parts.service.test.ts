@@ -186,3 +186,8 @@ describe("remove", () => {
     // delete is called inside $transaction, so we just verify the result
   });
 });
+
+vi.mock("../../utils/job-mutations.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/job-mutations.js")>()),
+  lockMutableJob: vi.fn(async () => undefined),
+}));

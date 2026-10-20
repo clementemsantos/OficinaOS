@@ -1,9 +1,10 @@
 import type { RepairCatalog } from "@shared/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Icon } from "@/components/ui/icon";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
-import { useRepairCatalogStore } from "@/stores/repair-catalog";
+import api from "@/lib/api";
 
 interface RepairServicePickerProps {
   compact?: boolean;
@@ -17,17 +18,44 @@ export default function RepairServicePicker({
   compact = false,
 }: RepairServicePickerProps) {
   const { t } = useTranslation();
+  const failureMessage = t("tasks.failed");
   const fmt = useFormatCurrency();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { repairs, fetchRepairs, isLoading } = useRepairCatalogStore();
+  const [repairs, setRepairs] = useState<RepairCatalog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (repairs.length === 0) {
-      fetchRepairs({ isActive: true, limit: 100 });
-    }
-  }, [fetchRepairs, repairs.length]);
+    let active = true;
+    setIsLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/repairs", {
+          params: {
+            isActive: true,
+            limit: 100,
+            search: query.trim() || undefined,
+          },
+        });
+        if (active) {
+          setRepairs(data.repairs);
+        }
+      } catch {
+        if (active) {
+          toast.error(failureMessage);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query, failureMessage]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
+import { RecordCategory } from "@/components/modules/catalog/record-category";
 import api from "@/lib/api";
 import {
   BusinessHistory,
@@ -27,6 +28,7 @@ interface SupplierRma {
 
 interface SupplierDetail {
   address: string | null;
+  customCategoryId: string | null;
   email: string | null;
   id: string;
   isActive: boolean;
@@ -95,6 +97,11 @@ export default function SupplierDetailPage() {
 
   return (
     <>
+      <RecordCategory
+        id={supplier.id}
+        initialId={supplier.customCategoryId}
+        scope="SUPPLIER"
+      />
       <SupplierCustomerLink supplierId={supplier.id} />
       <BusinessHistory entityId={supplier.id} entityType="SUPPLIER" />
       <div className="mb-6">

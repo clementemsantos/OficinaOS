@@ -262,12 +262,14 @@ model Account {
 // ─────────────────────────────────────────────
 
 model Customer {
+  customCategoryId     String?
+  customCategory       CatalogCategory?      @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
   supplierRole         Supplier?
   tickets              SupportTicket[]
   businessMessages     BusinessMessage[]
   purchaseOrders       PurchaseOrder[]
   commercialAgreements CommercialAgreement[]
-  physicalEquipment CustomerEquipment[]
+  physicalEquipment    CustomerEquipment[]
   id                   String                @id @default(cuid())
   name                 String
   phone                String
@@ -289,6 +291,7 @@ model Customer {
 
   tradeIns TradeIn[]
 
+  @@index([customCategoryId])
   @@index([email])
   @@index([phone])
   @@map("customers")
@@ -704,34 +707,37 @@ model JobPartsWaiting {
 // ─────────────────────────────────────────────
 
 model PartsCatalog {
+  customCategoryId    String?
+  customCategory      CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
   purchaseOrders      PurchaseOrder[]
-  id                  String          @id @default(cuid())
+  id                  String           @id @default(cuid())
   name                String
   category            PartCategory
-  defaultPrice        Decimal         @db.Decimal(10, 2)
-  priceKnown          Boolean         @default(true)
-  acquisitionCost     Decimal?        @db.Decimal(10, 2)
-  sourceReference     String?         @db.VarChar(200)
+  defaultPrice        Decimal          @db.Decimal(10, 2)
+  priceKnown          Boolean          @default(true)
+  acquisitionCost     Decimal?         @db.Decimal(10, 2)
+  sourceReference     String?          @db.VarChar(200)
   supplier            String?
   // Link to a registered Supplier record — the free-text `supplier` field
   // stays for display/imports; the FK enables the supplier detail view.
   supplierId          String?
-  supplierRef         Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  stockQuantity       Int             @default(0)
-  reorderLevel        Int             @default(0)
-  isActive            Boolean         @default(true)
+  supplierRef         Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  stockQuantity       Int              @default(0)
+  reorderLevel        Int              @default(0)
+  isActive            Boolean          @default(true)
   // Pro module "storefront" — public on the shop's online store page.
-  listedOnline        Boolean         @default(false)
+  listedOnline        Boolean          @default(false)
   // Set when an OWNER low-stock alert fires; gates re-alerts (24h window).
-  lastLowStockAlertAt DateTime?       @db.Timestamptz
-  createdAt           DateTime        @default(now()) @db.Timestamptz
-  updatedAt           DateTime        @updatedAt @db.Timestamptz
+  lastLowStockAlertAt DateTime?        @db.Timestamptz
+  createdAt           DateTime         @default(now()) @db.Timestamptz
+  updatedAt           DateTime         @updatedAt @db.Timestamptz
 
   jobParts       JobPart[]
   saleItems      SaleItem[]
   stockMovements StockMovement[]
   supplierRmas   SupplierRma[]
 
+  @@index([customCategoryId])
   @@index([name])
   @@index([category])
   @@index([supplierId])
@@ -745,9 +751,13 @@ model PartsCatalog {
 // ─────────────────────────────────────────────
 
 model JobPart {
-  id    String @id @default(cuid())
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  supplierId       String?
+  supplierRef      Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  customCategoryId String?
+  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id               String           @id @default(cuid())
+  jobId            String
+  job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   partId String?
   part   PartsCatalog? @relation(fields: [partId], references: [id], onDelete: SetNull)
@@ -765,6 +775,8 @@ model JobPart {
 
   returnClaims ReturnClaim[]
 
+  @@index([supplierId])
+  @@index([customCategoryId])
   @@index([jobId])
   @@map("job_parts")
 }
@@ -803,19 +815,22 @@ model StockMovement {
 // ─────────────────────────────────────────────
 
 model RepairCatalog {
-  id           String         @id @default(cuid())
-  name         String         @unique
-  category     RepairCategory
-  defaultPrice Decimal        @db.Decimal(10, 2)
-  priceKnown   Boolean        @default(true)
-  sourceReference String?     @db.VarChar(200)
-  isActive     Boolean        @default(true)
-  warrantyDays Int? // null = inherit ShopSettings.defaultWarrantyDays
-  createdAt    DateTime       @default(now()) @db.Timestamptz
-  updatedAt    DateTime       @updatedAt @db.Timestamptz
+  customCategoryId String?
+  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id               String           @id @default(cuid())
+  name             String           @unique
+  category         RepairCategory
+  defaultPrice     Decimal          @db.Decimal(10, 2)
+  priceKnown       Boolean          @default(true)
+  sourceReference  String?          @db.VarChar(200)
+  isActive         Boolean          @default(true)
+  warrantyDays     Int? // null = inherit ShopSettings.defaultWarrantyDays
+  createdAt        DateTime         @default(now()) @db.Timestamptz
+  updatedAt        DateTime         @updatedAt @db.Timestamptz
 
   jobRepairs JobRepair[]
 
+  @@index([customCategoryId])
   @@map("repair_catalog")
 }
 
@@ -826,9 +841,11 @@ model RepairCatalog {
 // ─────────────────────────────────────────────
 
 model JobRepair {
-  id    String @id @default(cuid())
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customCategoryId String?
+  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id               String           @id @default(cuid())
+  jobId            String
+  job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   repairId String?
   repair   RepairCatalog? @relation(fields: [repairId], references: [id], onDelete: SetNull)
@@ -844,6 +861,7 @@ model JobRepair {
   returnClaims ReturnClaim[]
 
   @@unique([jobId, repairId])
+  @@index([customCategoryId])
   @@index([jobId])
   @@map("job_repairs")
 }
@@ -1418,6 +1436,9 @@ model Verification {
 // ─────────────────────────────────────────────
 
 model Supplier {
+  jobParts             JobPart[]
+  customCategoryId     String?
+  customCategory       CatalogCategory?      @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
   customerId           String?               @unique
   customer             Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
   tickets              SupportTicket[]
@@ -1440,6 +1461,7 @@ model Supplier {
   rmas  SupplierRma[]
   parts PartsCatalog[]
 
+  @@index([customCategoryId])
   @@index([name])
   @@map("suppliers")
 }
@@ -1559,28 +1581,31 @@ model TaskRule {
 }
 
 model PurchaseOrder {
-  kind            String        @default("PRODUCT")
-  purchaseUrl     String?
-  customerId      String?
-  customer        Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  jobId           String?
-  job             Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  partId          String?
-  part            PartsCatalog? @relation(fields: [partId], references: [id], onDelete: SetNull)
-  costGross       Decimal       @default(0) @db.Decimal(14, 2)
-  quoteGross      Decimal       @default(0) @db.Decimal(14, 2)
-  costVatRate     Decimal       @default(0) @db.Decimal(5, 2)
-  saleVatRate     Decimal       @default(0) @db.Decimal(5, 2)
-  recoverInputVat Boolean       @default(true)
-  id              String        @id @default(cuid())
-  title           String
-  supplierId      String?
-  supplier        Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  notes           String?       @db.Text
-  reference       String?
-  createdAt       DateTime      @default(now()) @db.Timestamptz
-  updatedAt       DateTime      @updatedAt @db.Timestamptz
+  customCategoryId String?
+  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  kind             String           @default("PRODUCT")
+  purchaseUrl      String?
+  customerId       String?
+  customer         Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  jobId            String?
+  job              Job?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  partId           String?
+  part             PartsCatalog?    @relation(fields: [partId], references: [id], onDelete: SetNull)
+  costGross        Decimal          @default(0) @db.Decimal(14, 2)
+  quoteGross       Decimal          @default(0) @db.Decimal(14, 2)
+  costVatRate      Decimal          @default(0) @db.Decimal(5, 2)
+  saleVatRate      Decimal          @default(0) @db.Decimal(5, 2)
+  recoverInputVat  Boolean          @default(true)
+  id               String           @id @default(cuid())
+  title            String
+  supplierId       String?
+  supplier         Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  notes            String?          @db.Text
+  reference        String?
+  createdAt        DateTime         @default(now()) @db.Timestamptz
+  updatedAt        DateTime         @updatedAt @db.Timestamptz
 
+  @@index([customCategoryId])
   @@index([supplierId])
   @@index([customerId])
   @@index([jobId])
@@ -1613,21 +1638,24 @@ model RecordWorkflow {
 }
 
 model SupportTicket {
-  id          String    @id @default(cuid())
-  number      Int       @unique @default(autoincrement())
-  title       String
-  description String    @db.Text
-  area        String    @default("OTHER")
-  priority    String    @default("NORMAL")
-  customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  supplierId  String?
-  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime  @default(now()) @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @db.Timestamptz
+  customCategoryId String?
+  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id               String           @id @default(cuid())
+  number           Int              @unique @default(autoincrement())
+  title            String
+  description      String           @db.Text
+  area             String           @default("OTHER")
+  priority         String           @default("NORMAL")
+  customerId       String?
+  customer         Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  supplierId       String?
+  supplier         Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdById      String
+  createdBy        User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt        DateTime         @default(now()) @db.Timestamptz
+  updatedAt        DateTime         @updatedAt @db.Timestamptz
 
+  @@index([customCategoryId])
   @@index([customerId])
   @@index([supplierId])
   @@map("support_tickets")
@@ -1670,28 +1698,31 @@ model BusinessMessageLink {
 }
 
 model CommercialAgreement {
-  id                 String    @id @default(cuid())
+  customCategoryId   String?
+  customCategory     CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id                 String           @id @default(cuid())
   kind               String
   title              String
   customerId         String?
-  customer           Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer           Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
   supplierId         String?
-  supplier           Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  amountGross        Decimal   @default(0) @db.Decimal(14, 2)
-  vatRate            Decimal   @default(0) @db.Decimal(5, 2)
-  commissionBasisNet Decimal   @default(0) @db.Decimal(14, 2)
-  commissionRate     Decimal   @default(0) @db.Decimal(5, 2)
-  paidGross          Decimal   @default(0) @db.Decimal(14, 2)
-  interval           String    @default("ONCE")
-  status             String    @default("ACTIVE")
+  supplier           Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  amountGross        Decimal          @default(0) @db.Decimal(14, 2)
+  vatRate            Decimal          @default(0) @db.Decimal(5, 2)
+  commissionBasisNet Decimal          @default(0) @db.Decimal(14, 2)
+  commissionRate     Decimal          @default(0) @db.Decimal(5, 2)
+  paidGross          Decimal          @default(0) @db.Decimal(14, 2)
+  interval           String           @default("ONCE")
+  status             String           @default("ACTIVE")
   reference          String?
-  startsAt           DateTime? @db.Timestamptz
-  renewsAt           DateTime? @db.Timestamptz
-  endsAt             DateTime? @db.Timestamptz
-  notes              String?   @db.Text
-  createdAt          DateTime  @default(now()) @db.Timestamptz
-  updatedAt          DateTime  @updatedAt @db.Timestamptz
+  startsAt           DateTime?        @db.Timestamptz
+  renewsAt           DateTime?        @db.Timestamptz
+  endsAt             DateTime?        @db.Timestamptz
+  notes              String?          @db.Text
+  createdAt          DateTime         @default(now()) @db.Timestamptz
+  updatedAt          DateTime         @updatedAt @db.Timestamptz
 
+  @@index([customCategoryId])
   @@index([customerId])
   @@index([supplierId])
   @@index([renewsAt])
@@ -1705,19 +1736,19 @@ model CommercialAgreement {
 // Every original sheet column/value is preserved for lossless mapping.
 // ─────────────────────────────────────────────────────────────
 model ExternalImportRecord {
-  id           String   @id @default(cuid())
-  sourceSystem String   @db.VarChar(32)
-  sourceEntity String   @db.VarChar(32)
-  sourceId     String   @db.VarChar(200)
-  sourceFile   String?  @db.VarChar(255)
-  sourceRow    Int
+  id            String    @id @default(cuid())
+  sourceSystem  String    @db.VarChar(32)
+  sourceEntity  String    @db.VarChar(32)
+  sourceId      String    @db.VarChar(200)
+  sourceFile    String?   @db.VarChar(255)
+  sourceRow     Int
   operationalId String?
-  syncedAt     DateTime? @db.Timestamptz
-  syncError    String? @db.Text
-  headers      Json
-  values       Json
-  checksum     String   @db.VarChar(64)
-  createdAt    DateTime @default(now()) @db.Timestamptz
+  syncedAt      DateTime? @db.Timestamptz
+  syncError     String?   @db.Text
+  headers       Json
+  values        Json
+  checksum      String    @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @db.Timestamptz
 
   @@unique([sourceSystem, sourceEntity, sourceId])
   @@index([sourceSystem, sourceEntity])
@@ -1728,19 +1759,44 @@ model ExternalImportRecord {
 // catalogs a brand+model), this entity preserves each distinct Keymaster
 // serial/unit even when customer association was missing in the export.
 model CustomerEquipment {
-  id           String   @id @default(cuid())
-  sourceSystem String   @db.VarChar(32)
-  sourceId     String   @db.VarChar(200)
+  id           String    @id @default(cuid())
+  sourceSystem String    @db.VarChar(32)
+  sourceId     String    @db.VarChar(200)
   brand        String?
   model        String?
   category     String?
   serialNumber String?
   customerId   String?
   customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now()) @db.Timestamptz
-  updatedAt    DateTime @updatedAt @db.Timestamptz
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @db.Timestamptz
 
   @@unique([sourceSystem, sourceId])
   @@index([customerId])
   @@map("customer_equipment")
+}
+
+model CatalogCategory {
+  id         String                @id @default(cuid())
+  scope      String
+  name       String
+  nameKey    String
+  parentKey  String                @default("")
+  parentId   String?
+  parent     CatalogCategory?      @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   CatalogCategory[]     @relation("CategoryTree")
+  isActive   Boolean               @default(true)
+  parts      PartsCatalog[]
+  repairs    RepairCatalog[]
+  jobParts   JobPart[]
+  jobRepairs JobRepair[]
+  customers  Customer[]
+  suppliers  Supplier[]
+  orders     PurchaseOrder[]
+  tickets    SupportTicket[]
+  agreements CommercialAgreement[]
+
+  @@unique([scope, parentKey, nameKey])
+  @@index([scope, isActive])
+  @@map("catalog_categories")
 }

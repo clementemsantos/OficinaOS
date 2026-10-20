@@ -7,6 +7,7 @@ export interface RepairItem {
   basePrice: number;
   category: RepairCategoryType;
   code: string;
+  customCategoryName?: string;
   icon: string;
   iconBg: string;
   iconColor: string;
@@ -97,7 +98,8 @@ export default function RepairTable({
                   <span
                     className={`rounded-full px-3 py-1 font-medium text-xs uppercase ${REPAIR_CATEGORY_TONES[repair.category]}`}
                   >
-                    {t(`repair_category.${repair.category}`)}
+                    {repair.customCategoryName ??
+                      t(`repair_category.${repair.category}`)}
                   </span>
                 </td>
                 <td className="p-4">

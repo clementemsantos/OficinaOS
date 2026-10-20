@@ -4,6 +4,7 @@ import { orderFields } from "@shared/schemas/business";
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
+import { validateCategory } from "../services/catalog-category.service.js";
 import { parseInput } from "../utils/parse-input.js";
 import { getRole } from "../utils/request.js";
 
@@ -87,6 +88,7 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
     };
   });
   const validateReferences = async (value: z.infer<typeof orderFields>) => {
+    await validateCategory(app.prisma, "ORDER", value.customCategoryId);
     const refs = [
       value.supplierId
         ? app.prisma.supplier.findUnique({ where: { id: value.supplierId } })

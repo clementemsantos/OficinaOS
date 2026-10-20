@@ -10,6 +10,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
+import { validateCategory } from "../services/catalog-category.service.js";
 import { authorizeWorkflow } from "../services/workflow.service.js";
 import { parseInput } from "../utils/parse-input.js";
 import { getRole, getUserId } from "../utils/request.js";
@@ -152,6 +153,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
     { preHandler: requirePermission({ jobs: ["edit"] }) },
     async (req, reply) => {
       const data = parseInput(ticketFields, req.body);
+      await validateCategory(app.prisma, "TICKET", data.customCategoryId);
       if (data.supplierId) {
         await authorizeWorkflow(req, "SUPPLIER", "view", data.supplierId);
       }
@@ -171,6 +173,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
       const { id } = req.params as { id: string };
       await authorizeWorkflow(req, "TICKET", "edit", id);
       const data = parseInput(ticketFields, req.body);
+      await validateCategory(app.prisma, "TICKET", data.customCategoryId);
       if (data.supplierId) {
         await authorizeWorkflow(req, "SUPPLIER", "view", data.supplierId);
       }
@@ -188,8 +191,9 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
   app.register((inbox) => {
     inbox.addHook("preHandler", requirePermission({ settings: ["edit"] }));
     inbox.get("/targets", async (req) => {
-      const { entityType } = parseInput(
+      const { entityType, search } = parseInput(
         z.object({
+          search: z.string().trim().max(120).optional(),
           entityType: z.enum([
             "JOB",
             "ORDER",
@@ -201,11 +205,16 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
         }),
         req.query
       );
+      const containsSearch = (field: string) =>
+        search
+          ? { [field]: { contains: search, mode: "insensitive" as const } }
+          : undefined;
       switch (entityType) {
         case "JOB":
           return {
             data: (
               await app.prisma.job.findMany({
+                where: containsSearch("jobCode"),
                 select: { id: true, jobCode: true },
                 orderBy: { id: "desc" },
                 take: 1000,
@@ -216,6 +225,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
           return {
             data: (
               await app.prisma.purchaseOrder.findMany({
+                where: containsSearch("title"),
                 select: { id: true, title: true },
                 orderBy: { id: "desc" },
                 take: 1000,
@@ -226,6 +236,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
           return {
             data: (
               await app.prisma.supportTicket.findMany({
+                where: containsSearch("title"),
                 select: { id: true, title: true, number: true },
                 orderBy: { id: "desc" },
                 take: 1000,
@@ -238,6 +249,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
         case "CUSTOMER":
           return {
             data: await app.prisma.customer.findMany({
+              where: containsSearch("name"),
               select: { id: true, name: true },
               orderBy: { name: "asc" },
               take: 1000,
@@ -246,6 +258,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
         case "SUPPLIER":
           return {
             data: await app.prisma.supplier.findMany({
+              where: containsSearch("name"),
               select: { id: true, name: true },
               orderBy: { name: "asc" },
               take: 1000,
@@ -255,6 +268,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
           return {
             data: (
               await app.prisma.commercialAgreement.findMany({
+                where: containsSearch("title"),
                 select: { id: true, title: true },
                 orderBy: { id: "desc" },
                 take: 1000,
@@ -421,6 +435,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
     };
     inbox.post("/agreements", async (req, reply) => {
       const data = agreementData(req.body);
+      await validateCategory(app.prisma, "AGREEMENT", data.customCategoryId);
       await parties(data);
       return reply.status(201).send({
         data: await app.prisma.commercialAgreement.create({ data, include }),
@@ -430,6 +445,7 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
       const { id } = req.params as { id: string };
       await authorizeWorkflow(req, "AGREEMENT", "edit", id);
       const data = agreementData(req.body);
+      await validateCategory(app.prisma, "AGREEMENT", data.customCategoryId);
       await parties(data);
       return {
         data: await app.prisma.commercialAgreement.update({

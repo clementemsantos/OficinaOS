@@ -3,6 +3,7 @@ import type { RepairCatalog } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
+import { CategoryField } from "@/components/modules/catalog/category-field";
 import type { RepairFormData } from "@/components/modules/repairs/add-repair-modal";
 import AddRepairModal from "@/components/modules/repairs/add-repair-modal";
 import CategoryHealth from "@/components/modules/repairs/category-health";
@@ -13,6 +14,7 @@ import RepairMobileCard from "@/components/modules/repairs/repair-mobile-card";
 import type { RepairItem } from "@/components/modules/repairs/repair-table";
 import RepairTable from "@/components/modules/repairs/repair-table";
 import { Button } from "@/components/ui/button";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import {
   REPAIR_CATEGORY_ICONS,
@@ -25,6 +27,7 @@ function toRepairItem(r: RepairCatalog): RepairItem {
   const display = REPAIR_CATEGORY_ICONS[cat];
   const prefix = REPAIR_CATEGORY_PREFIXES[cat];
   return {
+    customCategoryName: r.customCategory?.name,
     id: r.id,
     code: `REP-${prefix}-${r.id.slice(-3).toUpperCase()}`,
     name: r.name,
@@ -123,6 +126,8 @@ export default function RepairsPage() {
   const fmt = useFormatCurrency();
   const {
     repairs,
+    nextCursor,
+    loadMoreRepairs,
     isLoading,
     error,
     fetchRepairs,
@@ -135,6 +140,7 @@ export default function RepairsPage() {
   const [activeCategory, setActiveCategory] = useState<
     RepairCategoryType | "ALL"
   >("ALL");
+  const [customCategory, setCustomCategory] = useState("");
   const [activeSort, setActiveSort] = useState<SortOption>("recently_added");
   const [searchParams, setSearchParams] = useSearchParams();
   // The query string, not local state, holds the term: a deep link from the
@@ -170,9 +176,19 @@ export default function RepairsPage() {
     message: string;
   } | null>(null);
 
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const fetchParams = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      customCategoryId: customCategory || undefined,
+      category: activeCategory === "ALL" ? undefined : activeCategory,
+      limit: 100,
+    }),
+    [debouncedSearch, customCategory, activeCategory]
+  );
   useEffect(() => {
-    fetchRepairs();
-  }, [fetchRepairs]);
+    fetchRepairs(fetchParams);
+  }, [fetchRepairs, fetchParams]);
 
   const repairItems = useMemo(() => repairs.map(toRepairItem), [repairs]);
 
@@ -183,6 +199,7 @@ export default function RepairsPage() {
 
   const handleAddRepair = async (data: RepairFormData) => {
     await createRepair({
+      customCategoryId: data.customCategoryId || null,
       name: data.name,
       category: data.category,
       defaultPrice: Number(data.basePrice),
@@ -202,6 +219,7 @@ export default function RepairsPage() {
     }
     try {
       await updateRepair(editingRepair.id, {
+        customCategoryId: data.customCategoryId || null,
         name: data.name,
         category: data.category,
         defaultPrice: Number(data.basePrice),
@@ -289,6 +307,11 @@ export default function RepairsPage() {
 
   return (
     <>
+      <CategoryField
+        onChange={setCustomCategory}
+        scope="REPAIR"
+        value={customCategory}
+      />
       <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h2 className="font-extrabold font-headline text-2xl text-on-surface tracking-tight md:text-3xl">
@@ -389,6 +412,15 @@ export default function RepairsPage() {
         )}
       </div>
 
+      {nextCursor && (
+        <Button
+          onClick={() =>
+            loadMoreRepairs({ ...fetchParams, cursor: nextCursor })
+          }
+        >
+          {t("tasks.more")}
+        </Button>
+      )}
       <CategoryHealth repairs={repairItems} />
 
       <AddRepairModal

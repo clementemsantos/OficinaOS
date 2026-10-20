@@ -4,10 +4,12 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Can } from "@/components/modules/can";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import { useJobsStore } from "@/stores/jobs";
 import AddPartDialog from "./add-part-dialog";
+import { JobLineEditor } from "./job-line-editor";
 
 interface JobPartsSectionProps {
   job: Job;
@@ -20,6 +22,7 @@ export default function JobPartsSection({
 }: JobPartsSectionProps) {
   const { t } = useTranslation();
   const fmt = useFormatCurrency();
+  const [editing, setEditing] = useState<JobPart | null>(null);
   const removePart = useJobsStore((s) => s.removePart);
   const addPart = useJobsStore((s) => s.addPart);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -63,10 +66,19 @@ export default function JobPartsSection({
     [removePart, addPart, job.id, onChanged, t]
   );
 
-  const parts = job.partsUsed ?? [];
+  const parts = (job.partsUsed ?? []) as JobPart[];
 
   return (
     <div>
+      {editing && (
+        <JobLineEditor
+          jobId={job.id}
+          kind="PART"
+          line={editing}
+          onChanged={onChanged}
+          onClose={() => setEditing(null)}
+        />
+      )}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-bold font-headline text-base text-on-surface">
           {t("jobs_parts_title")}
@@ -118,7 +130,8 @@ export default function JobPartsSection({
                   {part.partName}
                 </p>
                 <p className="font-label text-on-surface-variant text-xs">
-                  {t(`part_category.${part.category}`)}
+                  {part.customCategory?.name ??
+                    t(`part_category.${part.category}`)}
                   <Can perm={{ parts: ["viewCost"] }}>
                     {" "}
                     · {fmt(Number(part.unitPrice))} × {part.quantity}
@@ -131,6 +144,17 @@ export default function JobPartsSection({
                     {fmt(Number(part.totalCost))}
                   </span>
                 </Can>
+                {!isTerminal && (
+                  <Can perm={{ jobs: ["edit"] }}>
+                    <Button
+                      onClick={() => setEditing(part)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      {t("edit")}
+                    </Button>
+                  </Can>
+                )}
                 {!isTerminal && (
                   <RemovePartButton
                     onRemove={() => handleRemovePart(part.id, part)}

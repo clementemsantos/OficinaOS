@@ -2,6 +2,7 @@ import type { JobStatusType } from "@shared/constants";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
+import { RecordCategory } from "@/components/modules/catalog/record-category";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BusinessHistory } from "@/pages/business/history";
@@ -93,6 +94,11 @@ export default function CustomerDetailPage() {
         </Link>
       </div>
 
+      <RecordCategory
+        id={currentCustomer.id}
+        initialId={currentCustomer.customCategoryId}
+        scope="CUSTOMER"
+      />
       <BusinessHistory entityId={currentCustomer.id} entityType="CUSTOMER" />
       <RecordWorkflow
         entityId={currentCustomer.id}

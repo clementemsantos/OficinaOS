@@ -4,6 +4,11 @@ import type { Job } from "@shared/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@/hooks/use-can", () => ({ useCan: () => true }));
+vi.mock("@/lib/api", () => ({
+  default: { get: vi.fn(), patch: vi.fn() },
+  getErrorMessage: () => "error",
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

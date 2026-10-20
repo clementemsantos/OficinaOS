@@ -16,6 +16,7 @@ interface CustomerJob {
 
 interface CustomerDetail {
   createdAt: string;
+  customCategoryId?: string | null;
   email: string | null;
   id: string;
   jobs: CustomerJob[];
