@@ -2644,5 +2644,11 @@
     "saved": "Order saved.",
     "limit": "Add between 1 and 100 valid product lines.",
     "new_order": "New order"
+  },
+  "supplier_vat": {
+    "charges": "Supplier charges VAT on purchases",
+    "without": "No VAT on the supplier invoice",
+    "hint": "Disable when this supplier invoices your purchases without VAT. This sets a default for new order lines; customer sales VAT remains independent.",
+    "line_hint": "Enter the amount charged by the supplier. Switching VAT off does not change the price. Any reverse-charge accounting remains separate."
   }
 }

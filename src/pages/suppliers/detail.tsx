@@ -31,6 +31,7 @@ interface SupplierRma {
 
 interface SupplierDetail {
   address: string | null;
+  chargesPurchaseVat: boolean;
   customCategoryId: string | null;
   email: string | null;
   id: string;
@@ -119,6 +120,13 @@ export default function SupplierDetailPage() {
         initialId={supplier.customCategoryId}
         scope="SUPPLIER"
       />
+      <p className="my-2 text-sm">
+        {t(
+          supplier.chargesPurchaseVat === false
+            ? "supplier_vat.without"
+            : "supplier_vat.charges"
+        )}
+      </p>
       <SupplierCustomerLink supplierId={supplier.id} />
       <BusinessHistory entityId={supplier.id} entityType="SUPPLIER" />
       <div className="mb-6">

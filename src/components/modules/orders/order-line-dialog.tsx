@@ -11,13 +11,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useSupplierVat } from "./use-supplier-vat";
 export function OrderLineDialog({
   initial,
+  applySupplierDefaults = !initial.id,
   part,
   onClose,
   onApply,
 }: {
   initial: OrderLineInput;
+  applySupplierDefaults?: boolean;
   part?: { id: string; name: string } | null;
   onClose: () => void;
   onApply: (line: OrderLineInput) => void;
@@ -29,6 +32,12 @@ export function OrderLineDialog({
   const [creatingPart, setCreatingPart] = useState(false);
   const set = (patch: Partial<OrderLineInput>) =>
     setForm((old) => ({ ...old, ...patch }));
+  const { withoutVat, changeWithoutVat, rateChanged } = useSupplierVat({
+    supplierId: form.supplierId,
+    existingLine: !applySupplierDefaults,
+    initialRate: initial.costVatRate,
+    onRate: (costVatRate) => setForm((old) => ({ ...old, costVatRate })),
+  });
   const apply = () => {
     const result = orderLineFields.safeParse({
       ...form,
@@ -109,9 +118,15 @@ export function OrderLineDialog({
           ).map((name) => (
             <Field key={name} label={t(`order_lines.${name}`)}>
               <Input
+                disabled={name === "costVatRate" && withoutVat}
                 max={name.endsWith("Rate") ? "100" : "9999999999.99"}
                 min="0"
-                onChange={(event) => set({ [name]: event.target.value })}
+                onChange={(event) => {
+                  if (name === "costVatRate") {
+                    rateChanged();
+                  }
+                  set({ [name]: event.target.value });
+                }}
                 step="0.01"
                 type="number"
                 value={form[name]}
@@ -121,8 +136,24 @@ export function OrderLineDialog({
         </div>
         <SupplierPicker
           onChange={(id) => set({ supplierId: id || null })}
+          onSelect={(supplier) => {
+            if (supplier) {
+              changeWithoutVat(supplier.chargesPurchaseVat === false);
+            }
+          }}
           value={form.supplierId ?? ""}
         />
+        <Field horizontal label={t("supplier_vat.without")}>
+          <Checkbox
+            checked={withoutVat}
+            onChange={(event) => changeWithoutVat(event.target.checked)}
+          />
+        </Field>
+        {withoutVat && (
+          <p className="text-on-surface-variant text-sm">
+            {t("supplier_vat.line_hint")}
+          </p>
+        )}
         <Field label={t("business.fields.purchaseUrl")}>
           <Input
             onChange={(event) => set({ purchaseUrl: event.target.value })}

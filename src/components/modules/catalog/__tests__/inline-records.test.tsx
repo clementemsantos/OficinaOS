@@ -86,6 +86,7 @@ describe("creating related records without leaving the form", () => {
     fireEvent.click(screen.getByRole("button", { name: "save" }));
     await waitFor(() =>
       expect(mocks.post).toHaveBeenCalledWith("/suppliers", {
+        chargesPurchaseVat: true,
         name: "New vendor",
         email: "vendor@example.invalid",
         phone: "210000000",

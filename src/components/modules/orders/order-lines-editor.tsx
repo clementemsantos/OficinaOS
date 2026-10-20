@@ -93,6 +93,7 @@ export function OrderLinesEditor({
       {editing &&
         createPortal(
           <OrderLineDialog
+            applySupplierDefaults={editing.index < 0}
             initial={editing.line}
             onApply={(line) => {
               const next = {

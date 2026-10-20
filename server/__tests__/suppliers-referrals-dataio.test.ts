@@ -818,3 +818,99 @@ describe("editing RMA record associations", () => {
     expect(prisma.supplierRma.update).not.toHaveBeenCalled();
   });
 });
+
+describe("supplier purchase VAT preference", () => {
+  it("saves an explicit no-VAT-on-invoice preference on creation", async () => {
+    const create = vi
+      .fn()
+      .mockImplementation(({ data }) => ({ id: "s1", ...data }));
+    const app = buildApp({ supplier: { create } }, [
+      { plugin: suppliersRoutes, prefix: "/api/suppliers" },
+    ]);
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/suppliers",
+      payload: { name: "EU vendor", chargesPurchaseVat: false },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ chargesPurchaseVat: false }),
+    });
+    expect(res.json().data.chargesPurchaseVat).toBe(false);
+    await app.close();
+  });
+  it("defaults older create requests to VAT charged and does not reset the preference on unrelated edits", async () => {
+    const create = vi
+      .fn()
+      .mockImplementation(({ data }) => ({ id: "s1", ...data }));
+    const update = vi.fn().mockImplementation(({ data }) => ({
+      id: "s1",
+      chargesPurchaseVat: false,
+      ...data,
+    }));
+    const app = buildApp(
+      {
+        supplier: {
+          create,
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({ id: "s1", chargesPurchaseVat: false }),
+          update,
+        },
+      },
+      [{ plugin: suppliersRoutes, prefix: "/api/suppliers" }]
+    );
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/suppliers",
+      payload: { name: "Vendor" },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().data.chargesPurchaseVat).toBe(true);
+    const edited = await app.inject({
+      method: "PATCH",
+      url: "/api/suppliers/s1",
+      payload: { name: "Renamed" },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(update.mock.calls[0][0].data).not.toHaveProperty(
+      "chargesPurchaseVat"
+    );
+    expect(edited.json().data.chargesPurchaseVat).toBe(false);
+    await app.close();
+  });
+  it("can reactivate VAT and rejects non-boolean preference values", async () => {
+    const update = vi
+      .fn()
+      .mockImplementation(({ data }) => ({ id: "s1", ...data }));
+    const app = buildApp(
+      {
+        supplier: {
+          findUnique: vi.fn().mockResolvedValue({ id: "s1" }),
+          update,
+        },
+      },
+      [{ plugin: suppliersRoutes, prefix: "/api/suppliers" }]
+    );
+    expect(
+      (
+        await app.inject({
+          method: "PATCH",
+          url: "/api/suppliers/s1",
+          payload: { chargesPurchaseVat: true },
+        })
+      ).statusCode
+    ).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: "PATCH",
+          url: "/api/suppliers/s1",
+          payload: { chargesPurchaseVat: "false" },
+        })
+      ).statusCode
+    ).toBe(400);
+    expect(update).toHaveBeenCalledOnce();
+    await app.close();
+  });
+});

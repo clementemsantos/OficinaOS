@@ -120,3 +120,26 @@ describe("order product line calculations", () => {
     ).toBe(false);
   });
 });
+
+it("keeps supplier-invoice VAT at zero independently from customer VAT and retains the margin", () => {
+  const totals = orderLinesTotals([
+    {
+      quantity: 1,
+      costGross: "100",
+      quoteGross: "246",
+      costVatRate: "0",
+      saleVatRate: "23",
+      recoverInputVat: true,
+    },
+  ]);
+  expect(totals).toMatchObject({
+    costGross: "100.00",
+    quoteGross: "246.00",
+    margin: {
+      costNet: "100.00",
+      revenueNet: "200.00",
+      profitAfterVat: "100.00",
+      marginPercent: 50,
+    },
+  });
+});

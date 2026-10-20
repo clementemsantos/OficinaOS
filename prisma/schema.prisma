@@ -1437,6 +1437,7 @@ model Verification {
 // ─────────────────────────────────────────────
 
 model Supplier {
+  chargesPurchaseVat   Boolean               @default(true)
   orderLines           PurchaseOrderLine[]
   jobParts             JobPart[]
   customCategoryId     String?

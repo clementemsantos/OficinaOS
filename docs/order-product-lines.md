@@ -23,3 +23,11 @@ Os leitores precisam de acesso ao catálogo; custos, preços, taxas e margens co
 A API aceita criações antigas sem uma lista de linhas e converte-as numa linha. Alterações antigas apenas à ficha conservam os produtos. Alterações financeiras no formato antigo só são aceites quando existe uma única linha com quantidade 1; encomendas com várias linhas devem usar a edição de linhas.
 
 Antes de instalar, fazer backup da base de dados. O arranque habitual da aplicação aplica a migração incluída. Esta atualização integra-se na branch `inove/release-candidate` do Misto.
+
+## Fornecedores que faturam sem IVA
+
+A ficha do fornecedor e a criação rápida têm a opção **Fornecedor cobra IVA na compra**. Está ativa por defeito, conservando a configuração dos fornecedores existentes. Desativá-la define uma preferência para as novas linhas de encomenda associadas a esse fornecedor: a taxa de IVA cobrada pelo fornecedor passa a 0%, sem alterar o custo introduzido nem o IVA da venda ao cliente.
+
+Cada linha tem a opção **Sem IVA na fatura do fornecedor**, que pode ser ajustada para a fatura concreta. As linhas já gravadas ou já editadas no formulário conservam os valores guardados ao serem reabertas. A preferência não é aplicada retroativamente e não é uma obrigação fiscal imposta pelo servidor.
+
+Esta opção regista o IVA da fatura do fornecedor. Não calcula autoliquidações nem confirma uma isenção fiscal. Nas aquisições intracomunitárias pode ser necessário declarar IVA em Portugal e tratar o respetivo direito à dedução. Esses lançamentos fiscais, nomeadamente eventual IVA autoliquidado não dedutível, são tratados separadamente na contabilidade. As margens apresentadas resultam dos custos e impostos registados nas linhas.

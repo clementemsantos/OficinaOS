@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import api from "@/lib/api";
 interface Supplier {
   _count?: { rmas: number };
   address: string | null;
+  chargesPurchaseVat?: boolean;
   email: string | null;
   id: string;
   isActive: boolean;
@@ -24,6 +26,7 @@ interface Supplier {
 }
 
 const EMPTY = {
+  chargesPurchaseVat: true,
   name: "",
   email: "",
   phone: "",
@@ -45,6 +48,7 @@ export function SupplierModal({
   const [form, setForm] = useState(
     supplier
       ? {
+          chargesPurchaseVat: supplier.chargesPurchaseVat ?? true,
           name: supplier.name,
           email: supplier.email ?? "",
           phone: supplier.phone ?? "",
@@ -84,10 +88,11 @@ export function SupplierModal({
             address: form.address.trim() || undefined,
             notes: form.notes.trim() || undefined,
           };
+      const data = { ...payload, chargesPurchaseVat: form.chargesPurchaseVat };
       if (supplier) {
-        await api.patch(`/suppliers/${supplier.id}`, payload);
+        await api.patch(`/suppliers/${supplier.id}`, data);
       } else {
-        await api.post("/suppliers", payload);
+        await api.post("/suppliers", data);
       }
       toast.success(t("suppliers.saved"));
       onSaved();
@@ -160,6 +165,17 @@ export function SupplierModal({
               value={form.address}
             />
           </Field>
+          <Field horizontal label={t("supplier_vat.charges")}>
+            <Checkbox
+              checked={form.chargesPurchaseVat}
+              onChange={(event) =>
+                set({ chargesPurchaseVat: event.target.checked })
+              }
+            />
+          </Field>
+          <p className="text-on-surface-variant text-sm">
+            {t("supplier_vat.hint")}
+          </p>
           <Field label={t("suppliers.notes")}>
             <Textarea
               onChange={(e) => set({ notes: e.target.value })}
@@ -295,6 +311,11 @@ export default function SuppliersPage() {
                       to={`/suppliers/${s.id}`}
                     >
                       {s.name}
+                      {s.chargesPurchaseVat === false && (
+                        <span className="ml-2 rounded bg-surface-container-high px-2 py-1 text-xs">
+                          {t("supplier_vat.without")}
+                        </span>
+                      )}
                     </Link>
                     {!s.isActive && (
                       <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 text-on-surface-variant text-xs">

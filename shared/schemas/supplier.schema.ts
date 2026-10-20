@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createSupplierSchema = z.object({
+  chargesPurchaseVat: z.boolean().default(true),
   customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(120),
   email: z.string().email().max(160).optional(),
@@ -11,6 +12,7 @@ export const createSupplierSchema = z.object({
 });
 
 export const updateSupplierSchema = z.object({
+  chargesPurchaseVat: z.boolean().optional(),
   customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(120).optional(),
   // Nullable on update — null clears the field; undefined leaves it.
