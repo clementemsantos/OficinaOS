@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SupplierRmasPage, { RmaModal } from "..";
 
+const DESCRIPTION_LABEL = /^rmas.description/;
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   patch: vi.fn(),
@@ -132,7 +133,7 @@ it("edits an existing RMA and clears reference and reason without creating anoth
   expect(screen.getByRole("combobox", { name: "rmas.job_code" })).toHaveValue(
     "2026/1"
   );
-  fireEvent.change(screen.getByLabelText(/^rmas.description/), {
+  fireEvent.change(screen.getByLabelText(DESCRIPTION_LABEL), {
     target: { value: "Updated screen" },
   });
   fireEvent.change(screen.getByLabelText("rmas.reference"), {

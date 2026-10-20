@@ -707,30 +707,31 @@ model JobPartsWaiting {
 // ─────────────────────────────────────────────
 
 model PartsCatalog {
+  orderLines          PurchaseOrderLine[]
   customCategoryId    String?
-  customCategory      CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  customCategory      CatalogCategory?    @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
   purchaseOrders      PurchaseOrder[]
-  id                  String           @id @default(cuid())
+  id                  String              @id @default(cuid())
   name                String
   category            PartCategory
-  defaultPrice        Decimal          @db.Decimal(10, 2)
-  priceKnown          Boolean          @default(true)
-  acquisitionCost     Decimal?         @db.Decimal(10, 2)
-  sourceReference     String?          @db.VarChar(200)
+  defaultPrice        Decimal             @db.Decimal(10, 2)
+  priceKnown          Boolean             @default(true)
+  acquisitionCost     Decimal?            @db.Decimal(10, 2)
+  sourceReference     String?             @db.VarChar(200)
   supplier            String?
   // Link to a registered Supplier record — the free-text `supplier` field
   // stays for display/imports; the FK enables the supplier detail view.
   supplierId          String?
-  supplierRef         Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  stockQuantity       Int              @default(0)
-  reorderLevel        Int              @default(0)
-  isActive            Boolean          @default(true)
+  supplierRef         Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  stockQuantity       Int                 @default(0)
+  reorderLevel        Int                 @default(0)
+  isActive            Boolean             @default(true)
   // Pro module "storefront" — public on the shop's online store page.
-  listedOnline        Boolean          @default(false)
+  listedOnline        Boolean             @default(false)
   // Set when an OWNER low-stock alert fires; gates re-alerts (24h window).
-  lastLowStockAlertAt DateTime?        @db.Timestamptz
-  createdAt           DateTime         @default(now()) @db.Timestamptz
-  updatedAt           DateTime         @updatedAt @db.Timestamptz
+  lastLowStockAlertAt DateTime?           @db.Timestamptz
+  createdAt           DateTime            @default(now()) @db.Timestamptz
+  updatedAt           DateTime            @updatedAt @db.Timestamptz
 
   jobParts       JobPart[]
   saleItems      SaleItem[]
@@ -1436,6 +1437,7 @@ model Verification {
 // ─────────────────────────────────────────────
 
 model Supplier {
+  orderLines           PurchaseOrderLine[]
   jobParts             JobPart[]
   customCategoryId     String?
   customCategory       CatalogCategory?      @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
@@ -1581,29 +1583,30 @@ model TaskRule {
 }
 
 model PurchaseOrder {
+  lines            PurchaseOrderLine[]
   customCategoryId String?
-  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
-  kind             String           @default("PRODUCT")
+  customCategory   CatalogCategory?    @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  kind             String              @default("PRODUCT")
   purchaseUrl      String?
   customerId       String?
-  customer         Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer         Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
   jobId            String?
-  job              Job?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  job              Job?                @relation(fields: [jobId], references: [id], onDelete: SetNull)
   partId           String?
-  part             PartsCatalog?    @relation(fields: [partId], references: [id], onDelete: SetNull)
-  costGross        Decimal          @default(0) @db.Decimal(14, 2)
-  quoteGross       Decimal          @default(0) @db.Decimal(14, 2)
-  costVatRate      Decimal          @default(0) @db.Decimal(5, 2)
-  saleVatRate      Decimal          @default(0) @db.Decimal(5, 2)
-  recoverInputVat  Boolean          @default(true)
-  id               String           @id @default(cuid())
+  part             PartsCatalog?       @relation(fields: [partId], references: [id], onDelete: SetNull)
+  costGross        Decimal             @default(0) @db.Decimal(14, 2)
+  quoteGross       Decimal             @default(0) @db.Decimal(14, 2)
+  costVatRate      Decimal             @default(0) @db.Decimal(5, 2)
+  saleVatRate      Decimal             @default(0) @db.Decimal(5, 2)
+  recoverInputVat  Boolean             @default(true)
+  id               String              @id @default(cuid())
   title            String
   supplierId       String?
-  supplier         Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  notes            String?          @db.Text
+  supplier         Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  notes            String?             @db.Text
   reference        String?
-  createdAt        DateTime         @default(now()) @db.Timestamptz
-  updatedAt        DateTime         @updatedAt @db.Timestamptz
+  createdAt        DateTime            @default(now()) @db.Timestamptz
+  updatedAt        DateTime            @updatedAt @db.Timestamptz
 
   @@index([customCategoryId])
   @@index([supplierId])
@@ -1799,4 +1802,29 @@ model CatalogCategory {
   @@unique([scope, parentKey, nameKey])
   @@index([scope, isActive])
   @@map("catalog_categories")
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position        Int           @default(0)
+  name            String
+  quantity        Int           @default(1)
+  partId          String?
+  part            PartsCatalog? @relation(fields: [partId], references: [id], onDelete: SetNull)
+  supplierId      String?
+  supplier        Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  reference       String?
+  purchaseUrl     String?
+  costGross       Decimal       @default(0) @db.Decimal(14, 2)
+  quoteGross      Decimal       @default(0) @db.Decimal(14, 2)
+  costVatRate     Decimal       @default(0) @db.Decimal(5, 2)
+  saleVatRate     Decimal       @default(0) @db.Decimal(5, 2)
+  recoverInputVat Boolean       @default(true)
+
+  @@index([orderId, position])
+  @@index([partId])
+  @@index([supplierId])
+  @@map("purchase_order_lines")
 }

@@ -7,23 +7,37 @@ import { SearchPicker } from "@/components/ui/search-picker";
 import { useCan } from "@/hooks/use-can";
 import api from "@/lib/api";
 
+export interface CatalogPartOption {
+  acquisitionCost?: PartsCatalog["acquisitionCost"] | string | number;
+  defaultPrice?: PartsCatalog["defaultPrice"] | string | number;
+  id: string;
+  name: string;
+  supplierId?: string | null;
+}
 export function PartPicker({
   value,
   onChange,
   initialPart,
+  label,
+  onCreatingChange,
 }: {
   value: string;
-  onChange: (id: string) => void;
+  onChange: (id: string, part?: CatalogPartOption) => void;
+  label?: string;
+  onCreatingChange?: (creating: boolean) => void;
   initialPart?: { id: string; name: string } | null;
 }) {
   const { t } = useTranslation();
   const failure = t("tasks.failed");
   const canCreate = useCan({ parts: ["manageCatalog"] });
-  const [rows, setRows] = useState<{ id: string; name: string }[]>(
+  const [rows, setRows] = useState<CatalogPartOption[]>(
     initialPart ? [initialPart] : []
   );
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  useEffect(() => {
+    onCreatingChange?.(creating);
+  }, [creating, onCreatingChange]);
   useEffect(() => {
     let active = true;
     const timer = setTimeout(async () => {
@@ -54,8 +68,13 @@ export function PartPicker({
   return (
     <>
       <SearchPicker
-        label={t("rmas.part")}
-        onChange={onChange}
+        label={label ?? t("rmas.part")}
+        onChange={(id) =>
+          onChange(
+            id,
+            rows.find((row) => row.id === id)
+          )
+        }
         onCreate={canCreate ? () => setCreating(true) : undefined}
         onQuery={setQuery}
         options={rows}
@@ -66,8 +85,8 @@ export function PartPicker({
           onClose={() => setCreating(false)}
           onSubmit={async (input) => {
             const { data } = await api.post("/parts", input);
-            setRows((old) => [data.part, ...old]);
-            onChange(data.part.id);
+            setRows((old) => [data, ...old]);
+            onChange(data.id, data);
             setCreating(false);
           }}
         />

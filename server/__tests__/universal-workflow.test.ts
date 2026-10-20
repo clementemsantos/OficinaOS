@@ -39,6 +39,9 @@ function buildApp({
       create: vi.fn(async ({ data }) => ({ id: "o1", ...data })),
     },
   };
+  Object.assign(prisma, {
+    $transaction: async (run: (tx: unknown) => unknown) => await run(prisma),
+  });
   const app = Fastify();
   app.decorate("prisma", prisma as never);
   app.decorate("auth", {

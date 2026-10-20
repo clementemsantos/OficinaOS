@@ -2673,5 +2673,27 @@
     "new_service": "Criar serviço no catálogo",
     "created": "Criado e selecionado.",
     "customer": "Cliente"
+  },
+  "order_lines": {
+    "title": "Produtos da encomenda",
+    "add": "Adicionar linha de produto",
+    "line_title": "Linha de produto",
+    "catalog_product": "Pesquisar no inventário (opcional)",
+    "description": "Produto / descrição",
+    "costGross": "Custo unitário com IVA",
+    "quoteGross": "Preço unitário ao cliente com IVA",
+    "costVatRate": "IVA da compra (%)",
+    "saleVatRate": "IVA da venda (%)",
+    "line_total": "Total da linha com IVA",
+    "total_cost": "Custo total com IVA",
+    "total_quote": "Total ao cliente com IVA",
+    "empty": "Ainda não adicionou produtos.",
+    "apply": "Aplicar linha",
+    "invalid": "Verifique a descrição, quantidade, valores, taxas de IVA e ligação de compra.",
+    "stock_hint": "Adicionar produtos à encomenda não movimenta o stock do inventário.",
+    "conflict": "Esta encomenda foi alterada noutro local. Volte a carregá-la antes de guardar.",
+    "saved": "Encomenda guardada.",
+    "limit": "Adicione entre 1 e 100 linhas de produtos válidas.",
+    "new_order": "Nova encomenda"
   }
 }

@@ -1,10 +1,16 @@
-import { orderMargin } from "@shared/business-finance";
-import { AppError } from "@shared/errors/app-error.js";
-import { orderFields } from "@shared/schemas/business";
+import { orderLinesTotals, orderMargin } from "@shared/business-finance";
+import {
+  createOrderFields,
+  updateOrderFields,
+} from "@shared/schemas/order-lines";
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
-import { validateCategory } from "../services/catalog-category.service.js";
+import {
+  createOrder,
+  ORDER_INCLUDE,
+  updateOrder,
+} from "../services/purchase-orders.service";
 import { parseInput } from "../utils/parse-input.js";
 import { getRole } from "../utils/request.js";
 
@@ -12,7 +18,7 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
   app.addHook("preHandler", requirePermission({ parts: ["viewCatalog"] }));
   const serialize = async (
     req: FastifyRequest,
-    order: Awaited<ReturnType<typeof app.prisma.purchaseOrder.findMany>>[number]
+    order: Awaited<ReturnType<typeof createOrder>>
   ) => {
     const allowed = await app.auth.api.userHasPermission({
       body: { role: getRole(req), permissions: { parts: ["viewCost"] } },
@@ -23,10 +29,21 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       costVatRate,
       saleVatRate,
       recoverInputVat,
+      lines = [],
       ...publicFields
     } = order;
+    const publicLines = lines.map(
+      ({
+        costGross: _cost,
+        quoteGross: _quote,
+        costVatRate: _costVat,
+        saleVatRate: _saleVat,
+        recoverInputVat: _recover,
+        ...line
+      }) => line
+    );
     if (!allowed.success) {
-      return publicFields;
+      return { ...publicFields, lines: publicLines };
     }
     const financials = {
       costGross: costGross.toString(),
@@ -35,7 +52,24 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       saleVatRate: saleVatRate.toString(),
       recoverInputVat,
     };
-    return { ...publicFields, ...financials, margin: orderMargin(financials) };
+    const pricedLines = lines.map((line) => ({
+      ...line,
+      costGross: line.costGross.toString(),
+      quoteGross: line.quoteGross.toString(),
+      costVatRate: line.costVatRate.toString(),
+      saleVatRate: line.saleVatRate.toString(),
+    }));
+    const totals = pricedLines.length
+      ? orderLinesTotals(pricedLines)
+      : { ...financials, margin: orderMargin(financials) };
+    return {
+      ...publicFields,
+      ...financials,
+      costGross: totals.costGross,
+      quoteGross: totals.quoteGross,
+      lines: pricedLines,
+      margin: totals.margin,
+    };
   };
   app.get("/", async (req) => {
     const { cursor, supplierId, customerId, jobId, recordId } = parseInput(
@@ -64,7 +98,9 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
     const vendor = supplierId ?? linked?.id;
     const partyFilters = [
       ...(customer ? [{ customerId: customer }] : []),
-      ...(vendor ? [{ supplierId: vendor }] : []),
+      ...(vendor
+        ? [{ supplierId: vendor }, { lines: { some: { supplierId: vendor } } }]
+        : []),
     ];
     const data = await app.prisma.purchaseOrder.findMany({
       where: {
@@ -72,12 +108,7 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
         id: recordId,
         ...(partyFilters.length ? { OR: partyFilters } : {}),
       },
-      include: {
-        supplier: { select: { id: true, name: true } },
-        customer: { select: { id: true, name: true } },
-        part: { select: { id: true, name: true } },
-        job: { select: { id: true, jobCode: true } },
-      },
+      include: ORDER_INCLUDE,
       orderBy: { id: "desc" },
       take: 100,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -87,40 +118,13 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       nextCursor: data.length === 100 ? data.at(-1)?.id : null,
     };
   });
-  const validateReferences = async (value: z.infer<typeof orderFields>) => {
-    await validateCategory(app.prisma, "ORDER", value.customCategoryId);
-    const refs = [
-      value.supplierId
-        ? app.prisma.supplier.findUnique({ where: { id: value.supplierId } })
-        : true,
-      value.customerId
-        ? app.prisma.customer.findUnique({ where: { id: value.customerId } })
-        : true,
-      value.jobId
-        ? app.prisma.job.findUnique({ where: { id: value.jobId } })
-        : true,
-      value.partId
-        ? app.prisma.partsCatalog.findUnique({ where: { id: value.partId } })
-        : true,
-    ];
-    if ((await Promise.all(refs)).some((value) => !value)) {
-      throw new AppError("NOT_FOUND");
-    }
-    if (value.partId && value.kind !== "PART") {
-      throw new AppError("VALIDATION_ERROR");
-    }
-  };
   app.post(
     "/",
     { preHandler: requirePermission({ parts: ["manageCatalog", "viewCost"] }) },
     async (req, reply) => {
-      const data = parseInput(orderFields, req.body);
-      await validateReferences(data);
+      const data = parseInput(createOrderFields, req.body);
       return reply.status(201).send({
-        data: await serialize(
-          req,
-          await app.prisma.purchaseOrder.create({ data })
-        ),
+        data: await serialize(req, await createOrder(app.prisma, data)),
       });
     }
   );
@@ -129,32 +133,16 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
     { preHandler: requirePermission({ parts: ["manageCatalog", "viewCost"] }) },
     async (req) => {
       const { id } = req.params as { id: string };
-      const existing = await app.prisma.purchaseOrder.findUnique({
-        where: { id },
-      });
-      if (!existing) {
-        throw new AppError("NOT_FOUND");
-      }
-      const parsed = parseInput(orderFields.partial(), req.body);
-      // Zod applies defaults inside partial objects; retain only submitted keys.
-      const patch = Object.fromEntries(
-        Object.entries(parsed).filter(([key]) =>
-          Object.hasOwn(req.body as object, key)
-        )
-      );
-      const data = parseInput(orderFields, {
-        ...existing,
-        costGross: existing.costGross.toString(),
-        quoteGross: existing.quoteGross.toString(),
-        costVatRate: existing.costVatRate.toString(),
-        saleVatRate: existing.saleVatRate.toString(),
-        ...patch,
-      });
-      await validateReferences(data);
+      const data = parseInput(updateOrderFields, req.body);
       return {
         data: await serialize(
           req,
-          await app.prisma.purchaseOrder.update({ where: { id }, data })
+          await updateOrder(
+            app.prisma,
+            id,
+            data,
+            Object.keys(req.body as object)
+          )
         ),
       };
     }

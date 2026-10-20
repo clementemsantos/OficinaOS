@@ -7,6 +7,25 @@ import { purchaseOrdersRoutes } from "../routes/purchase-orders.js";
 function build({ admin = true, cost = true } = {}) {
   const order = {
     id: "o1",
+    updatedAt: new Date("2026-10-20T12:00:00Z"),
+    lines: [
+      {
+        id: "l1",
+        orderId: "o1",
+        position: 0,
+        name: "Screen",
+        quantity: 1,
+        partId: null,
+        supplierId: null,
+        reference: "",
+        purchaseUrl: "",
+        costGross: "123",
+        quoteGross: "246",
+        costVatRate: "23",
+        saleVatRate: "23",
+        recoverInputVat: true,
+      },
+    ],
     title: "Parts",
     kind: "PART",
     costGross: "123",
@@ -16,6 +35,8 @@ function build({ admin = true, cost = true } = {}) {
     recoverInputVat: true,
   };
   const prisma = {
+    $queryRaw: vi.fn(async () => [{ id: "o1" }]),
+    $transaction: vi.fn(),
     customer: {
       findUnique: vi.fn(async () => ({ id: "c1" })),
       findMany: vi.fn(async () => []),
@@ -52,9 +73,15 @@ function build({ admin = true, cost = true } = {}) {
     purchaseOrder: {
       findMany: vi.fn(async () => [order]),
       findUnique: vi.fn(async () => order),
-      update: vi.fn(async ({ data }) => ({ ...order, ...data })),
+      findUniqueOrThrow: vi.fn(async () => order),
+      update: vi.fn(async ({ data }) => ({
+        ...order,
+        ...data,
+        lines: order.lines,
+      })),
     },
   };
+  prisma.$transaction.mockImplementation((run) => run(prisma));
   const app = Fastify();
   app.decorate("prisma", prisma as never);
   app.decorate("auth", {
@@ -153,7 +180,11 @@ describe("business authorization and linkage", () => {
     expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          OR: [{ customerId: "c1" }, { supplierId: "s1" }],
+          OR: [
+            { customerId: "c1" },
+            { supplierId: "s1" },
+            { lines: { some: { supplierId: "s1" } } },
+          ],
         }),
       })
     );
@@ -242,6 +273,18 @@ describe("business authorization and linkage", () => {
     expect(data).not.toHaveProperty("costGross");
     expect(data).not.toHaveProperty("quoteGross");
     expect(data).not.toHaveProperty("margin");
+    for (const line of data.lines) {
+      for (const field of [
+        "costGross",
+        "quoteGross",
+        "costVatRate",
+        "saleVatRate",
+        "recoverInputVat",
+        "margin",
+      ]) {
+        expect(line).not.toHaveProperty(field);
+      }
+    }
     await app.close();
   });
   it("preserves existing financial values on a title-only edit", async () => {
@@ -256,11 +299,65 @@ describe("business authorization and linkage", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           title: "New title",
-          costGross: "123",
+          costGross: "123.00",
           kind: "PART",
         }),
       })
     );
+    await app.close();
+  });
+});
+
+describe("order line authorization", () => {
+  it("rejects writes without access to financial values", async () => {
+    const { app, prisma } = build({ cost: false });
+    for (const method of ["POST", "PATCH"] as const) {
+      const response = await app.inject({
+        method,
+        url: method === "POST" ? "/purchase-orders" : "/purchase-orders/o1",
+        payload: { title: "Changed" },
+      });
+      expect(response.statusCode).toBe(403);
+    }
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    await app.close();
+  });
+  it("requires a version for line writes before starting a transaction", async () => {
+    const { app, prisma } = build();
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/purchase-orders/o1",
+      payload: {
+        lines: [
+          {
+            name: "Product",
+            quantity: 1,
+            costGross: "1",
+            quoteGross: "2",
+            costVatRate: "0",
+            saleVatRate: "0",
+            recoverInputVat: true,
+          },
+        ],
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    await app.close();
+  });
+  it("serializes totals from the stored lines rather than stale header amounts", async () => {
+    const { app, prisma } = build();
+    const rows = await prisma.purchaseOrder.findMany();
+    prisma.purchaseOrder.findMany.mockResolvedValue([
+      { ...rows[0], costGross: "1", quoteGross: "1" },
+    ]);
+    const response = await app.inject({ url: "/purchase-orders" });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data[0]).toMatchObject({
+      costGross: "123.00",
+      quoteGross: "246.00",
+      margin: { profitAfterVat: "100.00" },
+    });
     await app.close();
   });
 });

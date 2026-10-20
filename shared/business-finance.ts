@@ -43,3 +43,49 @@ export function commissionGross(
   const commission = (cents(basis) * cents(rate) + 5000n) / 10000n;
   return money((commission * (10000n + cents(vat)) + 5000n) / 10000n);
 }
+
+export interface OrderLineMoney {
+  costGross: string;
+  costVatRate: string;
+  quantity: number;
+  quoteGross: string;
+  recoverInputVat: boolean;
+  saleVatRate: string;
+}
+/** VAT is rounded on each extended line; mixed VAT rates must not be averaged. */
+export function orderLinesTotals(lines: readonly OrderLineMoney[]) {
+  let cost = 0n;
+  let quote = 0n;
+  let costNet = 0n;
+  let revenueNet = 0n;
+  let vat = 0n;
+  for (const line of lines) {
+    const lineCost = cents(line.costGross) * BigInt(line.quantity);
+    const lineQuote = cents(line.quoteGross) * BigInt(line.quantity);
+    const margin = orderMargin({
+      ...line,
+      costGross: money(lineCost),
+      quoteGross: money(lineQuote),
+    });
+    cost += lineCost;
+    quote += lineQuote;
+    costNet += cents(margin.costNet);
+    revenueNet += cents(margin.revenueNet);
+    // vatBalance may be negative; cents() only parses unsigned values.
+    vat +=
+      lineQuote - cents(margin.revenueNet) - (lineCost - cents(margin.costNet));
+  }
+  const profit = revenueNet - costNet;
+  return {
+    costGross: money(cost),
+    quoteGross: money(quote),
+    margin: {
+      costNet: money(costNet),
+      revenueNet: money(revenueNet),
+      profitAfterVat: money(profit),
+      vatBalance: money(vat),
+      marginPercent:
+        revenueNet === 0n ? null : Number((profit * 10000n) / revenueNet) / 100,
+    },
+  };
+}

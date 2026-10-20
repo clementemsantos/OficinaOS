@@ -2622,5 +2622,27 @@
     "new_service": "Create catalog service",
     "created": "Created and selected.",
     "customer": "Customer"
+  },
+  "order_lines": {
+    "title": "Products in this order",
+    "add": "Add product line",
+    "line_title": "Product line",
+    "catalog_product": "Search inventory (optional)",
+    "description": "Product / description",
+    "costGross": "Unit cost incl. VAT",
+    "quoteGross": "Unit customer price incl. VAT",
+    "costVatRate": "Purchase VAT (%)",
+    "saleVatRate": "Sales VAT (%)",
+    "line_total": "Line total incl. VAT",
+    "total_cost": "Total cost incl. VAT",
+    "total_quote": "Customer total incl. VAT",
+    "empty": "No products added yet.",
+    "apply": "Apply line",
+    "invalid": "Check the description, quantity, amounts, VAT rates and purchase link.",
+    "stock_hint": "Adding products to an order does not move inventory stock.",
+    "conflict": "This order was changed elsewhere. Reload it before saving again.",
+    "saved": "Order saved.",
+    "limit": "Add between 1 and 100 valid product lines.",
+    "new_order": "New order"
   }
 }
