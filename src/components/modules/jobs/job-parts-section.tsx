@@ -134,9 +134,15 @@ export default function JobPartsSection({
                     t(`part_category.${part.category}`)}
                   <Can perm={{ parts: ["viewCost"] }}>
                     {" "}
-                    · {fmt(Number(part.unitPrice))} × {part.quantity}
+                    · {fmt(Number(part.unitPrice))} ×{" "}
+                    {part.quantity - (part.rmaQuantity ?? 0)}
                   </Can>
                 </p>
+                {(part.rmaQuantity ?? 0) > 0 && (
+                  <p className="text-primary text-sm">
+                    {t("rma_discount.line_note", { count: part.rmaQuantity })}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Can perm={{ parts: ["viewCost"] }}>
@@ -155,7 +161,7 @@ export default function JobPartsSection({
                     </Button>
                   </Can>
                 )}
-                {!isTerminal && (
+                {!(isTerminal || part.rmaQuantity > 0) && (
                   <RemovePartButton
                     onRemove={() => handleRemovePart(part.id, part)}
                   />

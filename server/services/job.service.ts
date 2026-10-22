@@ -1076,7 +1076,14 @@ const LOOKUP_INCLUDE_PUBLIC = {
       repair: { select: { warrantyDays: true } },
     },
   },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   payments: { select: { amount: true, method: true, createdAt: true } },
   notes: {
     where: { isCustomerVisible: true },
@@ -1096,7 +1103,14 @@ const LOOKUP_INCLUDE_AUTH = {
       repair: { select: { warrantyDays: true } },
     },
   },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   payments: { select: { amount: true, method: true, createdAt: true } },
   notes: {
     where: { isCustomerVisible: true },
@@ -1130,6 +1144,7 @@ async function buildJobLookupPayload(
     }>;
     partsUsed?: Array<{
       partName: string;
+      rmaQuantity?: number;
       quantity: number;
       totalCost: { toNumber: () => number };
     }>;
@@ -1195,7 +1210,7 @@ async function buildJobLookupPayload(
     ...partsUsed.map((p) => ({
       name: p.partName,
       price: p.totalCost.toNumber(),
-      quantity: p.quantity,
+      quantity: Math.max(0, p.quantity - (p.rmaQuantity ?? 0)),
     })),
   ];
   let receiptTotal = 0;
@@ -1322,7 +1337,14 @@ const LOOKUP_INCLUDE_RECEIPT = {
   customer: { select: { name: true, phone: true } },
   device: { select: { model: true, brand: { select: { name: true } } } },
   payments: { select: { amount: true, method: true, createdAt: true } },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   repairs: {
     select: {
       repairName: true,

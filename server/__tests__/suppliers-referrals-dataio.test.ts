@@ -11,6 +11,13 @@ function buildApp(
   plugins: { plugin: unknown; prefix?: string }[],
   user: { id: string; role: string } | null = { id: "u1", role: "OWNER" }
 ) {
+  const mockDb = prisma as Record<string, unknown>;
+  if (mockDb.supplierRma) {
+    mockDb.$transaction ??= vi.fn(
+      async (run: (tx: unknown) => unknown) => await run(prisma)
+    );
+    mockDb.$queryRaw ??= vi.fn(async () => [{ id: "locked-rma" }]);
+  }
   const app = Fastify();
   app.setErrorHandler((error, _request, reply) => {
     if (isAppError(error)) {
@@ -786,6 +793,7 @@ describe("editing RMA record associations", () => {
           jobId: "j2",
           description: "Updated",
           quantity: 2,
+          updatedAt: expect.any(Date),
         },
       })
     );
@@ -799,7 +807,9 @@ describe("editing RMA record associations", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(prisma.supplierRma.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { partId: null, jobId: null } })
+      expect.objectContaining({
+        data: { partId: null, jobId: null, updatedAt: expect.any(Date) },
+      })
     );
   });
   it.each([

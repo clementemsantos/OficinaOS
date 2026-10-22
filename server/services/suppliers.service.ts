@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@generated/client";
+import type { Prisma, PrismaClient } from "@generated/client";
 import { AppError } from "@shared/errors/app-error.js";
 import type {
   createSupplierRmaSchema,
@@ -99,6 +99,9 @@ export function listRmas(
     },
     orderBy: { createdAt: "desc" },
     include: {
+      deductedSaleItem: {
+        select: { sale: { select: { id: true, saleCode: true } } },
+      },
       supplier: { select: { id: true, name: true } },
       job: { select: { id: true, jobCode: true } },
       part: { select: { id: true, name: true } },
@@ -156,7 +159,10 @@ const RMA_TRANSITIONS: Record<string, string[]> = {
   CANCELLED: ["OPEN"],
 };
 
-async function rmaEditFields(prisma: PrismaClient, input: UpdateRmaInput) {
+async function rmaEditFields(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  input: UpdateRmaInput
+) {
   const { jobCode, ...fields } = input;
   const data: Record<string, unknown> = { ...fields };
   if (
@@ -184,8 +190,8 @@ async function rmaEditFields(prisma: PrismaClient, input: UpdateRmaInput) {
   return data;
 }
 
-export async function updateRma(
-  prisma: PrismaClient,
+async function updateRmaLocked(
+  prisma: PrismaClient | Prisma.TransactionClient,
   id: string,
   input: UpdateRmaInput
 ) {
@@ -198,6 +204,10 @@ export async function updateRma(
     part: { select: { id: true, name: true } },
   };
   const data = await rmaEditFields(prisma, input);
+  data.updatedAt = new Date(
+    Math.max(Date.now(), (existing.updatedAt?.getTime() ?? 0) + 1)
+  );
+  assertRmaSourceEdit(existing, input, data);
   if (input.status && input.status !== existing.status) {
     if (!RMA_TRANSITIONS[existing.status]?.includes(input.status)) {
       throw new AppError("INVALID_TRANSITION");
@@ -225,4 +235,37 @@ export async function updateRma(
     return prisma.supplierRma.findUniqueOrThrow({ where: { id }, include });
   }
   return prisma.supplierRma.update({ where: { id }, data, include });
+}
+
+export function updateRma(
+  prisma: PrismaClient,
+  id: string,
+  input: UpdateRmaInput
+) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM supplier_rmas WHERE id = ${id} FOR UPDATE`;
+    return await updateRmaLocked(tx, id, input);
+  });
+}
+
+function assertRmaSourceEdit(
+  existing: {
+    deductedAt: Date | null;
+    deductionReversedAt: Date | null;
+    quantity: number;
+    partId: string | null;
+    jobId: string | null;
+  },
+  input: UpdateRmaInput,
+  data: Record<string, unknown>
+) {
+  if (
+    existing.deductedAt &&
+    !existing.deductionReversedAt &&
+    ((input.quantity !== undefined && input.quantity !== existing.quantity) ||
+      (input.partId !== undefined && input.partId !== existing.partId) ||
+      (data.jobId !== undefined && data.jobId !== existing.jobId))
+  ) {
+    throw new AppError("CONFLICT");
+  }
 }

@@ -2754,5 +2754,27 @@
     "quote": "Total cliente",
     "margin": "Margem",
     "open": "Abrir encomenda"
+  },
+  "rma_discount": {
+    "title": "Retirar valor da peça em RMA",
+    "hint": "Escolha a reparação ou venda e a linha da peça original. O valor da quantidade do RMA será retirado desse registo. Os pagamentos recebidos ficam registados.",
+    "source": "Origem",
+    "reference": "Referência da reparação / venda",
+    "JOB": "Reparação",
+    "SALE": "Venda",
+    "find": "Procurar linhas de peças",
+    "piece": "Linha da peça original",
+    "choose": "Escolha uma linha",
+    "amount": "Valor a retirar",
+    "apply": "Descontar valor da peça",
+    "restore": "Repor valor na origem",
+    "restored": "Valor reposto na origem",
+    "applied": "Valor da peça retirado",
+    "invoiced": "Este registo já tem uma fatura emitida. O valor não foi alterado.",
+    "failed": "Não foi possível alterar o valor. Atualize o RMA e confirme a origem, as permissões e a quantidade disponível.",
+    "no_lines": "Não há unidades disponíveis correspondentes. Confirme a referência da origem, a peça e a quantidade do RMA.",
+    "line_note": "Unidades em RMA (não cobradas): {{count}}",
+    "payment_note": "Este desconto não regista um reembolso ao cliente.",
+    "units": "unidades"
   }
 }

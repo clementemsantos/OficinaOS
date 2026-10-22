@@ -27,13 +27,14 @@ export async function editJobPart(
     if (!old) {
       throw new AppError("NOT_FOUND");
     }
+    assertRmaPartEdit(old, input);
     if (input.customCategoryId !== old.customCategoryId) {
       await validateCategory(tx, "PART", input.customCategoryId);
     }
     const supplier = await supplierName(tx, input.supplierId, input.supplier);
     const quantity = input.quantity ?? old.quantity;
     const totalCost = new Prisma.Decimal(input.unitPrice ?? old.unitPrice).mul(
-      quantity
+      quantity - (old.rmaQuantity ?? 0)
     );
     if (totalCost.greaterThan("99999999.99")) {
       throw new AppError("VALIDATION_ERROR");
@@ -136,4 +137,17 @@ async function supplierName(
     throw new AppError("NOT_FOUND");
   }
   return vendor.name;
+}
+
+function assertRmaPartEdit(
+  old: { rmaQuantity: number; quantity: number; unitPrice: Prisma.Decimal },
+  input: EditJobPartInput
+) {
+  if (
+    old.rmaQuantity > 0 &&
+    ((input.quantity !== undefined && input.quantity !== old.quantity) ||
+      (input.unitPrice !== undefined && !old.unitPrice.equals(input.unitPrice)))
+  ) {
+    throw new AppError("CONFLICT");
+  }
 }

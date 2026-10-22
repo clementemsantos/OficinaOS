@@ -2,6 +2,7 @@ import type { PrismaClient } from "@generated/client";
 import { AppError } from "@shared/errors/app-error.js";
 import type { FastifyBaseLogger } from "fastify";
 import { decryptSecret } from "../lib/crypto.js";
+import { claimFinancialRecord } from "../lib/financial-record-lock.js";
 import { getOrCreateShopSettings } from "../repositories/settings.repository.js";
 
 /**
@@ -208,24 +209,12 @@ async function issueDocument(
   };
 }
 
-// In-flight issuance claims. A provider call is an irreversible
-// numbered fiscal document — two concurrent issues for the same
-// sale/job (double-click, two tabs) would emit two legal documents.
-// The check-then-write below is not atomic, so this process-level
-// claim serializes it (single-instance deployment, like the outbox
-// worker's isProcessing flag).
-const issuingKeys = new Set<string>();
-
 export async function issueInvoiceForSale(
   prisma: PrismaClient,
   saleId: string,
   log: FastifyBaseLogger
 ): Promise<IssuedInvoice> {
-  const claimKey = `sale:${saleId}`;
-  if (issuingKeys.has(claimKey)) {
-    throw new AppError("ALREADY_INVOICED");
-  }
-  issuingKeys.add(claimKey);
+  const release = claimFinancialRecord("SALE", saleId, true);
   try {
     const sale = await prisma.sale.findUnique({
       include: { customer: true, items: true },
@@ -241,13 +230,19 @@ export async function issueInvoiceForSale(
       throw new AppError("VALIDATION_ERROR");
     }
 
+    if (!sale.items.some((item) => item.quantity > (item.rmaQuantity ?? 0))) {
+      throw new AppError("VALIDATION_ERROR");
+    }
+
     const issued = await issueDocument(prisma, log, {
       customer: sale.customer,
-      lines: sale.items.map((i) => ({
-        name: i.name,
-        quantity: i.quantity,
-        unitPriceGrossCents: Math.round(Number(i.unitPrice) * 100),
-      })),
+      lines: sale.items
+        .filter((i) => i.quantity > (i.rmaQuantity ?? 0))
+        .map((i) => ({
+          name: i.name,
+          quantity: i.quantity - (i.rmaQuantity ?? 0),
+          unitPriceGrossCents: Math.round(Number(i.unitPrice) * 100),
+        })),
       reference: sale.saleCode,
     });
 
@@ -263,7 +258,7 @@ export async function issueInvoiceForSale(
     });
     return issued;
   } finally {
-    issuingKeys.delete(claimKey);
+    release();
   }
 }
 
@@ -272,11 +267,7 @@ export async function issueInvoiceForJob(
   jobId: string,
   log: FastifyBaseLogger
 ): Promise<IssuedInvoice> {
-  const claimKey = `job:${jobId}`;
-  if (issuingKeys.has(claimKey)) {
-    throw new AppError("ALREADY_INVOICED");
-  }
-  issuingKeys.add(claimKey);
+  const release = claimFinancialRecord("JOB", jobId, true);
   try {
     const job = await prisma.job.findUnique({
       include: { customer: true },
@@ -295,7 +286,12 @@ export async function issueInvoiceForJob(
         where: { jobId },
       }),
       prisma.jobPart.findMany({
-        select: { partName: true, quantity: true, unitPrice: true },
+        select: {
+          partName: true,
+          quantity: true,
+          unitPrice: true,
+          rmaQuantity: true,
+        },
         where: { jobId },
       }),
     ]);
@@ -305,11 +301,13 @@ export async function issueInvoiceForJob(
         quantity: 1,
         unitPriceGrossCents: Math.round(Number(r.price) * 100),
       })),
-      ...parts.map((p) => ({
-        name: p.partName,
-        quantity: p.quantity,
-        unitPriceGrossCents: Math.round(Number(p.unitPrice) * 100),
-      })),
+      ...parts
+        .filter((p) => p.quantity > (p.rmaQuantity ?? 0))
+        .map((p) => ({
+          name: p.partName,
+          quantity: p.quantity - (p.rmaQuantity ?? 0),
+          unitPriceGrossCents: Math.round(Number(p.unitPrice) * 100),
+        })),
     ];
     if (lines.length === 0) {
       throw new AppError("VALIDATION_ERROR");
@@ -333,6 +331,6 @@ export async function issueInvoiceForJob(
     });
     return issued;
   } finally {
-    issuingKeys.delete(claimKey);
+    release();
   }
 }

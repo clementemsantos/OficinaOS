@@ -2754,5 +2754,27 @@
     "quote": "Customer total",
     "margin": "Margin",
     "open": "Open order"
+  },
+  "rma_discount": {
+    "title": "Remove the RMA part value",
+    "hint": "Choose the original repair or sale and its part line. The selected quantity is deducted from that record. Existing payments are retained.",
+    "source": "Origin",
+    "reference": "Repair / sale reference",
+    "JOB": "Repair",
+    "SALE": "Sale",
+    "find": "Find part lines",
+    "piece": "Original part line",
+    "choose": "Choose a line",
+    "amount": "Amount to deduct",
+    "apply": "Deduct part value",
+    "restore": "Restore original value",
+    "restored": "Value restored",
+    "applied": "Part value deducted",
+    "invoiced": "This record has already been invoiced. Its value was not changed.",
+    "failed": "Could not change the amount. Refresh the RMA and check the source, permissions and available quantity.",
+    "no_lines": "No matching available units. Check the origin reference, part and RMA quantity.",
+    "line_note": "RMA units (not billed): {{count}}",
+    "payment_note": "This deduction does not record a payment refund.",
+    "units": "units"
   }
 }

@@ -7,7 +7,7 @@ import {
   updateSupplierRmaSchema,
   updateSupplierSchema,
 } from "@shared/schemas/supplier.schema";
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { requirePermission } from "../middlewares/rbac.js";
 import {
@@ -19,7 +19,7 @@ import {
   updateRma,
   updateSupplier,
 } from "../services/suppliers.service.js";
-import { getUserId } from "../utils/request.js";
+import { getRole, getUserId } from "../utils/request.js";
 import { resolveZodErrors } from "../utils/resolve-validation-messages.js";
 
 function parse<S extends z.ZodType>(
@@ -34,6 +34,22 @@ function parse<S extends z.ZodType>(
     });
   }
   return parsed.data;
+}
+
+async function rmaViews<T extends { deductedAmount?: unknown }>(
+  req: FastifyRequest,
+  rows: T[]
+) {
+  const allowed = await req.server.auth.api.userHasPermission({
+    body: { role: getRole(req), permissions: { parts: ["viewCost"] } },
+  });
+  return rows.map((row) => {
+    if (allowed.success) {
+      return row;
+    }
+    const { deductedAmount: _amount, ...view } = row;
+    return view;
+  });
 }
 
 // Suppliers + supplier RMAs — inventory-adjacent, gated by the parts
@@ -54,7 +70,9 @@ export const suppliersRoutes: FastifyPluginAsync = async (app) => {
   app.get("/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
     const supplier = await getSupplierDetail(app.prisma, id);
-    return reply.send({ data: supplier });
+    return reply.send({
+      data: { ...supplier, rmas: await rmaViews(req, supplier.rmas ?? []) },
+    });
   });
 
   app.post(
@@ -86,7 +104,7 @@ export const supplierRmasRoutes: FastifyPluginAsync = async (app) => {
   app.get("/", async (req, reply) => {
     const q = parse(listSupplierRmasQuerySchema, req.query, req.locale);
     const rmas = await listRmas(app.prisma, q);
-    return reply.send({ data: rmas });
+    return reply.send({ data: await rmaViews(req, rmas) });
   });
 
   app.post(
@@ -95,7 +113,7 @@ export const supplierRmasRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const body = parse(createSupplierRmaSchema, req.body, req.locale);
       const rma = await createRma(app.prisma, body, getUserId(req));
-      return reply.status(201).send({ data: rma });
+      return reply.status(201).send({ data: (await rmaViews(req, [rma]))[0] });
     }
   );
 
@@ -106,7 +124,7 @@ export const supplierRmasRoutes: FastifyPluginAsync = async (app) => {
       const { id } = req.params as { id: string };
       const body = parse(updateSupplierRmaSchema, req.body, req.locale);
       const rma = await updateRma(app.prisma, id, body);
-      return reply.send({ data: rma });
+      return reply.send({ data: (await rmaViews(req, [rma]))[0] });
     }
   );
 };

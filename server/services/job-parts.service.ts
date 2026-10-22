@@ -128,6 +128,9 @@ export async function remove(
     if (!current) {
       throw new AppError("NOT_FOUND");
     }
+    if (current.rmaQuantity > 0) {
+      throw new AppError("CONFLICT");
+    }
     await deletePartById(tx, partId);
     // Restore stock for catalog parts consumed by this line.
     if (current.partId) {

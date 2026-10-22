@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { JobCodePicker } from "@/components/modules/catalog/job-code-picker";
 import { PartPicker } from "@/components/modules/catalog/part-picker";
 import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
+import { RmaDeductionControl } from "@/components/modules/rmas/rma-deduction-control";
 import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -27,6 +28,10 @@ interface Part {
 
 interface Rma {
   createdAt: string;
+  deductedAmount?: string | number | null;
+  deductedAt?: string | null;
+  deductedSaleItem?: { sale: { saleCode: string } } | null;
+  deductionReversedAt?: string | null;
   description: string;
   id: string;
   job?: { id: string; jobCode: string } | null;
@@ -38,6 +43,7 @@ interface Rma {
   sentAt: string | null;
   status: string;
   supplier: Supplier | null;
+  updatedAt: string;
 }
 
 const STATUSES = ["OPEN", "SENT", "RECEIVED", "RESOLVED", "CANCELLED"];
@@ -319,6 +325,7 @@ export default function SupplierRmasPage() {
                 key={rma.id}
               >
                 <div className="min-w-0 flex-1">
+                  <RmaDeductionControl onSaved={load} rma={rma} />
                   <RecordWorkflow entityId={rma.id} entityType="RMA" />
                   {rma.job && (
                     <Link

@@ -400,9 +400,11 @@ model Sale {
 }
 
 model SaleItem {
-  id     String @id @default(cuid())
-  saleId String
-  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  rmaQuantity           Int           @default(0)
+  supplierRmaDeductions SupplierRma[] @relation("RmaSaleItem")
+  id                    String        @id @default(cuid())
+  saleId                String
+  sale                  Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   partId String?
   part   PartsCatalog? @relation(fields: [partId], references: [id], onDelete: SetNull)
@@ -752,13 +754,15 @@ model PartsCatalog {
 // ─────────────────────────────────────────────
 
 model JobPart {
-  supplierId       String?
-  supplierRef      Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  customCategoryId String?
-  customCategory   CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
-  id               String           @id @default(cuid())
-  jobId            String
-  job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  rmaQuantity           Int              @default(0)
+  supplierRmaDeductions SupplierRma[]    @relation("RmaJobPart")
+  supplierId            String?
+  supplierRef           Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  customCategoryId      String?
+  customCategory        CatalogCategory? @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
+  id                    String           @id @default(cuid())
+  jobId                 String
+  job                   Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   partId String?
   part   PartsCatalog? @relation(fields: [partId], references: [id], onDelete: SetNull)
@@ -1474,9 +1478,16 @@ model Supplier {
 // ─────────────────────────────────────────────
 
 model SupplierRma {
-  id         String   @id @default(cuid())
-  supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  deductedJobPartId   String?
+  deductedJobPart     JobPart?  @relation("RmaJobPart", fields: [deductedJobPartId], references: [id], onDelete: SetNull)
+  deductedSaleItemId  String?
+  deductedSaleItem    SaleItem? @relation("RmaSaleItem", fields: [deductedSaleItemId], references: [id], onDelete: SetNull)
+  deductedAmount      Decimal?  @db.Decimal(10, 2)
+  deductedAt          DateTime? @db.Timestamptz
+  deductionReversedAt DateTime? @db.Timestamptz
+  id                  String    @id @default(cuid())
+  supplierId          String
+  supplier            Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
 
   jobId String?
   job   Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)

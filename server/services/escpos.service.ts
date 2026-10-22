@@ -171,7 +171,11 @@ function jobCostsSection(
   );
   const repairsTotal = job.repairs.reduce((sum, r) => sum + toNum(r.price), 0);
   const finalCost = partsTotal + repairsTotal;
-  const displayCost = finalCost > 0 ? finalCost : toNum(job.estimatedCost);
+  const displayCost =
+    finalCost > 0 ||
+    (job.partsUsed ?? []).some((part) => (part.rmaQuantity ?? 0) > 0)
+      ? finalCost
+      : toNum(job.estimatedCost);
   const deposit = job.depositAmount ? toNum(job.depositAmount) : 0;
   const paidTotal =
     payments.reduce((sum, p) => sum + toNum(p.amount), 0) + deposit;
@@ -300,8 +304,8 @@ export function buildSaleReceiptEscPos(
   t.row(s.servedBy, sale.createdBy.name);
   t.sep();
   for (const item of sale.items) {
-    const label =
-      item.quantity > 1 ? `${item.name} x${item.quantity}` : item.name;
+    const billedQuantity = Math.max(0, item.quantity - (item.rmaQuantity ?? 0));
+    const label = `${item.name} x${billedQuantity}`;
     t.row(label, fmtMoneyPlain(item.lineTotal, currency));
   }
   t.sep();

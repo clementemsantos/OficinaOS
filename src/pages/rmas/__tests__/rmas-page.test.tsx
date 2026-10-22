@@ -104,6 +104,7 @@ it("edits an existing RMA and clears reference and reason without creating anoth
   render(
     <RmaModal
       editing={{
+        updatedAt: "2026-10-22T00:00:00.000Z",
         id: "r1",
         supplier: { id: "s1", name: "ACME" },
         job: { id: "j1", jobCode: "2026/1" },
