@@ -24,6 +24,48 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { icon: "build", labelKey: "jobs", to: "/jobs", perm: { jobs: ["view"] } },
   {
+    icon: "devices",
+    labelKey: "equipment_nav",
+    to: "/equipment",
+    perm: { jobs: ["view"] },
+  },
+  {
+    icon: "shopping_cart",
+    labelKey: "workflow.orders",
+    to: "/purchase-orders",
+    perm: { parts: ["viewCatalog"] },
+  },
+  {
+    icon: "confirmation_number",
+    labelKey: "business.tickets",
+    to: "/tickets",
+    perm: { jobs: ["view"] },
+  },
+  {
+    icon: "folder_open",
+    labelKey: "documents.library",
+    to: "/documents",
+    perm: { settings: ["edit"] },
+  },
+  {
+    icon: "forum",
+    labelKey: "business.messages",
+    to: "/messages",
+    perm: { settings: ["edit"] },
+  },
+  {
+    icon: "handshake",
+    labelKey: "business.agreements",
+    to: "/agreements",
+    perm: { settings: ["edit"] },
+  },
+  {
+    icon: "task_alt",
+    labelKey: "tasks.title",
+    to: "/tasks",
+    perm: { jobs: ["view"] },
+  },
+  {
     icon: "inbox",
     labelKey: "requests_nav",
     to: "/requests",

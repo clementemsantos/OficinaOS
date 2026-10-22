@@ -24,6 +24,10 @@ import {
   requireKeysetCursor,
   withKeyset,
 } from "../utils/keyset.js";
+import {
+  categoryDescendants,
+  validateCategory,
+} from "./catalog-category.service.js";
 import { markPricesDirty } from "./market-prices.service.js";
 import { markStoreDirty } from "./storefront.service.js";
 
@@ -31,6 +35,11 @@ export async function list(prisma: PrismaClient, query: ListPartsQueryInput) {
   const { category, cursor, isActive, limit, needsRestock, search } = query;
 
   const where: Prisma.PartsCatalogWhereInput = {};
+  if (query.customCategoryId) {
+    where.customCategoryId = {
+      in: await categoryDescendants(prisma, "PART", query.customCategoryId),
+    };
+  }
   if (category) {
     where.category = category as Prisma.EnumPartCategoryFilter<"PartsCatalog">;
   }
@@ -86,8 +95,21 @@ export async function create(
   input: CreatePartInput,
   userId?: string
 ) {
+  if (input.supplierId) {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: input.supplierId },
+      select: { id: true },
+    });
+    if (!supplier) {
+      throw new AppError("NOT_FOUND");
+    }
+  }
+  await validateCategory(prisma, "PART", input.customCategoryId);
   const initialStock = input.stockQuantity ?? 0;
   const data = {
+    customCategory: input.customCategoryId
+      ? { connect: { id: input.customCategoryId } }
+      : undefined,
     category: input.category,
     defaultPrice: input.defaultPrice,
     listedOnline: input.listedOnline ?? false,
@@ -95,6 +117,9 @@ export async function create(
     reorderLevel: input.reorderLevel ?? 0,
     stockQuantity: initialStock,
     supplier: input.supplier ?? null,
+    ...(input.supplierId
+      ? { supplierRef: { connect: { id: input.supplierId } } }
+      : {}),
   };
   // The initial count used to be dropped (stock always started at 0). When
   // there is opening stock it is recorded as a PURCHASE so the movement
@@ -132,7 +157,19 @@ export async function update(
   if (!part) {
     return null;
   }
+  if (input.supplierId) {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: input.supplierId },
+      select: { id: true },
+    });
+    if (!supplier) {
+      throw new AppError("NOT_FOUND");
+    }
+  }
 
+  if (input.customCategoryId !== part.customCategoryId) {
+    await validateCategory(prisma, "PART", input.customCategoryId);
+  }
   const stockDelta =
     input.stockQuantity === undefined
       ? 0

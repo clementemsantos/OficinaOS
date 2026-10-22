@@ -21,7 +21,7 @@ export async function findUnique(prisma: DbClient, id: string) {
 }
 
 export async function findCustomerByPhone(prisma: DbClient, phone: string) {
-  return await prisma.customer.findUnique({ where: { phone } });
+  return await prisma.customer.findFirst({ where: { phone } });
 }
 
 /**
@@ -51,9 +51,11 @@ export async function findByNormalizedPhone(
       END
     ) = ${normalizedPhone}
     ORDER BY id
-    LIMIT 1
+    LIMIT 2
   `;
-  return rows[0] ?? null;
+  // An imported household may legitimately share a phone number. Never
+  // choose an arbitrary customer for a new job when the lookup is ambiguous.
+  return rows.length === 1 ? (rows[0] ?? null) : null;
 }
 
 export async function findUniqueWithJobs(prisma: DbClient, id: string) {

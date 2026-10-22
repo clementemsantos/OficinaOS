@@ -1,7 +1,10 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { toast } from "sonner";
+import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -12,6 +15,7 @@ import api from "@/lib/api";
 interface Supplier {
   _count?: { rmas: number };
   address: string | null;
+  chargesPurchaseVat?: boolean;
   email: string | null;
   id: string;
   isActive: boolean;
@@ -22,6 +26,7 @@ interface Supplier {
 }
 
 const EMPTY = {
+  chargesPurchaseVat: true,
   name: "",
   email: "",
   phone: "",
@@ -30,7 +35,7 @@ const EMPTY = {
   notes: "",
 };
 
-function SupplierModal({
+export function SupplierModal({
   supplier,
   onClose,
   onSaved,
@@ -43,6 +48,7 @@ function SupplierModal({
   const [form, setForm] = useState(
     supplier
       ? {
+          chargesPurchaseVat: supplier.chargesPurchaseVat ?? true,
           name: supplier.name,
           email: supplier.email ?? "",
           phone: supplier.phone ?? "",
@@ -63,18 +69,30 @@ function SupplierModal({
     }
     setBusy(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        taxId: form.taxId.trim() || undefined,
-        address: form.address.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-      };
+      // On edit, emptied fields go as null so the server clears them —
+      // undefined would leave the old value untouched.
+      const payload = supplier
+        ? {
+            name: form.name.trim(),
+            email: form.email.trim() || null,
+            phone: form.phone.trim() || null,
+            taxId: form.taxId.trim() || null,
+            address: form.address.trim() || null,
+            notes: form.notes.trim() || null,
+          }
+        : {
+            name: form.name.trim(),
+            email: form.email.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            taxId: form.taxId.trim() || undefined,
+            address: form.address.trim() || undefined,
+            notes: form.notes.trim() || undefined,
+          };
+      const data = { ...payload, chargesPurchaseVat: form.chargesPurchaseVat };
       if (supplier) {
-        await api.patch(`/suppliers/${supplier.id}`, payload);
+        await api.patch(`/suppliers/${supplier.id}`, data);
       } else {
-        await api.post("/suppliers", payload);
+        await api.post("/suppliers", data);
       }
       toast.success(t("suppliers.saved"));
       onSaved();
@@ -147,6 +165,17 @@ function SupplierModal({
               value={form.address}
             />
           </Field>
+          <Field horizontal label={t("supplier_vat.charges")}>
+            <Checkbox
+              checked={form.chargesPurchaseVat}
+              onChange={(event) =>
+                set({ chargesPurchaseVat: event.target.checked })
+              }
+            />
+          </Field>
+          <p className="text-on-surface-variant text-sm">
+            {t("supplier_vat.hint")}
+          </p>
           <Field label={t("suppliers.notes")}>
             <Textarea
               onChange={(e) => set({ notes: e.target.value })}
@@ -269,8 +298,25 @@ export default function SuppliersPage() {
                 key={s.id}
               >
                 <div className="min-w-0 flex-1">
+                  <RecordWorkflow entityId={s.id} entityType="SUPPLIER" />
+                  <Link
+                    className="text-primary underline"
+                    to={`/purchase-orders?supplierId=${s.id}`}
+                  >
+                    {t("workflow.orders")}
+                  </Link>
                   <p className="truncate font-bold text-on-surface text-sm">
-                    {s.name}
+                    <Link
+                      className="hover:text-primary hover:underline"
+                      to={`/suppliers/${s.id}`}
+                    >
+                      {s.name}
+                      {s.chargesPurchaseVat === false && (
+                        <span className="ml-2 rounded bg-surface-container-high px-2 py-1 text-xs">
+                          {t("supplier_vat.without")}
+                        </span>
+                      )}
+                    </Link>
                     {!s.isActive && (
                       <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 text-on-surface-variant text-xs">
                         {t("suppliers.inactive")}

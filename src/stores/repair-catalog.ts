@@ -6,6 +6,7 @@ import api, { getErrorMessage } from "@/lib/api";
 interface RepairCatalogState {
   clearError: () => void;
   createRepair: (data: {
+    customCategoryId?: string | null;
     name: string;
     category: string;
     defaultPrice: number;
@@ -13,6 +14,7 @@ interface RepairCatalogState {
   deleteRepair: (id: string) => Promise<void>;
   error: string | null;
   fetchRepairs: (params?: {
+    customCategoryId?: string;
     cursor?: string;
     limit?: number;
     search?: string;
@@ -20,6 +22,13 @@ interface RepairCatalogState {
     isActive?: boolean;
   }) => Promise<void>;
   isLoading: boolean;
+  loadMoreRepairs: (params: {
+    cursor: string;
+    search?: string;
+    category?: string;
+    customCategoryId?: string;
+    limit?: number;
+  }) => Promise<void>;
   nextCursor: string | null;
   repairs: RepairCatalog[];
   toggleRepairActive: (id: string, isActive: boolean) => Promise<void>;
@@ -53,6 +62,23 @@ export const useRepairCatalogStore = create<RepairCatalogState>((set) => ({
     }
   },
 
+  loadMoreRepairs: async (params) => {
+    try {
+      const { data } = await api.get("/repairs", { params });
+      set((state) => ({
+        repairs: [
+          ...state.repairs,
+          ...data.repairs.filter(
+            (row: RepairCatalog) =>
+              !state.repairs.some((old) => old.id === row.id)
+          ),
+        ],
+        nextCursor: data.nextCursor ?? null,
+      }));
+    } catch (error) {
+      set({ error: getErrorMessage(error, i18n.t("errors.fetch_repairs")) });
+    }
+  },
   createRepair: async (data) => {
     set({ error: null });
     try {

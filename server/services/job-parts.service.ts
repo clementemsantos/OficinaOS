@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@generated/client";
 import { AuditAction } from "@generated/client";
+import { AppError } from "@shared/errors/app-error.js";
 import type { AddJobPartInput } from "@shared/schemas/job.schema";
 import { getAppInstance } from "../jobs/app-registry.js";
 import {
@@ -9,8 +10,9 @@ import {
   findPartWithJob,
 } from "../repositories/job-part.repository.js";
 import { createStockMovement } from "../repositories/stock-movement.repository.js";
-import { assertJobMutable } from "../utils/job-mutations.js";
+import { assertJobMutable, lockMutableJob } from "../utils/job-mutations.js";
 import { createAuditLog } from "./audit.service.js";
+import { validateCategory } from "./catalog-category.service.js";
 import { alertLowStock } from "./low-stock.service.js";
 import { markStoreDirtyIfListed } from "./storefront.service.js";
 
@@ -35,6 +37,7 @@ export async function add(
   // guards against overselling when two jobs consume the last unit, and
   // RETURNING exposes the exact balance for the movement ledger.
   const result = await prisma.$transaction(async (tx) => {
+    await lockMutableJob(tx, jobId);
     if (input.partId) {
       const decremented = await tx.$queryRaw<
         Array<{ stockQuantity: number | string }>
@@ -57,12 +60,19 @@ export async function add(
       });
     }
 
+    await validateCategory(tx, "PART", input.customCategoryId);
     const created = await createPartRepo(tx, {
+      customCategory: input.customCategoryId
+        ? { connect: { id: input.customCategoryId } }
+        : undefined,
       category: input.category,
       job: { connect: { id: jobId } },
       part: input.partId ? { connect: { id: input.partId } } : undefined,
       partName: input.partName,
       quantity: input.quantity,
+      supplierRef: input.supplierId
+        ? { connect: { id: input.supplierId } }
+        : undefined,
       supplier: input.supplier ?? null,
       totalCost,
       unitPrice: input.unitPrice,
@@ -113,25 +123,33 @@ export async function remove(
   }
 
   await prisma.$transaction(async (tx) => {
+    await lockMutableJob(tx, jobId);
+    const current = await findPartWithJob(tx, partId, jobId);
+    if (!current) {
+      throw new AppError("NOT_FOUND");
+    }
+    if (current.rmaQuantity > 0) {
+      throw new AppError("CONFLICT");
+    }
     await deletePartById(tx, partId);
     // Restore stock for catalog parts consumed by this line.
-    if (part.partId) {
+    if (current.partId) {
       const updated = await tx.partsCatalog.update({
-        where: { id: part.partId },
-        data: { stockQuantity: { increment: part.quantity } },
+        where: { id: current.partId },
+        data: { stockQuantity: { increment: current.quantity } },
         select: { stockQuantity: true },
       });
       await createStockMovement(tx, {
         balanceAfter: updated.stockQuantity,
         createdById: userId,
-        partId: part.partId,
-        quantity: part.quantity,
+        partId: current.partId,
+        quantity: current.quantity,
         type: "RETURN",
       });
     }
     await createAuditLog(tx, {
       action: AuditAction.PART_REMOVED,
-      fromValue: `${part.partName} x${part.quantity}`,
+      fromValue: `${current.partName} x${current.quantity}`,
       jobId,
       userId,
     });

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@generated/client";
 import { AuditAction, type RepairCategory } from "@generated/client";
+import { AppError } from "@shared/errors/app-error.js";
 import type { AddJobRepairInput } from "@shared/schemas/job.schema";
 import {
   createRepair as createRepairRepo,
@@ -8,8 +9,9 @@ import {
   findJobById,
   findRepairWithJob,
 } from "../repositories/job-repair.repository.js";
-import { assertJobMutable } from "../utils/job-mutations.js";
+import { assertJobMutable, lockMutableJob } from "../utils/job-mutations.js";
 import { createAuditLog } from "./audit.service.js";
+import { validateCategory } from "./catalog-category.service.js";
 
 export async function add(
   prisma: PrismaClient,
@@ -34,10 +36,15 @@ export async function add(
   }
 
   const jobRepair = await prisma.$transaction(async (tx) => {
+    await lockMutableJob(tx, jobId);
+    await validateCategory(tx, "REPAIR", input.customCategoryId);
     const created = await createRepairRepo(tx, {
       job: { connect: { id: jobId } },
       repair: input.repairId ? { connect: { id: input.repairId } } : undefined,
       repairName: input.repairName,
+      customCategory: input.customCategoryId
+        ? { connect: { id: input.customCategoryId } }
+        : undefined,
       category: input.category as RepairCategory,
       price: input.price,
       createdBy: { connect: { id: userId } },
@@ -73,12 +80,17 @@ export async function remove(
   }
 
   await prisma.$transaction(async (tx) => {
+    await lockMutableJob(tx, jobId);
+    const current = await findRepairWithJob(tx, repairId, jobId);
+    if (!current) {
+      throw new AppError("NOT_FOUND");
+    }
     await deleteRepairById(tx, repairId);
     await createAuditLog(tx, {
       jobId,
       userId,
       action: AuditAction.REPAIR_REMOVED,
-      fromValue: `${repair.repairName} — ${repair.price}`,
+      fromValue: `${current.repairName} — ${current.price}`,
     });
   });
 

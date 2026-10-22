@@ -1,19 +1,21 @@
 import type { PartCategoryType } from "@shared/constants";
-import { PartCategory } from "@shared/constants";
 import type { PartsCatalog } from "@shared/types";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { CategoryField } from "@/components/modules/catalog/category-field";
+import { SupplierPicker } from "@/components/modules/catalog/supplier-picker";
 import { Button } from "@/components/ui/button";
 import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useModalEffects } from "@/hooks/use-modal-effects";
 
 interface AddPartFormData {
   category: PartCategoryType | "";
+  customCategoryId: string;
   defaultPrice: string;
   isActive: boolean;
   listedOnline: boolean;
@@ -22,32 +24,42 @@ interface AddPartFormData {
   /** Opening stock — create only; later changes go through stock movements. */
   stockQuantity: string;
   supplier: string;
+  /** Linked Supplier record — "" means none. */
+  supplierId: string;
 }
 
 export type AddPartSubmitData = Omit<
   AddPartFormData,
-  "defaultPrice" | "reorderLevel" | "stockQuantity"
+  | "customCategoryId"
+  | "defaultPrice"
+  | "reorderLevel"
+  | "stockQuantity"
+  | "supplierId"
 > & {
+  customCategoryId: string | null;
   defaultPrice: number;
   reorderLevel: number;
   stockQuantity?: number;
+  /** null clears the supplier link on update. */
+  supplierId: string | null;
 };
 
 interface AddPartModalProps {
   editingPart?: PartsCatalog | null;
   onClose: () => void;
-  onSubmit: (data: AddPartSubmitData) => void;
+  onSubmit: (data: AddPartSubmitData) => Promise<void> | void;
 }
 
-const CATEGORIES: PartCategoryType[] = Object.values(PartCategory);
 const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
 const INT_REGEX = /^\d{0,6}$/;
 
 const INITIAL_FORM: AddPartFormData = {
+  customCategoryId: "",
   name: "",
   category: "",
   defaultPrice: "",
   supplier: "",
+  supplierId: "",
   isActive: true,
   listedOnline: false,
   reorderLevel: "",
@@ -60,21 +72,25 @@ function isDirty(
 ): boolean {
   if (editingPart) {
     return (
+      form.customCategoryId !== (editingPart.customCategoryId ?? "") ||
       form.name !== editingPart.name ||
       form.category !== editingPart.category ||
       Number.parseFloat(form.defaultPrice) !==
         Number(editingPart.defaultPrice) ||
       form.supplier !== (editingPart.supplier ?? "") ||
+      form.supplierId !== (editingPart.supplierId ?? "") ||
       form.isActive !== editingPart.isActive ||
       form.listedOnline !== editingPart.listedOnline ||
       form.reorderLevel !== String(editingPart.reorderLevel ?? 0)
     );
   }
   return (
+    form.customCategoryId !== INITIAL_FORM.customCategoryId ||
     form.name !== INITIAL_FORM.name ||
     form.category !== INITIAL_FORM.category ||
     form.defaultPrice !== INITIAL_FORM.defaultPrice ||
     form.supplier !== INITIAL_FORM.supplier ||
+    form.supplierId !== INITIAL_FORM.supplierId ||
     form.isActive !== INITIAL_FORM.isActive ||
     form.listedOnline !== INITIAL_FORM.listedOnline ||
     form.reorderLevel !== INITIAL_FORM.reorderLevel ||
@@ -95,10 +111,12 @@ export default function AddPartModal({
   const [form, setForm] = useState<AddPartFormData>(() => {
     if (editingPart) {
       return {
+        customCategoryId: editingPart.customCategoryId ?? "",
         name: editingPart.name,
         category: editingPart.category as PartCategoryType,
         defaultPrice: String(editingPart.defaultPrice),
         supplier: editingPart.supplier ?? "",
+        supplierId: editingPart.supplierId ?? "",
         isActive: editingPart.isActive,
         listedOnline: editingPart.listedOnline,
         reorderLevel: String(editingPart.reorderLevel ?? 0),
@@ -111,6 +129,7 @@ export default function AddPartModal({
     Partial<Record<"name" | "category" | "defaultPrice", string>>
   >({});
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const update = useCallback(
     <K extends keyof AddPartFormData>(key: K, value: AddPartFormData[K]) => {
@@ -143,7 +162,10 @@ export default function AddPartModal({
   // Escape goes through the dirty-check confirm, not straight to onClose.
   useModalEffects(true, handleRequestClose, dialogRef);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
+    if (submitting) {
+      return;
+    }
     e.preventDefault();
     const newErrors: Partial<
       Record<"name" | "category" | "defaultPrice", string>
@@ -155,25 +177,34 @@ export default function AddPartModal({
       newErrors.category = t("add_part_modal.error_category_required");
     }
     const priceVal = Number.parseFloat(form.defaultPrice);
-    if (!form.defaultPrice || Number.isNaN(priceVal) || priceVal <= 0) {
+    if (!form.defaultPrice || Number.isNaN(priceVal) || priceVal < 0) {
       newErrors.defaultPrice = t("add_part_modal.error_price_invalid");
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    onSubmit({
-      name: form.name,
-      category: form.category as PartCategoryType,
-      defaultPrice: priceVal,
-      supplier: form.supplier,
-      isActive: form.isActive,
-      listedOnline: form.listedOnline,
-      reorderLevel: Number.parseInt(form.reorderLevel, 10) || 0,
-      stockQuantity: isEditing
-        ? undefined
-        : Number.parseInt(form.stockQuantity, 10) || 0,
-    });
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        customCategoryId: form.customCategoryId || null,
+        name: form.name,
+        category: form.category as PartCategoryType,
+        defaultPrice: priceVal,
+        supplier: form.supplier,
+        supplierId: form.supplierId || null,
+        isActive: form.isActive,
+        listedOnline: form.listedOnline,
+        reorderLevel: Number.parseInt(form.reorderLevel, 10) || 0,
+        stockQuantity: isEditing
+          ? undefined
+          : Number.parseInt(form.stockQuantity, 10) || 0,
+      });
+    } catch {
+      toast.error(t("tasks.failed"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -249,46 +280,21 @@ export default function AddPartModal({
               )}
             </div>
 
-            <div>
-              <Label className="mb-2 block" htmlFor="part-category">
-                {t("add_part_modal.category")}
-              </Label>
-              <div className="relative">
-                <Select
-                  aria-describedby={
-                    errors.category ? "error-part-category" : undefined
-                  }
-                  aria-invalid={!!errors.category || undefined}
-                  id="part-category"
-                  onChange={(e) =>
-                    update("category", e.target.value as PartCategoryType)
-                  }
-                  required
-                  value={form.category}
-                >
-                  <option disabled value="">
-                    {t("add_part_modal.category_placeholder")}
-                  </option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {t(`part_category.${cat}`)}
-                    </option>
-                  ))}
-                </Select>
-                <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
-                  <Icon name="expand_more" size="sm" />
-                </span>
-              </div>
-              {errors.category && (
-                <p
-                  className="mt-1.5 rounded-lg bg-error-container px-3 py-1.5 font-bold text-on-error-container text-xs"
-                  id="error-part-category"
-                  role="alert"
-                >
-                  {errors.category}
-                </p>
-              )}
-            </div>
+            <CategoryField
+              base={{
+                value: form.category,
+                onChange: (value) =>
+                  update("category", value as PartCategoryType),
+              }}
+              onChange={(id) => update("customCategoryId", id)}
+              scope="PART"
+              value={form.customCategoryId}
+            />
+            {errors.category && (
+              <p className="text-error text-sm" role="alert">
+                {errors.category}
+              </p>
+            )}
 
             <div>
               <Label className="mb-2 block" htmlFor="part-price">
@@ -345,6 +351,28 @@ export default function AddPartModal({
                 placeholder={t("add_part_modal.supplier_placeholder")}
                 value={form.supplier}
               />
+            </div>
+
+            <div>
+              <Label className="mb-2 block" htmlFor="part-supplier-link">
+                {t("add_part_modal.supplier_link")}{" "}
+                <span className="font-normal text-on-surface-variant text-xs normal-case tracking-normal">
+                  ({t("add_part_modal.optional")})
+                </span>
+              </Label>
+              <div className="relative">
+                <SupplierPicker
+                  id="part-supplier-link"
+                  onChange={(id, name) => {
+                    update("supplierId", id);
+                    update("supplier", name);
+                  }}
+                  value={form.supplierId}
+                />
+                <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
+                  <Icon name="expand_more" size="sm" />
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -448,7 +476,11 @@ export default function AddPartModal({
             >
               {t("add_part_modal.cancel")}
             </Button>
-            <Button icon={isEditing ? "check" : "add"} type="submit">
+            <Button
+              icon={isEditing ? "check" : "add"}
+              loading={submitting}
+              type="submit"
+            >
               {isEditing ? t("save") : t("add_part_modal.add_part")}
             </Button>
           </div>

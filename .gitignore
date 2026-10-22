@@ -40,3 +40,6 @@ docs/internal/
 specs/
 # local backup dumps (sidecar writes to a volume; this guards dev runs)
 backups/
+
+# Online backup OAuth tokens and encryption keys
+backup-rclone/

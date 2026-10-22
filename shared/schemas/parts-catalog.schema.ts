@@ -5,6 +5,7 @@ import { z } from "zod";
 const stringBoolean = z.enum(["true", "false"]).transform((v) => v === "true");
 
 export const createPartSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1, { error: "validations.part_name_required" }).max(120),
   category: z.enum([
     PartCategory.SCREEN,
@@ -23,12 +24,15 @@ export const createPartSchema = z.object({
     .min(0, { error: "validations.price_positive" })
     .max(99_999_999.99),
   supplier: z.string().max(120).optional(),
+  /** Link to a Supplier record; the free-text supplier stays for display. */
+  supplierId: z.string().nullable().optional(),
   listedOnline: z.boolean().optional(),
   stockQuantity: z.number().int().min(0).optional(),
   reorderLevel: z.number().int().min(0).optional(),
 });
 
 export const updatePartSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(120).optional(),
   category: z
     .enum([
@@ -46,6 +50,8 @@ export const updatePartSchema = z.object({
     .optional(),
   defaultPrice: z.number().min(0).max(99_999_999.99).optional(),
   supplier: z.string().max(120).optional(),
+  /** null clears the link; undefined leaves it untouched. */
+  supplierId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   listedOnline: z.boolean().optional(),
   stockQuantity: z.number().int().min(0).optional(),
@@ -53,6 +59,7 @@ export const updatePartSchema = z.object({
 });
 
 export const listPartsQuerySchema = z.object({
+  customCategoryId: z.string().min(1).max(100).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),

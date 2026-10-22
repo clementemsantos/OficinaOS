@@ -160,3 +160,8 @@ describe("stock atomicity", () => {
     expect(prisma.partsCatalog.update).not.toHaveBeenCalled();
   });
 });
+
+vi.mock("../../utils/job-mutations.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/job-mutations.js")>()),
+  lockMutableJob: vi.fn(async () => undefined),
+}));

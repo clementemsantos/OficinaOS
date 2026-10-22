@@ -1,0 +1,41 @@
+# OficinaOS Inove.pt — preview isolated from production (4000) and tests (4001).
+# Always invoke with: docker compose --project-name oficinaos-misto --env-file .env.misto -f compose.misto.yaml ...
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: misto
+      POSTGRES_PASSWORD: ${MISTO_DB_PASSWORD:?run scripts/setup-misto-env.sh}
+      POSTGRES_DB: reparilo
+    volumes:
+      - misto-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U misto -d reparilo"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Publish only on the Tailscale interface; never 0.0.0.0 or public router.
+    ports:
+      - "${MISTO_BIND_IP:?run scripts/setup-misto-env.sh}:4002:4000"
+    env_file:
+      - .env.misto
+    environment:
+      DATABASE_URL: postgresql://misto:${MISTO_DB_PASSWORD}@db:5432/reparilo
+      NODE_ENV: production
+      OFICINAOS_SANDBOX: "true"
+    volumes:
+      - misto-uploads:/app/uploads
+
+volumes:
+  misto-pgdata:
+  misto-uploads:

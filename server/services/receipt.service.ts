@@ -511,6 +511,7 @@ export async function renderReceiptHtml(
     }>;
     partsUsed: Array<{
       partName: string;
+      rmaQuantity?: number;
       quantity: number;
       totalCost: number | { toNumber: () => number };
     }>;
@@ -553,7 +554,10 @@ export async function renderReceiptHtml(
   const partsTotal = partsUsed.reduce((sum, p) => sum + toNum(p.totalCost), 0);
   const repairsTotal = repairs.reduce((sum, r) => sum + toNum(r.price), 0);
   const finalCost = partsTotal + repairsTotal;
-  const displayCost = finalCost > 0 ? finalCost : toNum(job.estimatedCost);
+  const displayCost =
+    finalCost > 0 || job.partsUsed.some((part) => (part.rmaQuantity ?? 0) > 0)
+      ? finalCost
+      : toNum(job.estimatedCost);
   const deposit = job.depositAmount ? toNum(job.depositAmount) : 0;
   const paidTotal =
     payments.reduce((sum, p) => sum + toNum(p.amount), 0) + deposit;
@@ -723,7 +727,7 @@ ${ctx.repairs
 ${ctx.partsUsed
   .map(
     (p) =>
-      `<tr><td>${esc(p.partName)}</td><td class="num">${p.quantity}</td><td class="num">${fmtMoney(p.totalCost, ctx.currency)}</td></tr>`
+      `<tr><td>${esc(p.partName)}</td><td class="num">${Math.max(0, p.quantity - (p.rmaQuantity ?? 0))}</td><td class="num">${fmtMoney(p.totalCost, ctx.currency)}</td></tr>`
   )
   .join("")}
 </tbody></table>`;
@@ -827,6 +831,7 @@ interface SaleReceiptItem {
   lineTotal: number | { toNumber: () => number };
   name: string;
   quantity: number;
+  rmaQuantity?: number;
 }
 
 interface SaleReceiptPayment {
@@ -866,7 +871,7 @@ export async function renderSaleReceiptHtml(
     const itemRows = sale.items
       .map(
         (i) =>
-          `<tr><td>${esc(i.name)}</td><td class="num">${i.quantity}</td><td class="num">${fmtMoney(i.lineTotal, currency)}</td></tr>`
+          `<tr><td>${esc(i.name)}</td><td class="num">${Math.max(0, i.quantity - (i.rmaQuantity ?? 0))}</td><td class="num">${fmtMoney(i.lineTotal, currency)}</td></tr>`
       )
       .join("");
     const payRows = sale.payments
@@ -913,7 +918,7 @@ ${settings?.receiptFooter ? `<div class="foot"><div class="txt"><p>${escMultilin
   const rows = sale.items
     .map(
       (i) =>
-        `<tr><td>${esc(i.name)} ×${i.quantity}</td><td style="text-align:right">${fmtMoney(i.lineTotal, currency)}</td></tr>`
+        `<tr><td>${esc(i.name)} ×${Math.max(0, i.quantity - (i.rmaQuantity ?? 0))}</td><td style="text-align:right">${fmtMoney(i.lineTotal, currency)}</td></tr>`
     )
     .join("");
   const payRows = sale.payments
@@ -1142,6 +1147,7 @@ export async function renderLabelHtml(
     createdAt: Date;
     partsUsed: Array<{
       partName: string;
+      rmaQuantity?: number;
       quantity: number;
       totalCost: number | { toNumber: () => number };
     }>;
@@ -1187,7 +1193,10 @@ export async function renderLabelHtml(
     0
   );
   const finalCost = partsTotal + repairsTotal;
-  const displayCost = finalCost > 0 ? finalCost : toNum(job.estimatedCost);
+  const displayCost =
+    finalCost > 0 || job.partsUsed.some((part) => (part.rmaQuantity ?? 0) > 0)
+      ? finalCost
+      : toNum(job.estimatedCost);
   const price = hideCosts ? "" : fmtMoney(displayCost, currency);
 
   return `<!doctype html>

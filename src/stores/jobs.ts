@@ -25,6 +25,8 @@ interface JobsState {
   addPart: (
     jobId: string,
     data: {
+      customCategoryId?: string | null;
+      supplierId?: string | null;
       partId?: string;
       partName: string;
       category: string;
@@ -40,6 +42,7 @@ interface JobsState {
   addRepair: (
     jobId: string,
     data: {
+      customCategoryId?: string | null;
       repairId?: string;
       repairName: string;
       category: string;

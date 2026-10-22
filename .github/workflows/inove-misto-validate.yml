@@ -1,0 +1,47 @@
+name: Inove Misto Sandbox (Docker validation)
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile.node"
+      - "package.json"
+      - "compose.misto.yaml"
+      - "scripts/setup-misto-env.sh"
+      - ".github/workflows/inove-misto-validate.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: bash -n scripts/setup-misto-env.sh
+      - name: Generate sandbox settings with fake Tailscale IP
+        run: |
+          mkdir -p /tmp/mock-tools
+          printf '#!/bin/sh\necho 100.70.8.1\n' > /tmp/mock-tools/tailscale
+          chmod +x /tmp/mock-tools/tailscale
+          PATH="/tmp/mock-tools:$PATH" bash scripts/setup-misto-env.sh
+          test "$(stat -c %a .env.misto)" = "600"
+          grep -q '^OFICINAOS_SANDBOX=true$' .env.misto
+      - name: Validate independent Compose project and port 4002
+        run: |
+          docker compose --project-name oficinaos-misto --env-file .env.misto -f compose.misto.yaml config -q
+          docker compose --project-name oficinaos-misto --env-file .env.misto -f compose.misto.yaml config --format json > /tmp/inove-misto-config.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/inove-misto-config.json'))
+          a=d['services']['app']
+          b=d['services']['db']
+          assert len(a['ports']) == 1
+          port=a['ports'][0]
+          assert port['host_ip']=='100.70.8.1' and str(port['published'])=='4002'
+          assert not b.get('ports')
+          assert a['environment']['OFICINAOS_SANDBOX']=='true'
+          assert a['environment']['DATABASE_URL'].startswith('postgresql://misto:')
+          assert 'misto-pgdata' in d['volumes'] and 'misto-uploads' in d['volumes']
+          print('Isolation validated: only Tailscale:4002 published; database internal')
+          PY
+      - name: Build Node Docker image (catch npm peer conflicts)
+        run: docker build --file Dockerfile.node --tag inove-misto-ci .

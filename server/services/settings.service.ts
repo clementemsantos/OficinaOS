@@ -1,3 +1,5 @@
+const TRAILING_SLASH = /\/$/;
+
 import type { PrismaClient } from "@generated/client";
 import type {
   UpdateAiSettingsInput,
@@ -19,6 +21,14 @@ import {
 } from "../repositories/settings.repository.js";
 import { isModuleEnabled } from "../utils/modules.js";
 import { generateSmsWebhookToken } from "./sms.service.js";
+
+function endpointOrigin(endpoint: string) {
+  try {
+    return new URL(endpoint).origin;
+  } catch {
+    return endpoint;
+  }
+}
 
 function publicAiSettings<
   T extends { apiKeyEncrypted: string } | null | undefined,
@@ -44,6 +54,13 @@ export async function upsertAiSettings(
   input: UpdateAiSettingsInput
 ) {
   const data: Record<string, unknown> = {};
+  const previous =
+    input.endpointUrl === undefined ? null : await findAiSettingsUnique(prisma);
+  const providerChanged = Boolean(
+    previous?.endpointUrl &&
+      input.endpointUrl !== undefined &&
+      endpointOrigin(previous.endpointUrl) !== endpointOrigin(input.endpointUrl)
+  );
   if (input.endpointUrl !== undefined) {
     data.endpointUrl = input.endpointUrl;
   }
@@ -64,6 +81,10 @@ export async function upsertAiSettings(
     data.enabled = input.enabled ?? true;
   }
 
+  if (providerChanged && !input.apiKey) {
+    data.apiKeyEncrypted = "";
+    data.enabled = false;
+  }
   const row = await upsertAiSettingsRepo(prisma, {
     create: {
       apiKeyEncrypted: (data.apiKeyEncrypted as string) ?? "",
@@ -89,6 +110,28 @@ export async function getShopSettings(prisma: PrismaClient) {
   return rest;
 }
 
+const ORIGIN_LIST_SPLIT = /[\s,]+/;
+
+/** One canonical origin per line; empty/whitespace clears the setting. */
+function normalizeOriginList(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const origins = value
+    .split(ORIGIN_LIST_SPLIT)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      try {
+        return new URL(s).origin;
+      } catch {
+        return null;
+      }
+    })
+    .filter((o): o is string => o !== null);
+  return origins.length > 0 ? Array.from(new Set(origins)).join("\n") : null;
+}
+
 const shopCreate = (input: UpdateShopSettingsInput) => ({
   address: input.address ?? null,
   countryCode: input.countryCode ?? "PT",
@@ -108,6 +151,7 @@ const shopCreate = (input: UpdateShopSettingsInput) => ({
   printerPort: input.printerPort ?? 9100,
   monthlyRevenueGoal: input.monthlyRevenueGoal ?? null,
   reviewUrl: input.reviewUrl?.trim() || null,
+  embedAllowedOrigins: normalizeOriginList(input.embedAllowedOrigins),
   shopName: input.shopName,
 });
 
@@ -133,6 +177,10 @@ const shopUpdate = (input: UpdateShopSettingsInput) => ({
       : input.monthlyRevenueGoal || null,
   reviewUrl:
     input.reviewUrl === undefined ? undefined : input.reviewUrl.trim() || null,
+  embedAllowedOrigins:
+    input.embedAllowedOrigins === undefined
+      ? undefined
+      : normalizeOriginList(input.embedAllowedOrigins),
   shopName: input.shopName,
 });
 
@@ -211,6 +259,13 @@ export async function testAiConnection(prisma: PrismaClient) {
       headers.Authorization = `Bearer ${apiKey}`;
     }
 
+    if (
+      !endpoint.pathname
+        .replace(TRAILING_SLASH, "")
+        .endsWith("/chat/completions")
+    ) {
+      endpoint.pathname = `${endpoint.pathname.replace(TRAILING_SLASH, "")}/chat/completions`;
+    }
     const response = await fetch(endpoint, {
       body: JSON.stringify({
         max_tokens: 1,

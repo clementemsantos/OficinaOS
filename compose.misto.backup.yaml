@@ -1,0 +1,28 @@
+# Add to the existing Misto compose; never replaces its ports or volumes.
+services:
+  app:
+    volumes:
+      - misto-backup-status:/app/backup-status:ro
+  online-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: misto
+      PGDATABASE: reparilo
+      PGPASSWORD: ${MISTO_DB_PASSWORD:?configure .env.misto}
+      BACKUP_REMOTE: "oficina-crypt:"
+    volumes:
+      - misto-uploads:/source/uploads:ro
+      - misto-online-backups:/backups
+      - misto-backup-status:/status
+      - ./.env.misto:/source/recovery.env:ro
+      - ./backup-rclone:/config/rclone
+volumes:
+  misto-online-backups:
+  misto-backup-status:

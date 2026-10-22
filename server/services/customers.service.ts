@@ -23,6 +23,7 @@ import {
   findIdsByPhoneDigits,
   findUniqueWithJobs,
 } from "../repositories/customer.repository.js";
+import { validateCategory } from "./catalog-category.service.js";
 
 /** Upper bound on phone matches folded into a search; plenty for a shop. */
 const PHONE_MATCH_LIMIT = 200;
@@ -49,6 +50,7 @@ async function phoneMatchClause(
 }
 
 export async function create(prisma: PrismaClient, input: CreateCustomerInput) {
+  await validateCategory(prisma, "CUSTOMER", input.customCategoryId);
   const email = input.email?.trim() || null;
 
   // Same phone in another format ("912 345 678" vs "912345678") would slip
@@ -68,6 +70,9 @@ export async function create(prisma: PrismaClient, input: CreateCustomerInput) {
   // Only reached for an existing customer the caller chose to reuse — keep
   // their name, fill in what the form added.
   const updateData: Record<string, unknown> = {};
+  if (input.customCategoryId !== undefined) {
+    updateData.customCategoryId = input.customCategoryId;
+  }
   if (email) {
     updateData.email = email;
   }
@@ -84,14 +89,23 @@ export async function create(prisma: PrismaClient, input: CreateCustomerInput) {
   }
 
   const phone = existing?.phone ?? input.phone.trim();
-  return await customerUpsert(prisma, { phone }, updateData, {
+  const data = {
+    customCategory: input.customCategoryId
+      ? { connect: { id: input.customCategoryId } }
+      : undefined,
     email,
     name: input.name,
     phone,
     taxId,
     whatsappConsent: input.whatsappConsent ?? false,
     whatsappConsentAt: input.whatsappConsent ? new Date() : null,
-  });
+  };
+  if (existing) {
+    return await customerUpsert(prisma, { id: existing.id }, updateData, data);
+  }
+  // Phone is intentionally not unique: imported family/business contacts
+  // can share a number. New clients are explicit creates, not phone upserts.
+  return await prisma.customer.create({ data });
 }
 
 export async function update(
@@ -105,6 +119,10 @@ export async function update(
   }
 
   const updateData: Record<string, unknown> = {};
+  if (data.customCategoryId !== undefined) {
+    await validateCategory(prisma, "CUSTOMER", data.customCategoryId);
+    updateData.customCategoryId = data.customCategoryId;
+  }
   if (data.name !== undefined) {
     updateData.name = data.name;
   }

@@ -14,6 +14,10 @@ const repairCategoryValues = Object.values(RepairCategory) as [
 ];
 const jobStatusValues = Object.values(JobStatus) as [string, ...string[]];
 
+export const photoStageQuerySchema = z.object({
+  stage: z.enum(["INTAKE", "REPAIR", "FINAL"]).optional(),
+});
+
 export const intakeRepairItemSchema = z.object({
   repairId: z.string().max(64).optional(),
   repairName: z.string().min(1).max(120),
@@ -172,6 +176,8 @@ export const transitionStatusSchema = z
   });
 
 export const addJobPartSchema = z.object({
+  supplierId: z.string().min(1).nullable().optional(),
+  customCategoryId: z.string().min(1).nullable().optional(),
   partId: z.string().optional(),
   partName: z.string().min(1).max(120),
   category: z.enum([
@@ -192,6 +198,7 @@ export const addJobPartSchema = z.object({
 });
 
 export const addJobRepairSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   repairId: z.string().optional(),
   repairName: z.string().min(1).max(120),
   category: z.enum(repairCategoryValues),
@@ -225,3 +232,15 @@ export type AddJobNoteInput = z.infer<typeof addJobNoteSchema>;
 export type AddWaitingPartInput = z.infer<typeof addWaitingPartSchema>;
 export type JobListQueryInput = z.infer<typeof jobListQuerySchema>;
 export type IntakeRepairItem = z.infer<typeof intakeRepairItemSchema>;
+
+export const editJobPartSchema = addJobPartSchema
+  .omit({ partId: true })
+  .extend({ quantity: z.number().int().min(1).max(10_000) })
+  .partial()
+  .strict();
+export const editJobRepairSchema = addJobRepairSchema
+  .omit({ repairId: true })
+  .partial()
+  .strict();
+export type EditJobPartInput = z.infer<typeof editJobPartSchema>;
+export type EditJobRepairInput = z.infer<typeof editJobRepairSchema>;

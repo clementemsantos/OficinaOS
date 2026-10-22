@@ -14,7 +14,12 @@ export async function findMany(
     | PartsCatalogOrderByWithRelationInput[],
   take?: number
 ) {
-  return await prisma.partsCatalog.findMany({ where, orderBy, take });
+  return await prisma.partsCatalog.findMany({
+    where,
+    orderBy,
+    take,
+    include: { customCategory: { select: { id: true, name: true } } },
+  });
 }
 
 export async function count(prisma: DbClient, where: PartsCatalogWhereInput) {
@@ -22,7 +27,10 @@ export async function count(prisma: DbClient, where: PartsCatalogWhereInput) {
 }
 
 export async function findUnique(prisma: DbClient, id: string) {
-  return await prisma.partsCatalog.findUnique({ where: { id } });
+  return await prisma.partsCatalog.findUnique({
+    where: { id },
+    include: { customCategory: { select: { id: true, name: true } } },
+  });
 }
 
 /** Sort key of a row, for resolving a keyset cursor back to its position. */

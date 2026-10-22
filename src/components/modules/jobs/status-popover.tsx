@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import DeliverJobDialog from "@/components/modules/jobs/deliver-job-dialog";
 import FunctionalChecklist from "@/components/modules/jobs/intake-modal/functional-checklist";
 import type { IntakeChecklist } from "@/components/modules/jobs/intake-modal/types";
+import { WorkflowStateControl } from "@/components/modules/tasks/record-workflow";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useModalEffects } from "@/hooks/use-modal-effects";
@@ -31,6 +35,7 @@ export default function StatusPopover({
   const { t } = useTranslation();
   const transitionStatus = useJobsStore((s) => s.transitionStatus);
   const [open, setOpen] = useState(false);
+  const [manageStates, setManageStates] = useState(false);
   const [pending, setPending] = useState<JobStatusType | null>(null);
   const [reason, setReason] = useState("");
   const [laborHours, setLaborHours] = useState("");
@@ -224,30 +229,30 @@ export default function StatusPopover({
     notifySuccess(previousStatus, "DELIVERED");
   }, [job.status, onChanged, notifySuccess]);
 
-  if (availableStatuses.length === 0) {
-    return <StatusBadge size="lg" status={job.status} />;
-  }
-
   return (
     <div className="relative" ref={containerRef}>
-      <button
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className="flex items-center gap-1.5 rounded-full bg-surface-container-lowest py-1 ps-1 pe-3 shadow-sm ring-1 ring-outline-variant transition-all hover:shadow-md hover:ring-primary/50"
-        onClick={() => {
-          setOpen((prev) => !prev);
-          setFocusedIndex(0);
-        }}
-        type="button"
-      >
+      {availableStatuses.length === 0 ? (
         <StatusBadge size="lg" status={job.status} />
-        <Icon
-          className="text-on-surface-variant text-xl"
-          name={open ? "expand_less" : "expand_more"}
-        />
-      </button>
+      ) : (
+        <button
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          className="flex items-center gap-1.5 rounded-full bg-surface-container-lowest py-1 ps-1 pe-3 shadow-sm ring-1 ring-outline-variant transition-all hover:shadow-md hover:ring-primary/50"
+          onClick={() => {
+            setOpen((prev) => !prev);
+            setFocusedIndex(0);
+          }}
+          type="button"
+        >
+          <StatusBadge size="lg" status={job.status} />
+          <Icon
+            className="text-on-surface-variant text-xl"
+            name={open ? "expand_less" : "expand_more"}
+          />
+        </button>
+      )}
 
-      {open && (
+      {open && availableStatuses.length > 0 && (
         <div
           aria-activedescendant={
             open && !pending ? `status-option-${focusedIndex}` : undefined
@@ -308,9 +313,9 @@ export default function StatusPopover({
                 />
                 <StatusBadge status={pending} />
               </div>
-              <label className="sr-only" htmlFor="status-reason">
+              <Label className="sr-only" htmlFor="status-reason">
                 {t("jobs_status_change_reason_label")}
-              </label>
+              </Label>
               <textarea
                 aria-describedby={error ? "status-reason-error" : undefined}
                 aria-invalid={!!error}
@@ -465,6 +470,31 @@ export default function StatusPopover({
         </div>
       )}
 
+      <Button
+        onClick={() => {
+          setOpen(false);
+          setManageStates(true);
+        }}
+        variant="ghost"
+      >
+        {t("business.manage_states")}
+      </Button>
+      <Dialog
+        onClose={() => setManageStates(false)}
+        open={manageStates}
+        title={t("business.manage_states")}
+      >
+        {manageStates && (
+          <WorkflowStateControl
+            entityId={job.id}
+            entityType="JOB"
+            onChanged={() => {
+              window.dispatchEvent(new Event("business-record-changed"));
+              onChanged?.();
+            }}
+          />
+        )}
+      </Dialog>
       <DeliverJobDialog
         balanceDue={balanceDue}
         job={job}

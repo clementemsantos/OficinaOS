@@ -4,9 +4,15 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: { init: () => undefined, type: "3rdParty" },
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+}));
+
+// The modal fetches the supplier list for the link select.
+vi.mock("@/lib/api", () => ({
+  default: { get: vi.fn(async () => ({ data: { data: [] } })) },
 }));
 
 import AddPartModal from "../add-part-modal";
@@ -19,9 +25,10 @@ describe("AddPartModal", () => {
     fireEvent.change(screen.getByLabelText("add_part_modal.part_name"), {
       target: { value: "Ecrã iPhone 11" },
     });
-    fireEvent.change(screen.getByLabelText("add_part_modal.category"), {
-      target: { value: "SCREEN" },
-    });
+    fireEvent.focus(screen.getByRole("combobox", { name: "catalog.category" }));
+    fireEvent.click(
+      screen.getByRole("option", { name: "part_category.SCREEN" })
+    );
     fireEvent.change(screen.getByLabelText("add_part_modal.default_price"), {
       target: { value: "34.9" },
     });

@@ -8,6 +8,7 @@ export const CUSTOMER_TAX_ID_MAX = 20;
 const SEARCH_MAX = 100;
 
 export const createCustomerSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   email: z
     .string()
     .max(CUSTOMER_EMAIL_MAX)
@@ -40,6 +41,7 @@ export const createCustomerSchema = z.object({
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
 export const updateCustomerSchema = z.object({
+  customCategoryId: z.string().min(1).nullable().optional(),
   name: z
     .string()
     .trim()

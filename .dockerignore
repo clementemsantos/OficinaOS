@@ -51,3 +51,4 @@ capacitor.config.ts
 .editorconfig
 .bun-version
 pnpm-workspace.yaml
+backup-rclone

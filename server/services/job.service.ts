@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { Job, PrismaClient } from "@generated/client";
 import { AuditAction, Prisma, type RepairCategory } from "@generated/client";
 import { isImeiCategory } from "@shared/constants/device-categories";
@@ -20,6 +21,7 @@ import type {
   UpdateJobInput,
 } from "@shared/schemas/job.schema";
 import { isValidImei, normalizeImei } from "@shared/utils/imei";
+import { normalizePhone } from "@shared/utils/phone";
 import {
   findMany as auditFindMany,
   findManyWithInclude as auditFindManyWithInclude,
@@ -27,6 +29,7 @@ import {
 import {
   findUnique as customerFindUnique,
   upsert as customerUpsert,
+  findByNormalizedPhone,
 } from "../repositories/customer.repository.js";
 import {
   createBrand,
@@ -112,11 +115,18 @@ const JOB_INCLUDE = {
     },
     orderBy: { createdAt: "desc" as const },
   },
-  partsUsed: true,
+  partsUsed: {
+    include: { customCategory: { select: { id: true, name: true } } },
+  },
   partsWaiting: true,
   payments: { select: { amount: true, method: true, createdAt: true } },
   photos: true,
-  repairs: { include: { repair: { select: { warrantyDays: true } } } },
+  repairs: {
+    include: {
+      customCategory: { select: { id: true, name: true } },
+      repair: { select: { warrantyDays: true } },
+    },
+  },
   technician: { select: { id: true, name: true, username: true } },
 } as const satisfies Prisma.JobInclude;
 
@@ -179,6 +189,8 @@ function buildJobListWhere(query: JobListQueryInput): Prisma.JobWhereInput {
   if (search) {
     where.OR = [
       { jobCode: { contains: search, mode: "insensitive" } },
+      { externalRef: { contains: search, mode: "insensitive" } },
+      { externalRef: { contains: search, mode: "insensitive" } },
       { customer: { name: { contains: search, mode: "insensitive" } } },
       {
         device: { brand: { name: { contains: search, mode: "insensitive" } } },
@@ -387,6 +399,35 @@ async function remoteSignatureData(
   };
 }
 
+/** Only reuse a customer on intake when the phone uniquely identifies one. */
+async function resolveIntakeCustomer(
+  prisma: PrismaClient,
+  input: CreateJobInput
+) {
+  const email = input.customerEmail?.trim() || null;
+  const matched = await findByNormalizedPhone(
+    prisma,
+    normalizePhone(input.customerPhone)
+  );
+  const data = {
+    email,
+    name: input.customerName,
+    phone: input.customerPhone,
+  };
+  if (!matched) {
+    return await prisma.customer.create({ data });
+  }
+  return await customerUpsert(
+    prisma,
+    { id: matched.id },
+    {
+      name: input.customerName,
+      ...(email ? { email } : {}),
+    },
+    data
+  );
+}
+
 export async function create(
   prisma: PrismaClient,
   input: CreateJobInput,
@@ -420,20 +461,7 @@ export async function create(
     }
     customer = found;
   } else {
-    const email = input.customerEmail?.trim() || null;
-    customer = await customerUpsert(
-      prisma,
-      { phone: input.customerPhone },
-      {
-        name: input.customerName,
-        ...(email ? { email } : {}),
-      },
-      {
-        email,
-        name: input.customerName,
-        phone: input.customerPhone,
-      }
-    );
+    customer = await resolveIntakeCustomer(prisma, input);
   }
 
   let brandId = input.deviceBrandId;
@@ -538,6 +566,107 @@ export async function create(
   const fullJob = await jobFindUnique(prisma, job.id, JOB_INCLUDE);
 
   return { ...(fullJob ?? job), finalCost: computeFinalCost(fullJob ?? job) };
+}
+
+const GENERIC_IMPORT_BRAND = "Outra";
+
+export interface ImportedJobInput {
+  createdAt?: string;
+  customerEmail?: string;
+  customerName: string;
+  customerPhone: string;
+  deliveredAt?: string;
+  deviceBrand?: string;
+  deviceModel: string;
+  externalRef?: string;
+  jobCode?: string;
+  problem: string;
+  status?: JobStatusType;
+}
+
+/**
+ * Historical import (CSV/Excel migrations from another system). Shares the
+ * normal creation path pieces — normalized-phone customer match,
+ * case-insensitive brand, device upsert — but skips signatures and
+ * notifications, and carries the legacy dates over: the job's createdAt and,
+ * for DELIVERED history, a STATUS_CHANGED audit row stamped at deliveredAt
+ * so the export's deliveredAt round-trips.
+ */
+export function createImportedJob(
+  prisma: PrismaClient,
+  input: ImportedJobInput,
+  userId: string
+) {
+  const status = input.status ?? "DELIVERED";
+  const createdAt = input.createdAt ? new Date(input.createdAt) : undefined;
+  const deliveredAt = input.deliveredAt ? new Date(input.deliveredAt) : null;
+
+  return prisma.$transaction(async (tx) => {
+    const customer =
+      (await findByNormalizedPhone(tx, normalizePhone(input.customerPhone))) ??
+      (await tx.customer.create({
+        data: {
+          name: input.customerName.trim(),
+          phone: input.customerPhone.trim(),
+          email: input.customerEmail?.trim() || null,
+        },
+      }));
+
+    const brandName = input.deviceBrand?.trim() || GENERIC_IMPORT_BRAND;
+    const brand =
+      (await findBrandFirst(tx, {
+        name: { equals: brandName, mode: "insensitive" },
+      })) ?? (await createBrand(tx, { name: brandName }));
+
+    const device = await upsertDevice(
+      tx,
+      { brandId_model: { brandId: brand.id, model: input.deviceModel } },
+      {},
+      {
+        brand: { connect: { id: brand.id } },
+        model: input.deviceModel,
+        category: null,
+      }
+    );
+
+    const jobCode =
+      input.jobCode ?? (await generateJobCode(tx as PrismaClient)).jobCode;
+    const accessCode = crypto.randomBytes(8).toString("hex");
+
+    const job = await tx.job.create({
+      data: {
+        jobCode,
+        accessCode,
+        externalRef: input.externalRef ?? null,
+        customerId: customer.id,
+        deviceId: device.id,
+        reportedProblem: input.problem.trim(),
+        status,
+        createdById: userId,
+        ...(createdAt ? { createdAt } : {}),
+      },
+    });
+
+    await createAuditLog(tx, {
+      action: AuditAction.JOB_CREATED,
+      jobId: job.id,
+      toValue: jobCode,
+      userId,
+      ...(createdAt ? { createdAt } : {}),
+    });
+
+    if ((status === "DELIVERED" || deliveredAt) && deliveredAt) {
+      await createAuditLog(tx, {
+        action: AuditAction.STATUS_CHANGED,
+        jobId: job.id,
+        toValue: "DELIVERED",
+        userId,
+        createdAt: deliveredAt,
+      });
+    }
+
+    return job;
+  });
 }
 
 const UPDATE_SPECIAL_FIELDS = new Set([
@@ -947,7 +1076,14 @@ const LOOKUP_INCLUDE_PUBLIC = {
       repair: { select: { warrantyDays: true } },
     },
   },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   payments: { select: { amount: true, method: true, createdAt: true } },
   notes: {
     where: { isCustomerVisible: true },
@@ -967,7 +1103,14 @@ const LOOKUP_INCLUDE_AUTH = {
       repair: { select: { warrantyDays: true } },
     },
   },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   payments: { select: { amount: true, method: true, createdAt: true } },
   notes: {
     where: { isCustomerVisible: true },
@@ -1001,6 +1144,7 @@ async function buildJobLookupPayload(
     }>;
     partsUsed?: Array<{
       partName: string;
+      rmaQuantity?: number;
       quantity: number;
       totalCost: { toNumber: () => number };
     }>;
@@ -1066,7 +1210,7 @@ async function buildJobLookupPayload(
     ...partsUsed.map((p) => ({
       name: p.partName,
       price: p.totalCost.toNumber(),
-      quantity: p.quantity,
+      quantity: Math.max(0, p.quantity - (p.rmaQuantity ?? 0)),
     })),
   ];
   let receiptTotal = 0;
@@ -1193,7 +1337,14 @@ const LOOKUP_INCLUDE_RECEIPT = {
   customer: { select: { name: true, phone: true } },
   device: { select: { model: true, brand: { select: { name: true } } } },
   payments: { select: { amount: true, method: true, createdAt: true } },
-  partsUsed: { select: { partName: true, quantity: true, totalCost: true } },
+  partsUsed: {
+    select: {
+      partName: true,
+      quantity: true,
+      totalCost: true,
+      rmaQuantity: true,
+    },
+  },
   repairs: {
     select: {
       repairName: true,

@@ -3,10 +3,16 @@ import type { Job, JobRepair, RepairCatalog } from "@shared/types";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Can } from "@/components/modules/can";
 import RepairServicePicker from "@/components/modules/jobs/repair-service-picker";
+import AddRepairModal from "@/components/modules/repairs/add-repair-modal";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { useCan } from "@/hooks/use-can";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import { useJobsStore } from "@/stores/jobs";
+import { useRepairCatalogStore } from "@/stores/repair-catalog";
+import { JobLineEditor } from "./job-line-editor";
 
 interface JobRepairsSectionProps {
   job: Job;
@@ -19,6 +25,9 @@ export default function JobRepairsSection({
 }: JobRepairsSectionProps) {
   const { t } = useTranslation();
   const fmt = useFormatCurrency();
+  const canCreate = useCan({ repairs: ["manageCatalog"] });
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<JobRepair | null>(null);
   const addRepair = useJobsStore((s) => s.addRepair);
   const removeRepair = useJobsStore((s) => s.removeRepair);
   const [showForm, setShowForm] = useState(false);
@@ -46,6 +55,7 @@ export default function JobRepairsSection({
     setFormError(null);
     try {
       await addRepair(job.id, {
+        customCategoryId: selectedRepair.customCategoryId,
         repairId: selectedRepair.id,
         repairName: selectedRepair.name,
         category: selectedRepair.category,
@@ -101,13 +111,41 @@ export default function JobRepairsSection({
     [removeRepair, addRepair, job.id, onChanged, t]
   );
 
-  const repairs = job.repairs ?? [];
+  const repairs = (job.repairs ?? []) as JobRepair[];
   const selectedIds = repairs
     .map((r) => r.repairId)
     .filter((id): id is string => id != null);
 
   return (
     <div>
+      {creating && (
+        <AddRepairModal
+          onClose={() => setCreating(false)}
+          onSubmit={async (data) => {
+            const created = await useRepairCatalogStore
+              .getState()
+              .createRepair({
+                name: data.name,
+                category: data.category,
+                customCategoryId: data.customCategoryId || null,
+                defaultPrice: Number(data.basePrice),
+              });
+            handleSelectRepair(created);
+            setCreating(false);
+            setShowForm(true);
+          }}
+          open
+        />
+      )}
+      {editing && (
+        <JobLineEditor
+          jobId={job.id}
+          kind="REPAIR"
+          line={editing}
+          onChanged={onChanged}
+          onClose={() => setEditing(null)}
+        />
+      )}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-bold font-headline text-base text-on-surface">
           {t("jobs_repairs_title")}
@@ -126,6 +164,15 @@ export default function JobRepairsSection({
 
       {showForm && (
         <div className="mb-4 space-y-3 rounded-xl bg-surface-container-low p-4">
+          {canCreate && (
+            <Button
+              onClick={() => setCreating(true)}
+              size="sm"
+              variant="secondary"
+            >
+              {t("catalog.new_service")}
+            </Button>
+          )}
           <RepairServicePicker
             compact
             onSelect={handleSelectRepair}
@@ -234,13 +281,25 @@ export default function JobRepairsSection({
                   {repair.repairName}
                 </p>
                 <p className="font-label text-on-surface-variant text-xs">
-                  {t(`repair_category.${repair.category}`)}
+                  {repair.customCategory?.name ??
+                    t(`repair_category.${repair.category}`)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold font-headline text-on-surface text-xs">
                   {fmt(Number(repair.price))}
                 </span>
+                {!isTerminal && (
+                  <Can perm={{ jobs: ["edit"] }}>
+                    <Button
+                      onClick={() => setEditing(repair)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      {t("edit")}
+                    </Button>
+                  </Can>
+                )}
                 {!isTerminal && (
                   <RemoveRepairButton
                     onRemove={() => handleRemoveRepair(repair.id, repair)}

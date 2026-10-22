@@ -2,23 +2,25 @@ import type { RepairCategoryType } from "@shared/constants";
 import type { RepairCatalog } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CategoryField } from "@/components/modules/catalog/category-field";
 import { Button } from "@/components/ui/button";
 import ConfirmDiscardDialog from "@/components/ui/confirm-discard-dialog";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useModalEffects } from "@/hooks/use-modal-effects";
-import { REPAIR_CATEGORY_ICONS } from "@/lib/category-display";
 
 export interface RepairFormData {
   basePrice: string;
   category: RepairCategoryType;
+  customCategoryId: string;
   name: string;
 }
 
 const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
 
 const INITIAL_FORM: RepairFormData = {
+  customCategoryId: "",
   basePrice: "",
   category: "HARDWARE",
   name: "",
@@ -31,22 +33,13 @@ interface AddRepairModalProps {
   open: boolean;
 }
 
-const REPAIR_CATEGORIES: {
-  key: RepairCategoryType;
-  labelKey: string;
-}[] = [
-  { key: "HARDWARE", labelKey: "repair_category.HARDWARE" },
-  { key: "SOFTWARE", labelKey: "repair_category.SOFTWARE" },
-  { key: "DIAGNOSTIC", labelKey: "repair_category.DIAGNOSTIC" },
-  { key: "OTHER", labelKey: "repair_category.OTHER" },
-];
-
 function isDirty(
   form: RepairFormData,
   editingRepair: RepairCatalog | null | undefined
 ): boolean {
   if (editingRepair) {
     return (
+      form.customCategoryId !== (editingRepair.customCategoryId ?? "") ||
       form.name !== editingRepair.name ||
       form.category !== (editingRepair.category as RepairCategoryType) ||
       Number.parseFloat(form.basePrice) !==
@@ -54,6 +47,7 @@ function isDirty(
     );
   }
   return (
+    form.customCategoryId !== INITIAL_FORM.customCategoryId ||
     form.name !== INITIAL_FORM.name ||
     form.category !== INITIAL_FORM.category ||
     form.basePrice !== INITIAL_FORM.basePrice
@@ -73,6 +67,7 @@ export default function AddRepairModal({
   const [form, setForm] = useState<RepairFormData>(() => {
     if (editingRepair) {
       return {
+        customCategoryId: editingRepair.customCategoryId ?? "",
         name: editingRepair.name,
         category: editingRepair.category as RepairCategoryType,
         basePrice: String(editingRepair.defaultPrice),
@@ -89,6 +84,7 @@ export default function AddRepairModal({
   useEffect(() => {
     if (editingRepair) {
       setForm({
+        customCategoryId: editingRepair.customCategoryId ?? "",
         name: editingRepair.name,
         category: editingRepair.category as RepairCategoryType,
         basePrice: String(editingRepair.defaultPrice),
@@ -210,32 +206,16 @@ export default function AddRepairModal({
           </div>
 
           <div className="flex flex-col gap-5 px-6 py-6">
-            <div>
-              <Label className="mb-2 block" htmlFor="repair-category">
-                {t("repair_modal.category_section")}
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {REPAIR_CATEGORIES.map((cat) => (
-                  <button
-                    className={`min-h-[44px] rounded-xl px-4 py-2.5 font-bold font-label text-xs transition-all ${
-                      form.category === cat.key
-                        ? "bg-primary text-on-primary shadow-sm"
-                        : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant"
-                    }`}
-                    key={cat.key}
-                    onClick={() => update("category", cat.key)}
-                    type="button"
-                  >
-                    <Icon
-                      className="me-1 -mt-0.5 inline align-middle"
-                      name={REPAIR_CATEGORY_ICONS[cat.key].icon}
-                      size="sm"
-                    />
-                    {t(cat.labelKey)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <CategoryField
+              base={{
+                value: form.category,
+                onChange: (value) =>
+                  update("category", value as RepairCategoryType),
+              }}
+              onChange={(id) => update("customCategoryId", id)}
+              scope="REPAIR"
+              value={form.customCategoryId}
+            />
 
             <div>
               <Label className="mb-2 block" htmlFor="repair-name">

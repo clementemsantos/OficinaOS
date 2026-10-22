@@ -52,7 +52,8 @@ export default function RepairMobileCard({
           <span
             className={`rounded-full px-2 py-0.5 font-medium text-xs uppercase ${REPAIR_CATEGORY_TONES[repair.category]}`}
           >
-            {t(`repair_category.${repair.category}`)}
+            {repair.customCategoryName ??
+              t(`repair_category.${repair.category}`)}
           </span>
         </div>
       </div>

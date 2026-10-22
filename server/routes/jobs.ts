@@ -6,7 +6,10 @@ import {
   addJobRepairSchema,
   addWaitingPartSchema,
   createJobSchema,
+  editJobPartSchema,
+  editJobRepairSchema,
   jobListQuerySchema,
+  photoStageQuerySchema,
   transitionStatusSchema,
   updateJobSchema,
 } from "@shared/schemas/job.schema";
@@ -29,6 +32,10 @@ import {
   transitionStatus,
   update as updateJob,
 } from "../services/job.service.js";
+import {
+  editJobPart,
+  editJobRepair,
+} from "../services/job-line-edit.service.js";
 import {
   add as addNote,
   list as listNotes,
@@ -64,6 +71,7 @@ import {
 } from "../services/portal.service.js";
 import { renderReceiptHtml } from "../services/receipt.service.js";
 import { codeLockout } from "../utils/code-lockout.js";
+import { parseInput } from "../utils/parse-input.js";
 import { getRole, getUserId } from "../utils/request.js";
 import { resolveZodErrors } from "../utils/resolve-validation-messages.js";
 
@@ -726,6 +734,35 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.patch(
+    "/:id/parts/:partId",
+    { preHandler: requirePermission({ jobs: ["edit"] }) },
+    async (req) => {
+      const { id, partId } = req.params as { id: string; partId: string };
+      const data = parseInput(editJobPartSchema, req.body);
+      if (data.unitPrice !== undefined) {
+        await requirePermission({ parts: ["viewCost", "setCost"] })(
+          req,
+          {} as never
+        );
+      }
+      return await editJobPart(app.prisma, id, partId, data, getUserId(req));
+    }
+  );
+  app.patch(
+    "/:id/repairs/:repairId",
+    { preHandler: requirePermission({ jobs: ["edit"] }) },
+    async (req) => {
+      const { id, repairId } = req.params as { id: string; repairId: string };
+      return await editJobRepair(
+        app.prisma,
+        id,
+        repairId,
+        parseInput(editJobRepairSchema, req.body),
+        getUserId(req)
+      );
+    }
+  );
   app.delete(
     "/:id/parts/:partId",
     {
@@ -834,7 +871,17 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         throw new AppError("NO_FILE_UPLOADED");
       }
       const userId = getUserId(req);
-      const result = await uploadPhoto(app.prisma, id, data, userId);
+      const parsed = photoStageQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        throw new AppError("VALIDATION_ERROR");
+      }
+      const result = await uploadPhoto(
+        app.prisma,
+        id,
+        data,
+        userId,
+        parsed.data
+      );
       if (!result) {
         throw new AppError("JOB_NOT_FOUND");
       }

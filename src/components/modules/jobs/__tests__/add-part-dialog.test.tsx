@@ -9,6 +9,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/hooks/use-can", () => ({ useCan: () => false }));
+vi.mock("@/lib/api", () => ({
+  default: { get: vi.fn(async () => ({ data: { data: [] } })) },
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -130,7 +134,8 @@ describe("AddPartDialog", () => {
     const supplierInput = document.getElementById(
       "add-part-supplier"
     ) as HTMLInputElement;
-    expect(supplierInput.value).toBe("FixParts");
+    expect(supplierInput.value).toBe("");
+    expect(screen.getAllByText("FixParts").length).toBeGreaterThan(0);
   });
 
   it("switches to custom tab", () => {

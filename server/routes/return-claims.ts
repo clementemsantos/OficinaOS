@@ -2,6 +2,7 @@ import { AppError, throwIfError } from "@shared/errors/app-error.js";
 import type { PermissionCheck } from "@shared/permissions";
 import {
   createReturnClaimSchema,
+  editReturnClaimSchema,
   listReturnClaimsQuerySchema,
   resolveReturnClaimSchema,
   triageReturnClaimSchema,
@@ -12,6 +13,7 @@ import { requirePermission } from "../middlewares/rbac.js";
 import {
   create as createClaim,
   detachRework,
+  editReason,
   getById as getClaim,
   list as listClaims,
   removePhoto,
@@ -117,6 +119,32 @@ export const returnClaimsRoutes: FastifyPluginAsync = async (app) => {
         throw new AppError("RETURN_CLAIM_NOT_FOUND");
       }
       return reply.send(claim);
+    }
+  );
+
+  app.patch(
+    "/:id",
+    { preHandler: [requirePermission({ returns: ["edit"] })] },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const parsed = editReturnClaimSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new AppError("VALIDATION_ERROR", {
+          errors: resolveZodErrors(
+            parsed.error.flatten().fieldErrors,
+            req.locale
+          ),
+        });
+      }
+      const scopeUserId = await selfScopeUserId(req);
+      const result = await editReason(
+        app.prisma,
+        id,
+        parsed.data.returnReason,
+        scopeUserId
+      );
+      throwIfError(result);
+      return reply.send(result);
     }
   );
 

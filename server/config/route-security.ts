@@ -114,6 +114,13 @@ function routeMatchesPattern(url: string, pattern: string): boolean {
 }
 
 export const routeSecurity: [string, RouteSecurityOverride][] = [
+  [
+    "/api/integrations",
+    {
+      allowSensitiveKeys: true,
+      rateLimit: { max: 60, timeWindow: "1 minute" },
+    },
+  ],
   ["/health", { rateLimit: false, csrf: false }],
   [
     "/api/csrf-token",

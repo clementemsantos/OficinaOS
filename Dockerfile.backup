@@ -1,0 +1,5 @@
+FROM postgres:16-alpine
+RUN apk add --no-cache rclone tar coreutils util-linux
+COPY scripts/full-backup.sh /scripts/full-backup.sh
+RUN chmod 755 /scripts/full-backup.sh
+ENTRYPOINT ["/bin/sh", "-c", "while true; do /scripts/full-backup.sh || echo 'Backup failed: inspect backup status'; sleep 86400; done"]

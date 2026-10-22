@@ -20,12 +20,21 @@ import {
   requireKeysetCursor,
   withKeyset,
 } from "../utils/keyset.js";
+import {
+  categoryDescendants,
+  validateCategory,
+} from "./catalog-category.service.js";
 import { markPricesDirty } from "./market-prices.service.js";
 
 export async function list(prisma: PrismaClient, query: ListRepairsQueryInput) {
   const { cursor, limit, search, category, isActive } = query;
 
   const where: Prisma.RepairCatalogWhereInput = {};
+  if (query.customCategoryId) {
+    where.customCategoryId = {
+      in: await categoryDescendants(prisma, "REPAIR", query.customCategoryId),
+    };
+  }
   if (category) {
     where.category = category as Prisma.EnumRepairCategoryFilter;
   }
@@ -69,7 +78,11 @@ export async function getById(prisma: PrismaClient, id: string) {
 }
 
 export async function create(prisma: PrismaClient, input: CreateRepairInput) {
+  await validateCategory(prisma, "REPAIR", input.customCategoryId);
   const repair = await createRepair(prisma, {
+    customCategory: input.customCategoryId
+      ? { connect: { id: input.customCategoryId } }
+      : undefined,
     category: input.category,
     defaultPrice: input.defaultPrice,
     name: input.name,
@@ -88,6 +101,9 @@ export async function update(
     return null;
   }
 
+  if (input.customCategoryId !== existing.customCategoryId) {
+    await validateCategory(prisma, "REPAIR", input.customCategoryId);
+  }
   const updated = await updateRepair(prisma, id, input);
   await markPricesDirty(prisma).catch(() => null);
   return updated;
