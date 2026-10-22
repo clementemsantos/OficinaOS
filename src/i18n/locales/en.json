@@ -2743,5 +2743,16 @@
     "backup_remote": "Last verified online copy",
     "backup_failure": "Last failed attempt",
     "auto_server_disabled": "Automatic sync is disabled on this server. You can use Sync now."
+  },
+  "orders_list": {
+    "reference": "Order reference",
+    "title": "Description",
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "date": "Date",
+    "cost": "Cost",
+    "quote": "Customer total",
+    "margin": "Margin",
+    "open": "Open order"
   }
 }

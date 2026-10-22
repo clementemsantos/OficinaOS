@@ -12,6 +12,7 @@ import { useCan } from "@/hooks/use-can";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import api from "@/lib/api";
 import { BusinessHistory } from "@/pages/business/history";
+import { OrdersTable } from "./orders-table";
 
 const HTTP_URL = /^https?:/;
 export default function PurchaseOrdersPage() {
@@ -58,7 +59,12 @@ export default function PurchaseOrdersPage() {
         )}
       </div>
       {integrationAdmin && (
-        <IntegrationPanel kind="WOOCOMMERCE" onSynced={() => load()} />
+        <details>
+          <summary className="cursor-pointer font-semibold">
+            {t("integrations.WOOCOMMERCE")}
+          </summary>
+          <IntegrationPanel kind="WOOCOMMERCE" onSynced={() => load()} />
+        </details>
       )}
       {edit && editing !== undefined && (
         <OrderEditor
@@ -78,95 +84,100 @@ export default function PurchaseOrdersPage() {
         />
       )}
       {!orders.length && <p>{t("workflow.no_orders")}</p>}
-      {orders.map((order) => (
-        <article
-          className="space-y-3 rounded-2xl bg-surface-container-low p-5"
-          key={order.id}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-bold text-lg">
-              <Link
-                className="hover:underline"
-                to={`/purchase-orders?recordId=${order.id}`}
-              >
-                {order.title}
-              </Link>
-            </h2>
-            {edit && (
-              <Button
-                onClick={() => {
-                  setEditing(order);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                variant="secondary"
-              >
-                {t("edit")}
-              </Button>
-            )}
-          </div>
-          <p>
-            {[
-              order.customer?.name,
-              order.supplier?.name,
-              order.reference,
-              new Date(order.createdAt).toLocaleDateString(),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          <OrderLinesTable financial={financial} lines={order.lines} />
-          {financial && order.costsComplete === false && (
+      {!recordId && <OrdersTable financial={financial} orders={orders} />}
+      {recordId &&
+        orders.map((order) => (
+          <article
+            className="space-y-3 rounded-2xl bg-surface-container-low p-5"
+            key={order.id}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-bold text-lg">
+                <Link
+                  className="hover:underline"
+                  to={`/purchase-orders?recordId=${order.id}`}
+                >
+                  {order.number
+                    ? `EN-${String(order.number).padStart(6, "0")} · `
+                    : ""}
+                  {order.title}
+                </Link>
+              </h2>
+              {edit && (
+                <Button
+                  onClick={() => {
+                    setEditing(order);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  variant="secondary"
+                >
+                  {t("edit")}
+                </Button>
+              )}
+            </div>
             <p>
-              {t("integrations.cost_missing")} · {t("order_lines.total_quote")}:{" "}
-              {fmt(Number(order.quoteGross))}
+              {[
+                order.customer?.name,
+                order.supplier?.name,
+                order.reference,
+                new Date(order.createdAt).toLocaleDateString(),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-          )}
-          {financial && order.margin && (
-            <dl className="grid gap-3 sm:grid-cols-4">
-              <div>
-                <dt>{t("order_lines.total_cost")}</dt>
-                <dd className="font-bold">{fmt(Number(order.costGross))}</dd>
-              </div>
-              <div>
-                <dt>{t("order_lines.total_quote")}</dt>
-                <dd className="font-bold">{fmt(Number(order.quoteGross))}</dd>
-              </div>
-              <div>
-                <dt>{t("business.margin")}</dt>
-                <dd className="font-bold">
-                  {fmt(Number(order.margin.profitAfterVat))} ·{" "}
-                  {order.margin.marginPercent ?? "—"}%
-                </dd>
-              </div>
-              <div>
-                <dt>{t("business.vat_balance")}</dt>
-                <dd>{fmt(Number(order.margin.vatBalance))}</dd>
-              </div>
-            </dl>
-          )}
-          <p className="whitespace-pre-wrap">{order.notes}</p>
-          {order.jobId && (
-            <Link
-              className="text-primary underline"
-              to={`/jobs/${order.jobId}`}
-            >
-              {order.job?.jobCode ?? t("business.fields.jobId")}
-            </Link>
-          )}
-          {order.purchaseUrl && HTTP_URL.test(order.purchaseUrl) && (
-            <a
-              className="ml-3 text-primary underline"
-              href={order.purchaseUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {t("business.fields.purchaseUrl")}
-            </a>
-          )}
-          <RecordWorkflow entityId={order.id} entityType="ORDER" />
-          <BusinessHistory entityId={order.id} entityType="ORDER" />
-        </article>
-      ))}
+            <OrderLinesTable financial={financial} lines={order.lines} />
+            {financial && order.costsComplete === false && (
+              <p>
+                {t("integrations.cost_missing")} ·{" "}
+                {t("order_lines.total_quote")}: {fmt(Number(order.quoteGross))}
+              </p>
+            )}
+            {financial && order.margin && (
+              <dl className="grid gap-3 sm:grid-cols-4">
+                <div>
+                  <dt>{t("order_lines.total_cost")}</dt>
+                  <dd className="font-bold">{fmt(Number(order.costGross))}</dd>
+                </div>
+                <div>
+                  <dt>{t("order_lines.total_quote")}</dt>
+                  <dd className="font-bold">{fmt(Number(order.quoteGross))}</dd>
+                </div>
+                <div>
+                  <dt>{t("business.margin")}</dt>
+                  <dd className="font-bold">
+                    {fmt(Number(order.margin.profitAfterVat))} ·{" "}
+                    {order.margin.marginPercent ?? "—"}%
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("business.vat_balance")}</dt>
+                  <dd>{fmt(Number(order.margin.vatBalance))}</dd>
+                </div>
+              </dl>
+            )}
+            <p className="whitespace-pre-wrap">{order.notes}</p>
+            {order.jobId && (
+              <Link
+                className="text-primary underline"
+                to={`/jobs/${order.jobId}`}
+              >
+                {order.job?.jobCode ?? t("business.fields.jobId")}
+              </Link>
+            )}
+            {order.purchaseUrl && HTTP_URL.test(order.purchaseUrl) && (
+              <a
+                className="ml-3 text-primary underline"
+                href={order.purchaseUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {t("business.fields.purchaseUrl")}
+              </a>
+            )}
+            <RecordWorkflow entityId={order.id} entityType="ORDER" />
+            <BusinessHistory entityId={order.id} entityType="ORDER" />
+          </article>
+        ))}
       {cursor && (
         <Button
           onClick={async () => {

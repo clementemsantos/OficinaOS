@@ -40,6 +40,7 @@ export interface PurchaseOrderView {
     marginPercent: number | null;
   };
   notes: string | null;
+  number?: number;
   partId: string | null;
   purchaseUrl: string | null;
   quoteGross?: string;

@@ -31,3 +31,9 @@ A ficha do fornecedor e a criação rápida têm a opção **Fornecedor cobra IV
 Cada linha tem a opção **Sem IVA na fatura do fornecedor**, que pode ser ajustada para a fatura concreta. As linhas já gravadas ou já editadas no formulário conservam os valores guardados ao serem reabertas. A preferência não é aplicada retroativamente e não é uma obrigação fiscal imposta pelo servidor.
 
 Esta opção regista o IVA da fatura do fornecedor. Não calcula autoliquidações nem confirma uma isenção fiscal. Nas aquisições intracomunitárias pode ser necessário declarar IVA em Portugal e tratar o respetivo direito à dedução. Esses lançamentos fiscais, nomeadamente eventual IVA autoliquidado não dedutível, são tratados separadamente na contabilidade. As margens apresentadas resultam dos custos e impostos registados nas linhas.
+
+## Lista e referência das encomendas
+
+A página inicial apresenta uma tabela com referência, descrição, cliente, fornecedor, data, custo, total do cliente e margem (os valores financeiros respeitam as permissões existentes). A referência automática `EN-000001` é única e permanece estável. A referência externa já existente mantém-se separada e não é substituída.
+
+Clicar na referência ou em «Abrir encomenda» abre apenas essa ficha, com as linhas de produtos, edição, totais, margem, tarefas, ficheiros e histórico. «Todas as encomendas» regressa à tabela. A migração atribui números às encomendas antigas sem modificar os seus valores ou referências externas.

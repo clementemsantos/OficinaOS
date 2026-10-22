@@ -1584,6 +1584,7 @@ model TaskRule {
 }
 
 model PurchaseOrder {
+  number           Int                 @unique @default(autoincrement())
   lines            PurchaseOrderLine[]
   customCategoryId String?
   customCategory   CatalogCategory?    @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)

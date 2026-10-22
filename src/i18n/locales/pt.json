@@ -2743,5 +2743,16 @@
     "backup_remote": "Última cópia online verificada",
     "backup_failure": "Última tentativa falhada",
     "auto_server_disabled": "A sincronização automática está desativada neste servidor. Pode usar Sincronizar agora."
+  },
+  "orders_list": {
+    "reference": "Referência da encomenda",
+    "title": "Descrição",
+    "customer": "Cliente",
+    "supplier": "Fornecedor",
+    "date": "Data",
+    "cost": "Custo",
+    "quote": "Total cliente",
+    "margin": "Margem",
+    "open": "Abrir encomenda"
   }
 }
