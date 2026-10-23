@@ -7,9 +7,11 @@ import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { loadEnv } from "../config/env.js";
 import { requirePermission } from "../middlewares/rbac.js";
+import { documentName } from "../services/documents.service.js";
 import { parseInput } from "../utils/parse-input.js";
 import { getUserId } from "../utils/request.js";
 
+const STORAGE_KEY_PATTERN = /^[a-f0-9-]{36}$/;
 const idSchema = z.object({ id: z.string().min(1).max(100) });
 const mediaIdSchema = idSchema.extend({ mediaId: z.string().min(1).max(100) });
 const entryFields = z.object({
@@ -63,7 +65,7 @@ function allowEditing(req: FastifyRequest, entry: Entry) {
 }
 
 function atlasStoragePath(key: string) {
-  if (!/^[a-f0-9-]{36}$/.test(key)) {
+  if (!STORAGE_KEY_PATTERN.test(key)) {
     throw new AppError("NOT_FOUND");
   }
   return path.resolve(loadEnv().UPLOAD_DIR, ".atlas", key);
@@ -241,9 +243,7 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
           storageKey,
           mime,
           size: bytes.length,
-          filename:
-            file.filename.replace(/[/\\\x00-\x1f]/g, "_").slice(0, 180) ||
-            "imagem",
+          filename: documentName(file.filename).slice(0, 180),
         },
       });
       return reply.code(201).send({ data: image });
@@ -273,4 +273,5 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
       .type(image.mime)
       .send(createReadStream(atlasStoragePath(image.storageKey)));
   });
+  return Promise.resolve();
 };
