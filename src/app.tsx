@@ -33,6 +33,7 @@ const TradeInsPage = lazy(() => import("@/pages/trade-ins"));
 const PartRequestsPage = lazy(() => import("@/pages/part-requests"));
 const MarketPricesPage = lazy(() => import("@/pages/market-prices"));
 const JobsPage = lazy(() => import("@/pages/jobs"));
+const RepairAtlasPage = lazy(() => import("@/pages/atlas"));
 const DocumentsPage = lazy(() => import("@/pages/business/documents"));
 const PurchaseOrdersPage = lazy(() => import("@/pages/purchase-orders"));
 const BusinessPage = lazy(() => import("@/pages/business"));
@@ -140,6 +141,16 @@ export default function App() {
               }
               path="/jobs"
             />
+            <Route element={<RequirePermission perm={{ jobs: ["view"] }} />}>
+              <Route
+                element={
+                  <DashboardLayout>
+                    <RepairAtlasPage />
+                  </DashboardLayout>
+                }
+                path="/atlas"
+              />
+            </Route>
             <Route
               element={<RequirePermission perm={{ parts: ["viewCatalog"] }} />}
             >
