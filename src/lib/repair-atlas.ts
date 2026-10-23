@@ -260,7 +260,7 @@ export function normalizeAtlasSearch(text: string): string {
 const COMMON_WORDS = new Set([
   "com", "sem", "para", "que", "uma", "uns", "por", "mas", "dos", "das",
   "tem", "está", "esta", "não", "nao", "quando", "depois", "antes",
-  "equipamento", "problema", "cliente", "meu", "minha", "liga",
+  "equipamento", "problema", "cliente", "meu", "minha",
 ]);
 
 export function searchAtlasGuides(query: string, category: string = "all"): AtlasGuide[] {
