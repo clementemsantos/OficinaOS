@@ -2650,5 +2650,6 @@
     "without": "No VAT on the supplier invoice",
     "hint": "Disable when this supplier invoices your purchases without VAT. This sets a default for new order lines; customer sales VAT remains independent.",
     "line_hint": "Enter the amount charged by the supplier. Switching VAT off does not change the price. Any reverse-charge accounting remains separate."
-  }
+  },
+  "atlas_nav": "Atlas de Réparation"
 }
