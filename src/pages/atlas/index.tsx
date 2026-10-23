@@ -14,7 +14,7 @@ import {
 
 function AtlasFlow({ guide }: { guide: AtlasGuide }) {
   return (
-    <div aria-label="Fluxo de diagnóstico" className="flex flex-wrap items-center gap-2">
+    <div aria-label="Fluxo de diagnóstico" role="group" className="flex flex-wrap items-center gap-2">
       {guide.flow.map((item, index) => (
         <div className="flex items-center gap-2" key={item}>
           {index > 0 && <Icon className="text-sm text-on-surface-variant" name="arrow_forward" />}
@@ -41,8 +41,12 @@ function AtlasGuideContent({
     const url = new URL("/atlas", window.location.origin);
     url.searchParams.set("guia", guide.id);
     const ok = await copyTextToClipboard(url.toString());
-    if (ok) toast.success("Ligação interna do guia copiada");
-    else toast.error("Não foi possível copiar a ligação");
+    if (ok) {
+      toast.success("Ligação interna do guia copiada");
+    }
+    else {
+      toast.error("Não foi possível copiar a ligação");
+    }
   };
   const progress = guide.validation.filter((_, i) => completed[i]).length;
   return (
@@ -200,8 +204,12 @@ export default function RepairAtlasPage() {
 
   const selectGuide = (id: string | null) => {
     const next = new URLSearchParams(params);
-    if (id) next.set("guia", id);
-    else next.delete("guia");
+    if (id) {
+      next.set("guia", id);
+    }
+    else {
+      next.delete("guia");
+    }
     setParams(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -253,7 +261,7 @@ export default function RepairAtlasPage() {
         />
       </div>
 
-      <div aria-label="Filtrar equipamentos" className="flex flex-wrap gap-2">
+      <div aria-label="Filtrar equipamentos" role="group" className="flex flex-wrap gap-2">
         {ATLAS_CATEGORIES.map((item) => (
           <button
             aria-pressed={category === item.id}
@@ -272,7 +280,7 @@ export default function RepairAtlasPage() {
         ))}
       </div>
 
-      <section aria-label="Guias de reparação">
+      <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-bold font-headline text-xl">Guias disponíveis</h2>
           <span className="text-on-surface-variant text-sm">{matching.length} resultado(s)</span>
