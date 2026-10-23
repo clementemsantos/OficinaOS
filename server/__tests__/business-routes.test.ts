@@ -71,6 +71,9 @@ function build({ admin = true, cost = true } = {}) {
       create: vi.fn(async ({ data }) => ({ id: "a1", ...data })),
     },
     recordWorkflow: { findMany: vi.fn(async () => []) },
+    orderPayment: {
+      aggregate: vi.fn(async () => ({ _sum: { amount: null } })),
+    },
     purchaseOrder: {
       findMany: vi.fn(async () => [order]),
       findUnique: vi.fn(async () => order),

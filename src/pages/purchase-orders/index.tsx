@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { IntegrationPanel } from "@/components/modules/documents/integration-panel";
 import { OrderEditor } from "@/components/modules/orders/order-editor";
+import { OrderFinance } from "@/components/modules/orders/order-finance";
 import { OrderLinesTable } from "@/components/modules/orders/order-lines-table";
 import {
   RecordWorkflow,
@@ -147,6 +148,11 @@ export default function PurchaseOrdersPage() {
             <WorkflowStateControl
               entityId={order.id}
               entityType="ORDER"
+              onChanged={load}
+            />
+            <OrderFinance
+              id={order.id}
+              key={order.updatedAt}
               onChanged={load}
             />
             <OrderLinesTable financial={financial} lines={order.lines} />

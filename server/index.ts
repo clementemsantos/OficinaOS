@@ -41,6 +41,7 @@ import { keymasterActiveJobsRoutes } from "./routes/keymaster-active-jobs.js";
 import { marketPricesRoutes } from "./routes/market-prices.js";
 import { notificationsRoutes } from "./routes/notifications.js";
 import { onlineBackupRoutes } from "./routes/online-backup.js";
+import { orderFinanceRoutes } from "./routes/order-finance.js";
 import { partRequestsRoutes } from "./routes/part-requests.js";
 import { partsRoutes } from "./routes/parts.js";
 import { paymentRoutes } from "./routes/payments.js";
@@ -228,6 +229,7 @@ app.register(documentsRoutes, { prefix: "/api/documents" });
 app.register(businessRoutes, { prefix: "/api/business" });
 app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
 app.register(purchaseOrdersRoutes, { prefix: "/api/purchase-orders" });
+app.register(orderFinanceRoutes, { prefix: "/api/purchase-orders" });
 app.register(tasksRoutes, { prefix: "/api/tasks" });
 
 // Opt-in integrations work in Misto too; restoring a copy requires disabling them.

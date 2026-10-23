@@ -48,6 +48,9 @@ function setup() {
     partsCatalog: { findUnique: vi.fn().mockResolvedValue({ id: "p1" }) },
     customer: { findUnique: vi.fn().mockResolvedValue({ id: "c1" }) },
     job: { findUnique: vi.fn().mockResolvedValue({ id: "j1" }) },
+    orderPayment: {
+      aggregate: vi.fn(async () => ({ _sum: { amount: null } })),
+    },
     purchaseOrder: {
       findUniqueOrThrow: vi.fn().mockResolvedValue(existing),
       create: vi
@@ -60,6 +63,46 @@ function setup() {
   return { db, tx, existing, prisma: db as unknown as PrismaClient };
 }
 describe("purchase orders with multiple products", () => {
+  it("does not let a changed quote fall below payments already received", async () => {
+    const { prisma, tx, existing } = setup();
+    tx.orderPayment.aggregate.mockResolvedValue({
+      _sum: { amount: "100" },
+    } as never);
+    await expect(
+      updateOrder(
+        prisma,
+        "o1",
+        updateOrderFields.parse({
+          expectedUpdatedAt: existing.updatedAt.toISOString(),
+          lines: [{ ...base, id: "l1", quantity: 1, quoteGross: "50" }],
+        }),
+        ["lines", "expectedUpdatedAt"]
+      )
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(tx.purchaseOrder.update).not.toHaveBeenCalled();
+  });
+  it("returns a revised customer quote to draft without changing payment records", async () => {
+    const { prisma, tx, existing } = setup();
+    await updateOrder(
+      prisma,
+      "o1",
+      updateOrderFields.parse({
+        expectedUpdatedAt: existing.updatedAt.toISOString(),
+        lines: [{ ...base, id: "l1", quoteGross: "300" }],
+      }),
+      ["lines", "expectedUpdatedAt"]
+    );
+    expect(tx.purchaseOrder.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          quoteStatus: "DRAFT",
+          quoteDecidedAt: null,
+          quoteGross: "600.00",
+        }),
+      })
+    );
+  });
+
   it("creates all lines and computes header totals instead of trusting client totals", async () => {
     const { prisma, tx } = setup();
     await createOrder(

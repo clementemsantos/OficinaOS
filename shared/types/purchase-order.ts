@@ -44,6 +44,7 @@ export interface PurchaseOrderView {
   partId: string | null;
   purchaseUrl: string | null;
   quoteGross?: string;
+  quoteStatus?: string;
   reference: string | null;
   supplier: RecordLabel | null;
   supplierId: string | null;

@@ -2799,5 +2799,32 @@
     "parts": "Recorded parts",
     "no_solution": "No intervention recorded — solution not documented.",
     "review": "Create a reviewed guide"
+  },
+  "order_finance": {
+    "title": "Quote and customer payments",
+    "manual_hint": "Manual records of payments already received. This does not charge cards, send quotes or issue fiscal documents. Payments from WooCommerce are not imported automatically.",
+    "total": "Quoted total",
+    "paid": "Received",
+    "balance": "Outstanding",
+    "DRAFT": "Draft",
+    "SENT": "Sent",
+    "ACCEPTED": "Accepted",
+    "REJECTED": "Rejected",
+    "quote_status": "Quote status",
+    "save_status": "Record status",
+    "accept_first": "Record acceptance of the quote before adding payments.",
+    "amount": "Amount",
+    "method": "Payment method",
+    "reference": "Reference",
+    "note": "Note",
+    "date": "Date / recorded by",
+    "record": "Record received payment",
+    "void": "Void record",
+    "voided": "Voided",
+    "reason": "Reason for correction",
+    "saved": "Record saved",
+    "failed": "Could not save. Refresh the order and check its quote status, outstanding balance and permissions.",
+    "quote_history": "Quote history (latest 50 records)",
+    "vat": "VAT"
   }
 }

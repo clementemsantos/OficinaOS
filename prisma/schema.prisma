@@ -182,8 +182,10 @@ enum AiMessageFeedback {
 // ─────────────────────────────────────────────
 
 model User {
-  atlasEntries        AtlasEntry[]    @relation("AtlasAuthor")
-  atlasRevisions      AtlasRevision[] @relation("AtlasRevisionEditor")
+  atlasEntries        AtlasEntry[]      @relation("AtlasAuthor")
+  atlasRevisions      AtlasRevision[]   @relation("AtlasRevisionEditor")
+  orderPayments       OrderPayment[]    @relation("OrderPaymentCreated")
+  orderPaymentsVoided OrderPayment[]    @relation("OrderPaymentVoided")
   supportTickets      SupportTicket[]
   businessMessages    BusinessMessage[]
   id                  String            @id @default(cuid())
@@ -1597,6 +1599,9 @@ model TaskRule {
 }
 
 model PurchaseOrder {
+  payments         OrderPayment[]
+  quoteStatus      String              @default("DRAFT")
+  quoteDecidedAt   DateTime?           @db.Timestamptz
   number           Int                 @unique @default(autoincrement())
   lines            PurchaseOrderLine[]
   customCategoryId String?
@@ -1944,4 +1949,25 @@ model AtlasMedia {
 
   @@index([entryId, createdAt])
   @@map("atlas_media")
+}
+
+model OrderPayment {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  requestKey  String        @unique
+  method      PaymentMethod
+  amount      Decimal       @db.Decimal(14, 2)
+  reference   String?
+  note        String?
+  createdById String
+  createdBy   User          @relation("OrderPaymentCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime      @default(now()) @db.Timestamptz
+  voidedAt    DateTime?     @db.Timestamptz
+  voidedBy    User?         @relation("OrderPaymentVoided", fields: [voidedById], references: [id], onDelete: Restrict)
+  voidedById  String?
+  voidReason  String?
+
+  @@index([orderId, createdAt])
+  @@map("order_payments")
 }

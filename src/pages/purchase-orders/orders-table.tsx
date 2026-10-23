@@ -75,6 +75,11 @@ export function OrdersTable({
                     </td>
                     <td className="p-3 font-semibold">
                       {fmt(Number(order.quoteGross ?? 0))}
+                      {order.quoteStatus && (
+                        <p className="text-xs">
+                          {t(`order_finance.${order.quoteStatus}`)}
+                        </p>
+                      )}
                     </td>
                     <td className="p-3">
                       {order.margin ? (

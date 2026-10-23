@@ -11,6 +11,7 @@ import {
 import type { z } from "zod";
 import { parseInput } from "../utils/parse-input";
 import { validateCategory } from "./catalog-category.service";
+import { orderPaidTotal } from "./order-finance.service";
 
 type DB = PrismaClient | Prisma.TransactionClient;
 export const ORDER_INCLUDE = {
@@ -150,6 +151,52 @@ function storedLine(line: {
     saleVatRate: line.saleVatRate.toString(),
   };
 }
+interface QuoteShape {
+  customerId?: string | null;
+  lines: {
+    name: string;
+    quantity: number;
+    quoteGross: string | Prisma.Decimal;
+    saleVatRate: string | Prisma.Decimal;
+  }[];
+  title: string;
+}
+async function validateQuoteRevision(
+  tx: Prisma.TransactionClient,
+  id: string,
+  existing: QuoteShape,
+  revised: QuoteShape,
+  quoteGross: string
+) {
+  const paid = await orderPaidTotal(tx, id);
+  if (
+    paid.greaterThan(quoteGross) ||
+    (paid.greaterThan(0) &&
+      (revised.customerId ?? null) !== (existing.customerId ?? null))
+  ) {
+    throw new AppError("CONFLICT");
+  }
+  return (
+    (revised.customerId ?? null) !== (existing.customerId ?? null) ||
+    revised.title !== existing.title ||
+    JSON.stringify(
+      revised.lines.map((line) => [
+        line.name,
+        line.quantity,
+        Number(line.quoteGross),
+        Number(line.saleVatRate),
+      ])
+    ) !==
+      JSON.stringify(
+        existing.lines.map((line) => [
+          line.name,
+          line.quantity,
+          Number(line.quoteGross),
+          Number(line.saleVatRate),
+        ])
+      )
+  );
+}
 export function updateOrder(
   prisma: PrismaClient,
   id: string,
@@ -212,10 +259,18 @@ export function updateOrder(
     }
     await validateReferences(tx, header, lines);
     const totals = orderLinesTotals(lines);
+    const quoteChanged = await validateQuoteRevision(
+      tx,
+      id,
+      existing,
+      { ...header, lines },
+      totals.quoteGross
+    );
     return tx.purchaseOrder.update({
       where: { id },
       data: {
         ...header,
+        ...(quoteChanged ? { quoteStatus: "DRAFT", quoteDecidedAt: null } : {}),
         updatedAt: new Date(
           Math.max(Date.now(), existing.updatedAt.getTime() + 1)
         ),

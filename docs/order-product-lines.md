@@ -43,3 +43,15 @@ Clicar na referência ou em «Abrir encomenda» abre apenas essa ficha, com as l
 A tabela apresenta o estado configurável da encomenda. Na ficha, o seletor de estado fica junto dos dados principais, separado da área de tarefas e anexos, que abre expandida. Mantêm-se linhas, custos, orçamento, IVA, margem e histórico.
 
 Os filtros por pesquisa, estado (incluindo sem estado), cliente, fornecedor, tipo e datas são aplicados no servidor antes da paginação. A pesquisa inclui referência EN, referência de fornecedor, descrição, nomes e produtos. Os intervalos de datas incluem todo o último dia em UTC. Os estados existentes, mesmo desativados, continuam disponíveis para consultar histórico; a atribuição continua a exigir um estado ativo.
+
+## Orçamentos e recebimentos
+
+A ficha tem uma área de orçamento e pagamentos. O orçamento pode ser marcado manualmente como rascunho, enviado, aceite ou recusado. Esta marcação não envia mensagens ao cliente nem recolhe uma assinatura. Cada marcação guarda uma cópia das linhas, quantidades, preços e IVA no registo de auditoria; os últimos 50 registos estão disponíveis na ficha.
+
+Só é possível registar recebimentos depois de marcar a aceitação. São permitidos pagamentos parciais e vários métodos: numerário, cartão, transferência, MB WAY, Multibanco e outro, reutilizando as opções existentes. Mostra-se o total orçamentado, o recebido e o valor em falta. O registo inclui referência, nota, data e utilizador.
+
+Os valores são calculados com decimais sobre as linhas reais. O servidor bloqueia pagamentos superiores ao saldo, pedidos com versões desatualizadas e duplicações da mesma confirmação. As operações são serializadas pela encomenda. Alterar linhas ou preços do orçamento devolve-o a rascunho; não é permitido baixar o total para menos do que já foi recebido.
+
+A correção de um recebimento exige a permissão de anulação e um motivo. O registo permanece no histórico com data e responsável, deixando de contar para o total recebido. Isto não faz uma devolução de dinheiro. A consulta exige acesso aos valores e a pagamentos; registar e anular têm permissões próprias.
+
+Estes são registos manuais da encomenda, não cobram por gateway nem emitem faturas/recibos fiscais. Não se transferem automaticamente para pagamentos de reparações/vendas ou para o fecho de caixa. Os recebimentos do WooCommerce não são importados automaticamente: confirmar a origem antes de registar um pagamento. As encomendas anteriores mantêm os valores e começam em rascunho, sem criar recebimentos fictícios.

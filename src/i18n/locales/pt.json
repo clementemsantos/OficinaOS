@@ -2799,5 +2799,32 @@
     "parts": "Peças registadas",
     "no_solution": "Sem intervenção registada — solução não documentada.",
     "review": "Criar um guia revisto"
+  },
+  "order_finance": {
+    "title": "Orçamento e pagamentos do cliente",
+    "manual_hint": "Registo manual de pagamentos já recebidos. Não cobra cartões, não envia orçamentos nem emite documentos fiscais. Os pagamentos do WooCommerce não são importados automaticamente.",
+    "total": "Total orçamentado",
+    "paid": "Recebido",
+    "balance": "Em falta",
+    "DRAFT": "Rascunho",
+    "SENT": "Enviado",
+    "ACCEPTED": "Aceite",
+    "REJECTED": "Recusado",
+    "quote_status": "Estado do orçamento",
+    "save_status": "Registar estado",
+    "accept_first": "Registe a aceitação do orçamento antes de adicionar pagamentos.",
+    "amount": "Valor",
+    "method": "Método de pagamento",
+    "reference": "Referência",
+    "note": "Nota",
+    "date": "Data / registado por",
+    "record": "Registar pagamento recebido",
+    "void": "Anular registo",
+    "voided": "Anulado",
+    "reason": "Motivo da correção",
+    "saved": "Registo guardado",
+    "failed": "Não foi possível guardar. Atualize a encomenda e verifique o orçamento, o valor em falta e as permissões.",
+    "quote_history": "Histórico de orçamentos (últimos 50 registos)",
+    "vat": "IVA"
   }
 }
