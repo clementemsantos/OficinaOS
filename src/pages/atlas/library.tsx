@@ -325,12 +325,12 @@ function GuideDetails(props: {
               key={image.id}
             >
               <img
-                height={480}
-                width={640}
                 alt={`Imagem técnica: ${image.filename}`}
                 className="max-h-80 w-full rounded-lg object-contain"
+                height={480}
                 loading="lazy"
                 src={`/api/atlas/entries/${entry.id}/media/${image.id}`}
+                width={640}
               />
               <figcaption className="mt-2 break-all text-on-surface-variant text-xs">
                 {image.filename}
