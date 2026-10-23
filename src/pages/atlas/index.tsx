@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { DeviceDiagram } from "@/components/modules/atlas/device-diagram";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   ATLAS_CATEGORIES,
@@ -199,16 +201,14 @@ function AtlasGuideContent({
               className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3 text-sm"
               key={item}
             >
-              <input
+              <Checkbox
                 checked={Boolean(completed[i])}
-                className="mt-0.5 size-4 accent-primary"
                 onChange={(event) =>
                   setCompleted((prev) => ({
                     ...prev,
                     [i]: event.target.checked,
                   }))
                 }
-                type="checkbox"
               />
               <span
                 className={
@@ -305,20 +305,15 @@ export default function RepairAtlasPage() {
         )}
       </header>
 
-      <div className="relative">
-        <Icon
-          className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
-          name="search"
-        />
-        <input
-          aria-label="Pesquisar avaria, sintoma, componente ou ferramenta"
-          className="min-h-14 w-full rounded-2xl border border-outline-variant/50 bg-surface-container ps-12 pe-4 text-on-surface outline-none placeholder:text-on-surface-variant focus:border-primary"
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ex.: não carrega, ecrã preto, HDMI, ventoinha, impressora..."
-          type="search"
-          value={query}
-        />
-      </div>
+      <Input
+        aria-label="Pesquisar avaria, sintoma, componente ou ferramenta"
+        className="min-h-14 rounded-2xl border border-outline-variant/50 bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:border-primary"
+        iconStart="search"
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Ex.: não carrega, ecrã preto, HDMI, ventoinha, impressora..."
+        type="search"
+        value={query}
+      />
 
       <div className="flex flex-wrap gap-2">
         {ATLAS_CATEGORIES.map((item) => (
