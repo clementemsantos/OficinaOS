@@ -293,11 +293,20 @@ export default function RepairAtlasPage() {
           diagnóstico estruturado e confirmar os resultados antes de entregar o
           equipamento.
         </p>
-        <nav aria-label="Novas ferramentas do Atlas" className="mt-5 flex flex-wrap gap-3">
-          <Link className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-on-primary" to="/atlas/colaborativo">
+        <nav
+          aria-label="Novas ferramentas do Atlas"
+          className="mt-5 flex flex-wrap gap-3"
+        >
+          <Link
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-on-primary"
+            to="/atlas/colaborativo"
+          >
             <Icon name="edit_note" /> Criar e partilhar guias na loja
           </Link>
-          <Link className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 font-semibold text-primary" to="/atlas/iphones">
+          <Link
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 font-semibold text-primary"
+            to="/atlas/iphones"
+          >
             <Icon name="smartphone" /> Atlas visual de iPhones
           </Link>
         </nav>

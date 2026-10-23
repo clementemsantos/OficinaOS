@@ -16,11 +16,21 @@ const entryFields = z.object({
   title: z.string().trim().min(5).max(180),
   summary: z.string().trim().min(10).max(600),
   content: z.string().trim().min(20).max(50_000),
-  category: z.enum(["phone", "tablet", "laptop", "desktop", "console", "printer", "general"]),
+  category: z.enum([
+    "phone",
+    "tablet",
+    "laptop",
+    "desktop",
+    "console",
+    "printer",
+    "general",
+  ]),
   brand: z.string().trim().max(80).optional().nullable(),
   model: z.string().trim().max(120).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
-  difficulty: z.enum(["Inicial", "Intermédio", "Avançado"]).default("Intermédio"),
+  difficulty: z
+    .enum(["Inicial", "Intermédio", "Avançado"])
+    .default("Intermédio"),
 });
 const querySchema = z.object({
   q: z.string().max(100).optional(),
@@ -30,7 +40,11 @@ type Entry = { authorId: string; status: string };
 type AtlasInput = z.infer<typeof entryFields>;
 
 function allowViewing(req: FastifyRequest, entry: Entry) {
-  if (entry.status !== "SHOP" && req.user?.role !== "OWNER" && entry.authorId !== getUserId(req)) {
+  if (
+    entry.status !== "SHOP" &&
+    req.user?.role !== "OWNER" &&
+    entry.authorId !== getUserId(req)
+  ) {
     throw new AppError("NOT_FOUND");
   }
 }
@@ -62,12 +76,20 @@ function mimeOf(buffer: Buffer): string | null {
   ) {
     return "image/png";
   }
-  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8 &&
-    buffer[2] === 0xff && buffer.at(-1) === 0xd9) {
+  if (
+    buffer.length >= 4 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff &&
+    buffer.at(-1) === 0xd9
+  ) {
     return "image/jpeg";
   }
-  if (buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" &&
-    buffer.toString("ascii", 8, 12) === "WEBP") {
+  if (
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
     return "image/webp";
   }
   return null;
@@ -89,7 +111,9 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
     const userId = getUserId(req);
     const where = {
       AND: [
-        req.user?.role === "OWNER" ? {} : { OR: [{ status: "SHOP" }, { authorId: userId }] },
+        req.user?.role === "OWNER"
+          ? {}
+          : { OR: [{ status: "SHOP" }, { authorId: userId }] },
         category ? { category } : {},
         q
           ? {
@@ -132,7 +156,9 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
       data: {
         ...input,
         authorId,
-        revisions: { create: { number: 1, snapshot: input, editorId: authorId } },
+        revisions: {
+          create: { number: 1, snapshot: input, editorId: authorId },
+        },
       },
     });
     return reply.code(201).send({ data: entry });
@@ -148,7 +174,8 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
     allowEditing(req, entry);
     // Changing a published guide returns it to a private draft pending owner's review.
     const latest = await app.prisma.atlasRevision.aggregate({
-      where: { entryId: id }, _max: { number: true },
+      where: { entryId: id },
+      _max: { number: true },
     });
     const updated = await app.prisma.atlasEntry.update({
       where: { id },
@@ -177,7 +204,8 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
       throw new AppError("NOT_FOUND");
     }
     const result = await app.prisma.atlasEntry.update({
-      where: { id }, data: { status: "SHOP" },
+      where: { id },
+      data: { status: "SHOP" },
     });
     return { data: result };
   });
@@ -209,8 +237,13 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
     try {
       const image = await app.prisma.atlasMedia.create({
         data: {
-          entryId: id, storageKey, mime, size: bytes.length,
-          filename: file.filename.replace(/[/\\\x00-\x1f]/g, "_").slice(0, 180) || "imagem",
+          entryId: id,
+          storageKey,
+          mime,
+          size: bytes.length,
+          filename:
+            file.filename.replace(/[/\\\x00-\x1f]/g, "_").slice(0, 180) ||
+            "imagem",
         },
       });
       return reply.code(201).send({ data: image });
@@ -233,7 +266,8 @@ export const atlasRoutes: FastifyPluginAsync = async (app) => {
     if (!image) {
       throw new AppError("NOT_FOUND");
     }
-    return reply.header("Cache-Control", "private, no-store")
+    return reply
+      .header("Cache-Control", "private, no-store")
       .header("X-Content-Type-Options", "nosniff")
       .header("Content-Security-Policy", "sandbox")
       .type(image.mime)

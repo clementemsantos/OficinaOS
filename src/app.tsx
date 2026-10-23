@@ -153,11 +153,19 @@ export default function App() {
                 path="/atlas"
               />
               <Route
-                element={<DashboardLayout><AtlasLibraryPage /></DashboardLayout>}
+                element={
+                  <DashboardLayout>
+                    <AtlasLibraryPage />
+                  </DashboardLayout>
+                }
                 path="/atlas/colaborativo"
               />
               <Route
-                element={<DashboardLayout><IphoneAtlasPage /></DashboardLayout>}
+                element={
+                  <DashboardLayout>
+                    <IphoneAtlasPage />
+                  </DashboardLayout>
+                }
                 path="/atlas/iphones"
               />
             </Route>
