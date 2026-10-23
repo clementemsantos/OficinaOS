@@ -14,7 +14,7 @@ import {
 
 function AtlasFlow({ guide }: { guide: AtlasGuide }) {
   return (
-    <div aria-label="Fluxo de diagnóstico" role="group" className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {guide.flow.map((item, index) => (
         <div className="flex items-center gap-2" key={item}>
           {index > 0 && <Icon className="text-sm text-on-surface-variant" name="arrow_forward" />}
@@ -261,7 +261,7 @@ export default function RepairAtlasPage() {
         />
       </div>
 
-      <div aria-label="Filtrar equipamentos" role="group" className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {ATLAS_CATEGORIES.map((item) => (
           <button
             aria-pressed={category === item.id}
