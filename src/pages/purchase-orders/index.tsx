@@ -6,12 +6,16 @@ import { toast } from "sonner";
 import { IntegrationPanel } from "@/components/modules/documents/integration-panel";
 import { OrderEditor } from "@/components/modules/orders/order-editor";
 import { OrderLinesTable } from "@/components/modules/orders/order-lines-table";
-import { RecordWorkflow } from "@/components/modules/tasks/record-workflow";
+import {
+  RecordWorkflow,
+  WorkflowStateControl,
+} from "@/components/modules/tasks/record-workflow";
 import { Button } from "@/components/ui/button";
 import { useCan } from "@/hooks/use-can";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import api from "@/lib/api";
 import { BusinessHistory } from "@/pages/business/history";
+import { OrderFilters } from "./order-filters";
 import { OrdersTable } from "./orders-table";
 
 const HTTP_URL = /^https?:/;
@@ -27,6 +31,11 @@ export default function PurchaseOrdersPage() {
   const recordId = params.get("recordId") || undefined;
   const supplierId = params.get("supplierId") || undefined;
   const customerId = params.get("customerId") || undefined;
+  const q = params.get("q") || undefined;
+  const stateId = params.get("stateId") || undefined;
+  const kind = params.get("kind") || undefined;
+  const from = params.get("from") || undefined;
+  const to = params.get("to") || undefined;
   const financial = useCan({ parts: ["viewCost"] });
   const edit = useCan({ parts: ["manageCatalog", "viewCost"] });
   const [orders, setOrders] = useState<PurchaseOrderView[]>([]);
@@ -37,14 +46,23 @@ export default function PurchaseOrdersPage() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get("/purchase-orders", {
-        params: { supplierId, customerId, recordId },
+        params: {
+          supplierId,
+          customerId,
+          recordId,
+          q,
+          stateId,
+          kind,
+          from,
+          to,
+        },
       });
       setOrders(data.data);
       setCursor(data.nextCursor);
     } catch {
       toast.error(failure);
     }
-  }, [supplierId, customerId, recordId, failure]);
+  }, [supplierId, customerId, recordId, q, stateId, kind, from, to, failure]);
   useEffect(() => {
     load();
   }, [load]);
@@ -83,6 +101,7 @@ export default function PurchaseOrdersPage() {
           supplierId={supplierId}
         />
       )}
+      {!recordId && <OrderFilters onChange={setParams} params={params} />}
       {!orders.length && <p>{t("workflow.no_orders")}</p>}
       {!recordId && <OrdersTable financial={financial} orders={orders} />}
       {recordId &&
@@ -125,6 +144,11 @@ export default function PurchaseOrdersPage() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            <WorkflowStateControl
+              entityId={order.id}
+              entityType="ORDER"
+              onChanged={load}
+            />
             <OrderLinesTable financial={financial} lines={order.lines} />
             {financial && order.costsComplete === false && (
               <p>
@@ -174,7 +198,13 @@ export default function PurchaseOrdersPage() {
                 {t("business.fields.purchaseUrl")}
               </a>
             )}
-            <RecordWorkflow entityId={order.id} entityType="ORDER" />
+            <RecordWorkflow
+              entityId={order.id}
+              entityType="ORDER"
+              expanded
+              key={order.workflowState?.id ?? "none"}
+              showState={false}
+            />
             <BusinessHistory entityId={order.id} entityType="ORDER" />
           </article>
         ))}
@@ -183,7 +213,17 @@ export default function PurchaseOrdersPage() {
           onClick={async () => {
             try {
               const { data } = await api.get("/purchase-orders", {
-                params: { supplierId, customerId, recordId, cursor },
+                params: {
+                  supplierId,
+                  customerId,
+                  recordId,
+                  q,
+                  stateId,
+                  kind,
+                  from,
+                  to,
+                  cursor,
+                },
               });
               setOrders((old) => [...old, ...data.data]);
               setCursor(data.nextCursor);

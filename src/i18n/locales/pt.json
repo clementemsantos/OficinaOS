@@ -2753,7 +2753,17 @@
     "cost": "Custo",
     "quote": "Total cliente",
     "margin": "Margem",
-    "open": "Abrir encomenda"
+    "open": "Abrir encomenda",
+    "status": "Estado",
+    "search": "Pesquisar referência, produto ou contacto",
+    "all": "Todos",
+    "kind": "Tipo",
+    "product": "Produtos",
+    "part": "Peças",
+    "from": "Desde",
+    "to": "Até",
+    "filter": "Aplicar filtros",
+    "clear": "Limpar filtros"
   },
   "rma_discount": {
     "title": "Retirar valor da peça em RMA",
@@ -2777,5 +2787,17 @@
     "payment_note": "Este desconto não regista um reembolso ao cliente.",
     "units": "unidades"
   },
-  "atlas_nav": "Atlas de Reparações"
+  "atlas_nav": "Atlas de Reparações",
+  "atlas_cases": {
+    "title": "Casos reais da oficina",
+    "back": "Voltar ao Atlas",
+    "hint": "Pesquise problemas e intervenções registados na sua loja. Uma reparação concluída ou uma peça faturada, por si só, não comprova a causa nem confirma a solução. Reveja a ficha antes de criar um guia técnico. Estes registos são internos.",
+    "search": "Modelo, marca, sintoma, intervenção ou referência da reparação",
+    "completed": "Concluídas / entregues",
+    "empty": "Não existem reparações correspondentes.",
+    "work": "Intervenções registadas",
+    "parts": "Peças registadas",
+    "no_solution": "Sem intervenção registada — solução não documentada.",
+    "review": "Criar um guia revisto"
+  }
 }

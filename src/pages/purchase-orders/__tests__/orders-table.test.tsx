@@ -19,6 +19,7 @@ const order = {
   reference: "SUPPLIER-REF",
   customer: { id: "c1", name: "Ana" },
   supplier: null,
+  workflowState: { id: "waiting", name: "A aguardar fornecedor" },
   createdAt: "2026-10-22T10:00:00Z",
   costGross: "20",
   quoteGross: "30",
@@ -31,6 +32,7 @@ describe("order overview", () => {
         <OrdersTable financial orders={[order]} />
       </MemoryRouter>
     );
+    expect(screen.getByText("A aguardar fornecedor")).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "EN-000042" })).toHaveAttribute(
       "href",

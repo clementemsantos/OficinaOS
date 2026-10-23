@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { DeviceDiagram } from "@/components/modules/atlas/device-diagram";
@@ -241,6 +242,7 @@ function AtlasGuideContent({
 }
 
 export default function RepairAtlasPage() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const deviceType = params.get("tipo");
@@ -297,6 +299,12 @@ export default function RepairAtlasPage() {
           aria-label="Novas ferramentas do Atlas"
           className="mt-5 flex flex-wrap gap-3"
         >
+          <Link
+            className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 py-2 font-semibold text-on-primary"
+            to="/atlas/casos"
+          >
+            {t("atlas_cases.title")}
+          </Link>
           <Link
             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-on-primary"
             to="/atlas/colaborativo"

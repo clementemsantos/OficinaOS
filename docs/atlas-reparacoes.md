@@ -59,3 +59,9 @@ docker compose logs --tail=80 app
 7. Verificar que um navegador não autenticado é encaminhado para autenticação.
 8. Abrir uma reparação; escolher **Atlas técnico**, confirmar filtro por equipamento e botão para regressar.
 9. Confirmar que nenhum dado de cliente é incluído no link copiado.
+
+## Casos reais da oficina
+
+Em `/atlas/casos`, pesquisar sintomas, marca, modelo, referência ou intervenção registada. A consulta usa as reparações da instalação, com paginação e filtro de concluídas/entregues. Cada caso mostra o problema descrito, as intervenções e peças registadas, e uma ligação à ficha original. Não expõe códigos de desbloqueio, tokens de acesso, clientes nem valores financeiros nesta consulta.
+
+Um estado concluído não é prova de uma solução técnica: é necessário rever os registos e confirmar o resultado antes de criar um guia. A consulta não importa conversas do ChatGPT nem dados de terceiros. Casos recuperados de conversas anteriores devem ser revistos individualmente e guardados pela loja; não devem ser incluídos no código público do projeto.

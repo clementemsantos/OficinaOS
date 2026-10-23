@@ -49,4 +49,5 @@ export interface PurchaseOrderView {
   supplierId: string | null;
   title: string;
   updatedAt: string;
+  workflowState?: RecordLabel | null;
 }

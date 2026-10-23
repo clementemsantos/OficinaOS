@@ -37,3 +37,9 @@ Esta opção regista o IVA da fatura do fornecedor. Não calcula autoliquidaçõ
 A página inicial apresenta uma tabela com referência, descrição, cliente, fornecedor, data, custo, total do cliente e margem (os valores financeiros respeitam as permissões existentes). A referência automática `EN-000001` é única e permanece estável. A referência externa já existente mantém-se separada e não é substituída.
 
 Clicar na referência ou em «Abrir encomenda» abre apenas essa ficha, com as linhas de produtos, edição, totais, margem, tarefas, ficheiros e histórico. «Todas as encomendas» regressa à tabela. A migração atribui números às encomendas antigas sem modificar os seus valores ou referências externas.
+
+## Estado e filtros da lista
+
+A tabela apresenta o estado configurável da encomenda. Na ficha, o seletor de estado fica junto dos dados principais, separado da área de tarefas e anexos, que abre expandida. Mantêm-se linhas, custos, orçamento, IVA, margem e histórico.
+
+Os filtros por pesquisa, estado (incluindo sem estado), cliente, fornecedor, tipo e datas são aplicados no servidor antes da paginação. A pesquisa inclui referência EN, referência de fornecedor, descrição, nomes e produtos. Os intervalos de datas incluem todo o último dia em UTC. Os estados existentes, mesmo desativados, continuam disponíveis para consultar histórico; a atribuição continua a exigir um estado ativo.

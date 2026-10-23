@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from "@generated/client";
 import { orderLinesTotals, orderMargin } from "@shared/business-finance";
 import {
   createOrderFields,
@@ -14,6 +15,87 @@ import {
 import { parseInput } from "../utils/parse-input.js";
 import { getRole } from "../utils/request.js";
 
+const ORDER_NUMBER = /^EN-(\d+)$/i;
+function orderSearch({
+  q,
+  recordId,
+  from,
+  to,
+}: {
+  q?: string;
+  recordId?: string;
+  from?: string;
+  to?: string;
+}): Prisma.PurchaseOrderWhereInput {
+  const number = Number(q?.match(ORDER_NUMBER)?.[1]);
+  const contains = { contains: q, mode: "insensitive" as const };
+  return {
+    id: recordId,
+    createdAt: {
+      ...(from ? { gte: new Date(`${from}T00:00:00Z`) } : {}),
+      ...(to
+        ? { lt: new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000) }
+        : {}),
+    },
+    ...(q
+      ? {
+          AND: [
+            {
+              OR: [
+                { title: contains },
+                { reference: contains },
+                { customer: { name: contains } },
+                { supplier: { name: contains } },
+                { lines: { some: { name: contains } } },
+                ...(Number.isInteger(number) &&
+                number > 0 &&
+                number <= 2_147_483_647
+                  ? [{ number }]
+                  : []),
+              ],
+            },
+          ],
+        }
+      : {}),
+  };
+}
+function stateSelection(
+  stateId: string | undefined,
+  records: { entityId: string }[]
+): Prisma.PurchaseOrderWhereInput {
+  if (!stateId) {
+    return {};
+  }
+  const ids = records.map((row) => row.entityId);
+  return { AND: [{ id: stateId === "none" ? { notIn: ids } : { in: ids } }] };
+}
+
+async function orderParties(
+  prisma: PrismaClient,
+  customerId?: string,
+  supplierId?: string
+) {
+  const linked = customerId
+    ? await prisma.supplier.findUnique({
+        where: { customerId },
+        select: { id: true },
+      })
+    : null;
+  const supplier = supplierId
+    ? await prisma.supplier.findUnique({
+        where: { id: supplierId },
+        select: { customerId: true },
+      })
+    : null;
+  const customer = customerId ?? supplier?.customerId;
+  const vendor = supplierId ?? linked?.id;
+  return [
+    ...(customer ? [{ customerId: customer }] : []),
+    ...(vendor
+      ? [{ supplierId: vendor }, { lines: { some: { supplierId: vendor } } }]
+      : []),
+  ];
+}
 export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
   app.addHook("preHandler", requirePermission({ parts: ["viewCatalog"] }));
   const serialize = async (
@@ -75,9 +157,46 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
         : totals.margin,
     };
   };
+  app.get("/filters", async () => {
+    const [states, customers, suppliers] = await Promise.all([
+      app.prisma.workflowState.findMany({
+        where: { entityType: "ORDER" },
+        orderBy: { name: "asc" },
+      }),
+      app.prisma.customer.findMany({
+        where: { purchaseOrders: { some: {} } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      app.prisma.supplier.findMany({
+        where: {
+          OR: [{ purchaseOrders: { some: {} } }, { orderLines: { some: {} } }],
+        },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    return { states, customers, suppliers };
+  });
   app.get("/", async (req) => {
-    const { cursor, supplierId, customerId, jobId, recordId } = parseInput(
+    const {
+      cursor,
+      supplierId,
+      customerId,
+      jobId,
+      recordId,
+      q,
+      stateId,
+      kind,
+      from,
+      to,
+    } = parseInput(
       z.object({
+        q: z.string().trim().max(100).optional(),
+        stateId: z.string().optional(),
+        kind: z.enum(["PRODUCT", "PART"]).optional(),
+        from: z.iso.date().optional(),
+        to: z.iso.date().optional(),
         cursor: z.string().optional(),
         supplierId: z.string().optional(),
         customerId: z.string().optional(),
@@ -86,30 +205,24 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       }),
       req.query
     );
-    const linked = customerId
-      ? await app.prisma.supplier.findUnique({
-          where: { customerId },
-          select: { id: true },
+    const partyFilters = await orderParties(app.prisma, customerId, supplierId);
+    const states = stateId
+      ? await app.prisma.recordWorkflow.findMany({
+          where: {
+            entityType: "ORDER",
+            ...(stateId === "none" ? {} : { stateId }),
+          },
+          select: { entityId: true },
         })
-      : null;
-    const supplier = supplierId
-      ? await app.prisma.supplier.findUnique({
-          where: { id: supplierId },
-          select: { customerId: true },
-        })
-      : null;
-    const customer = customerId ?? supplier?.customerId;
-    const vendor = supplierId ?? linked?.id;
-    const partyFilters = [
-      ...(customer ? [{ customerId: customer }] : []),
-      ...(vendor
-        ? [{ supplierId: vendor }, { lines: { some: { supplierId: vendor } } }]
-        : []),
-    ];
+      : [];
     const data = await app.prisma.purchaseOrder.findMany({
       where: {
         jobId,
-        id: recordId,
+        kind,
+        AND: [
+          orderSearch({ q, recordId, from, to }),
+          stateSelection(stateId, states),
+        ],
         ...(partyFilters.length ? { OR: partyFilters } : {}),
       },
       include: ORDER_INCLUDE,
@@ -117,8 +230,21 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       take: 100,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
+    const workflows = await app.prisma.recordWorkflow.findMany({
+      where: {
+        entityType: "ORDER",
+        entityId: { in: data.map((order) => order.id) },
+      },
+      include: { state: { select: { id: true, name: true } } },
+    });
+    const byOrder = new Map(workflows.map((row) => [row.entityId, row.state]));
     return {
-      data: await Promise.all(data.map((order) => serialize(req, order))),
+      data: await Promise.all(
+        data.map(async (order) => ({
+          ...(await serialize(req, order)),
+          workflowState: byOrder.get(order.id) ?? null,
+        }))
+      ),
       nextCursor: data.length === 100 ? data.at(-1)?.id : null,
     };
   });

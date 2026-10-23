@@ -21,10 +21,12 @@ export function RecordWorkflow({
   entityType,
   entityId,
   expanded = false,
+  showState = true,
 }: {
   entityType: WorkflowType;
   entityId: string;
   expanded?: boolean;
+  showState?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(expanded);
@@ -40,7 +42,7 @@ export function RecordWorkflow({
       </summary>
       {open && (
         <>
-          {entityType !== "JOB" && (
+          {showState && entityType !== "JOB" && (
             <WorkflowStateControl
               entityId={entityId}
               entityType={entityType}

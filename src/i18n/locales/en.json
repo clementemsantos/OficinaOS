@@ -2753,7 +2753,17 @@
     "cost": "Cost",
     "quote": "Customer total",
     "margin": "Margin",
-    "open": "Open order"
+    "open": "Open order",
+    "status": "Status",
+    "search": "Search reference, product or contact",
+    "all": "All",
+    "kind": "Type",
+    "product": "Products",
+    "part": "Parts",
+    "from": "From",
+    "to": "Through",
+    "filter": "Apply filters",
+    "clear": "Clear filters"
   },
   "rma_discount": {
     "title": "Remove the RMA part value",
@@ -2777,5 +2787,17 @@
     "payment_note": "This deduction does not record a payment refund.",
     "units": "units"
   },
-  "atlas_nav": "Repair Atlas"
+  "atlas_nav": "Repair Atlas",
+  "atlas_cases": {
+    "title": "Real workshop cases",
+    "back": "Back to Atlas",
+    "hint": "Search problems and work recorded in your shop. A completed repair or a billed part alone does not prove the cause or confirm a solution. Review the repair before creating a technical guide. These records remain internal.",
+    "search": "Model, brand, symptom, work or repair reference",
+    "completed": "Completed / delivered",
+    "empty": "No matching repair records.",
+    "work": "Recorded interventions",
+    "parts": "Recorded parts",
+    "no_solution": "No intervention recorded — solution not documented.",
+    "review": "Create a reviewed guide"
+  }
 }

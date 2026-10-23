@@ -15,6 +15,7 @@ export function OrdersTable({
   const columns = [
     "reference",
     "title",
+    "status",
     "customer",
     "supplier",
     "date",
@@ -54,6 +55,11 @@ export function OrdersTable({
                       {order.reference}
                     </p>
                   )}
+                </td>
+                <td className="p-3">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary text-xs">
+                    {order.workflowState?.name ?? t("workflow.no_status")}
+                  </span>
                 </td>
                 <td className="p-3">{order.customer?.name ?? "—"}</td>
                 <td className="p-3">{order.supplier?.name ?? "—"}</td>

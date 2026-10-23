@@ -34,6 +34,7 @@ const PartRequestsPage = lazy(() => import("@/pages/part-requests"));
 const MarketPricesPage = lazy(() => import("@/pages/market-prices"));
 const JobsPage = lazy(() => import("@/pages/jobs"));
 const RepairAtlasPage = lazy(() => import("@/pages/atlas"));
+const AtlasCasesPage = lazy(() => import("@/pages/atlas/cases"));
 const AtlasLibraryPage = lazy(() => import("@/pages/atlas/library"));
 const IphoneAtlasPage = lazy(() => import("@/pages/atlas/iphones"));
 const DocumentsPage = lazy(() => import("@/pages/business/documents"));
@@ -151,6 +152,14 @@ export default function App() {
                   </DashboardLayout>
                 }
                 path="/atlas"
+              />
+              <Route
+                element={
+                  <DashboardLayout>
+                    <AtlasCasesPage />
+                  </DashboardLayout>
+                }
+                path="/atlas/casos"
               />
               <Route
                 element={
