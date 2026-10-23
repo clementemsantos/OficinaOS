@@ -197,12 +197,13 @@ function AtlasGuideContent({
         </div>
         <div className="space-y-3">
           {guide.validation.map((item, i) => (
-            <label
-              className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3 text-sm"
+            <div
+              className="flex items-start gap-3 rounded-xl bg-surface-container-low p-3 text-sm"
               key={item}
             >
               <Checkbox
                 checked={Boolean(completed[i])}
+                id={`atlas-check-${guide.id}-${i}`}
                 onChange={(event) =>
                   setCompleted((prev) => ({
                     ...prev,
@@ -210,14 +211,17 @@ function AtlasGuideContent({
                   }))
                 }
               />
-              <span
+              <label
                 className={
-                  completed[i] ? "text-on-surface-variant line-through" : ""
+                  completed[i]
+                    ? "cursor-pointer text-on-surface-variant line-through"
+                    : "cursor-pointer"
                 }
+                htmlFor={`atlas-check-${guide.id}-${i}`}
               >
                 {item}
-              </span>
-            </label>
+              </label>
+            </div>
           ))}
         </div>
         <p className="mt-4 text-on-surface-variant text-xs">
