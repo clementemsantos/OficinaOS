@@ -2776,5 +2776,6 @@
     "line_note": "RMA units (not billed): {{count}}",
     "payment_note": "This deduction does not record a payment refund.",
     "units": "units"
-  }
+  },
+  "atlas_nav": "Repair Atlas"
 }
