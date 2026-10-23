@@ -2400,5 +2400,6 @@
     "copied": "Copiado",
     "copy_failed": "No se pudo copiar",
     "jobs": "Reparaciones"
-  }
+  },
+  "atlas_nav": "Atlas de Reparaciones"
 }

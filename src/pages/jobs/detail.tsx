@@ -30,6 +30,14 @@ import { useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { useUiStore } from "@/stores/ui";
 
+function atlasLinkForJob(job: Job): string {
+  const params = new URLSearchParams({
+    tipo: job.device?.category ?? "",
+    obra: job.id,
+  });
+  return `/atlas?${params.toString()}`;
+}
+
 function toNum(v: unknown): number {
   return typeof v === "number" ? v : Number(v ?? 0);
 }
@@ -388,6 +396,13 @@ export default function JobDetailPage() {
             {t("jobs_detail_track")}
           </Link>
 
+          <Link
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-primary/10 px-4 font-bold text-primary text-sm transition-colors hover:bg-primary/20"
+            to={atlasLinkForJob(job)}
+          >
+            <Icon className="text-[18px]" name="menu_book" />
+            Atlas técnico
+          </Link>
           <span
             aria-hidden="true"
             className="hidden h-6 w-px bg-outline-variant/40 sm:block"
