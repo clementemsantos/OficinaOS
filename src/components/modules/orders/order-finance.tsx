@@ -9,6 +9,11 @@ import { useCan } from "@/hooks/use-can";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import api from "@/lib/api";
 
+import {
+  type CustomPaymentMethod,
+  PaymentMethodManager,
+} from "./payment-method-manager";
+
 interface QuoteSnapshot {
   lines: {
     id: string;
@@ -23,10 +28,12 @@ interface QuoteSnapshot {
 }
 interface Finance {
   balance: string;
+  methods?: CustomPaymentMethod[];
   paid: string;
   payments: {
     id: string;
     method: string;
+    customMethodName?: string | null;
     amount: string;
     reference: string | null;
     note: string | null;
@@ -95,6 +102,7 @@ export function OrderFinance({
     <section className="space-y-4 rounded-xl border border-outline-variant p-4">
       <h2 className="font-bold text-lg">{t("order_finance.title")}</h2>
       <p>{t("order_finance.manual_hint")}</p>
+      <PaymentMethodManager methods={data.methods ?? []} onChanged={load} />
       <dl className="grid gap-3 sm:grid-cols-3">
         {(
           [
@@ -160,7 +168,12 @@ export function OrderFinance({
               event.preventDefault();
               const form = new FormData(event.currentTarget);
               save("payments", {
-                method: form.get("method"),
+                method: String(form.get("method")).startsWith("CUSTOM:")
+                  ? "OTHER"
+                  : form.get("method"),
+                customMethodId: String(form.get("method")).startsWith("CUSTOM:")
+                  ? String(form.get("method")).slice(7)
+                  : undefined,
                 amount: Number(String(form.get("amount")).replace(",", ".")),
                 reference: form.get("reference"),
                 note: form.get("note"),
@@ -190,6 +203,13 @@ export function OrderFinance({
                     {t(`payment_method.${method}`)}
                   </option>
                 ))}
+                {(data.methods ?? [])
+                  .filter((method) => method.isActive)
+                  .map((method) => (
+                    <option key={method.id} value={`CUSTOM:${method.id}`}>
+                      {method.name}
+                    </option>
+                  ))}
               </Select>
             </label>
             <label htmlFor={`order-reference-${id}`}>
@@ -259,7 +279,10 @@ export function OrderFinance({
                   {new Date(payment.createdAt).toLocaleString()}
                   <p>{payment.createdBy.name || payment.createdBy.username}</p>
                 </td>
-                <td className="p-2">{t(`payment_method.${payment.method}`)}</td>
+                <td className="p-2">
+                  {payment.customMethodName ??
+                    t(`payment_method.${payment.method}`)}
+                </td>
                 <td className="p-2">
                   {fmt(Number(payment.amount))}
                   {payment.voidedAt && (

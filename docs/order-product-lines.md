@@ -55,3 +55,9 @@ Os valores são calculados com decimais sobre as linhas reais. O servidor bloque
 A correção de um recebimento exige a permissão de anulação e um motivo. O registo permanece no histórico com data e responsável, deixando de contar para o total recebido. Isto não faz uma devolução de dinheiro. A consulta exige acesso aos valores e a pagamentos; registar e anular têm permissões próprias.
 
 Estes são registos manuais da encomenda, não cobram por gateway nem emitem faturas/recibos fiscais. Não se transferem automaticamente para pagamentos de reparações/vendas ou para o fecho de caixa. Os recebimentos do WooCommerce não são importados automaticamente: confirmar a origem antes de registar um pagamento. As encomendas anteriores mantêm os valores e começam em rascunho, sem criar recebimentos fictícios.
+
+### Métodos de pagamento personalizados
+
+Em «Orçamento e pagamentos do cliente» → «Gerir métodos de pagamento», um administrador com permissão de editar definições pode adicionar nomes próprios, alterar o nome e desativar/reativar métodos. Os métodos habituais continuam disponíveis. A seleção de um método desativado é recusada pelo servidor.
+
+Cada pagamento mantém uma cópia do nome do método na data do registo. Alterar ou desativar a opção não reescreve recebimentos anteriores; uma repetição da mesma confirmação também não cria outro pagamento. Os nomes personalizados não podem ser repetidos, mesmo mudando apenas as maiúsculas. Esta gestão aplica-se às encomendas; as reparações e vendas conservam as opções existentes.

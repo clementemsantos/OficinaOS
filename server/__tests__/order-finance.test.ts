@@ -39,6 +39,7 @@ function setup() {
     method: string;
     amount: Prisma.Decimal;
     voidedAt: Date | null;
+    customMethodId?: string;
     reference?: string;
     note?: string;
   } | null = null;
@@ -47,6 +48,14 @@ function setup() {
     purchaseOrder: {
       findUnique: vi.fn(async () => order),
       update: vi.fn(async ({ data }) => Object.assign(order, data)),
+    },
+    customPaymentMethod: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => ({
+        id: "method1",
+        name: "Cheque",
+        isActive: true,
+      })),
     },
     orderPayment: {
       findMany: vi.fn(async () => []),
@@ -165,6 +174,51 @@ describe("order quote and payments", () => {
       )
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
+  it("snapshots a custom method and accepts retries even after it is renamed or disabled", async () => {
+    const { db, tx } = setup();
+    const payload = {
+      ...input,
+      method: "OTHER" as const,
+      customMethodId: "method1",
+    };
+    await recordOrderPayment(db, "o1", payload, "u1");
+    expect(tx.orderPayment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        customMethodId: "method1",
+        customMethodName: "Cheque",
+        method: "OTHER",
+      }),
+    });
+    tx.customPaymentMethod.findUnique.mockResolvedValue({
+      id: "method1",
+      name: "New name",
+      isActive: false,
+    });
+    const retry = await recordOrderPayment(db, "o1", payload, "u1");
+    expect(retry.customMethodName).toBe("Cheque");
+    expect(tx.orderPayment.create).toHaveBeenCalledTimes(1);
+  });
+  it("rejects disabled custom methods and mismatched built-in methods", async () => {
+    const { db, tx } = setup();
+    tx.customPaymentMethod.findUnique.mockResolvedValue({
+      id: "method1",
+      name: "Cheque",
+      isActive: false,
+    });
+    await expect(
+      recordOrderPayment(
+        db,
+        "o1",
+        { ...input, method: "OTHER", customMethodId: "method1" },
+        "u1"
+      )
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(tx.orderPayment.create).not.toHaveBeenCalled();
+    expect(
+      orderPaymentFields.safeParse({ ...input, customMethodId: "method1" })
+        .success
+    ).toBe(false);
+  });
   it("only accepts positive amounts with cent precision", () => {
     for (const amount of [0, -1, 1.001]) {
       expect(orderPaymentFields.safeParse({ ...input, amount }).success).toBe(
@@ -174,6 +228,47 @@ describe("order quote and payments", () => {
     expect(
       orderPaymentFields.safeParse({ ...input, amount: 1.23 }).success
     ).toBe(true);
+  });
+  it("restricts custom method creation and editing to settings administrators", async () => {
+    const { db } = setup();
+    const app = Fastify();
+    app.decorate("prisma", db);
+    app.decorate("auth", {
+      api: {
+        userHasPermission: async ({
+          body,
+        }: {
+          body: { permissions: { settings?: string[] } };
+        }) => ({ success: !body.permissions.settings }),
+      },
+    } as never);
+    app.addHook("onRequest", (req, _reply, done) => {
+      req.user = { id: "u1", role: "TECHNICIAN" } as never;
+      done();
+    });
+    app.setErrorHandler((error, _req, reply) =>
+      reply.code(isAppError(error) ? error.status : 500).send({})
+    );
+    app.register(orderFinanceRoutes, { prefix: "/orders" });
+    expect(
+      (
+        await app.inject({
+          url: "/orders/payment-methods",
+          method: "POST",
+          payload: { name: "Cheque" },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          url: "/orders/payment-methods/m1",
+          method: "PATCH",
+          payload: { name: "Cheque", isActive: false },
+        })
+      ).statusCode
+    ).toBe(403);
+    await app.close();
   });
   it("enforces financial access and create permissions on the server", async () => {
     const { db, tx } = setup();

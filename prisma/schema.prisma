@@ -1952,22 +1952,36 @@ model AtlasMedia {
 }
 
 model OrderPayment {
-  id          String        @id @default(cuid())
-  orderId     String
-  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  requestKey  String        @unique
-  method      PaymentMethod
-  amount      Decimal       @db.Decimal(14, 2)
-  reference   String?
-  note        String?
-  createdById String
-  createdBy   User          @relation("OrderPaymentCreated", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime      @default(now()) @db.Timestamptz
-  voidedAt    DateTime?     @db.Timestamptz
-  voidedBy    User?         @relation("OrderPaymentVoided", fields: [voidedById], references: [id], onDelete: Restrict)
-  voidedById  String?
-  voidReason  String?
+  customMethodId   String?
+  customMethod     CustomPaymentMethod? @relation(fields: [customMethodId], references: [id], onDelete: SetNull)
+  customMethodName String?
+  id               String               @id @default(cuid())
+  orderId          String
+  order            PurchaseOrder        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  requestKey       String               @unique
+  method           PaymentMethod
+  amount           Decimal              @db.Decimal(14, 2)
+  reference        String?
+  note             String?
+  createdById      String
+  createdBy        User                 @relation("OrderPaymentCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt        DateTime             @default(now()) @db.Timestamptz
+  voidedAt         DateTime?            @db.Timestamptz
+  voidedBy         User?                @relation("OrderPaymentVoided", fields: [voidedById], references: [id], onDelete: Restrict)
+  voidedById       String?
+  voidReason       String?
 
   @@index([orderId, createdAt])
   @@map("order_payments")
+}
+
+model CustomPaymentMethod {
+  id        String         @id @default(cuid())
+  name      String         @db.VarChar(80)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now()) @db.Timestamptz
+  updatedAt DateTime       @updatedAt @db.Timestamptz
+  payments  OrderPayment[]
+
+  @@map("custom_payment_methods")
 }

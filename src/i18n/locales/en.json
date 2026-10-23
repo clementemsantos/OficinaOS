@@ -2826,5 +2826,14 @@
     "failed": "Could not save. Refresh the order and check its quote status, outstanding balance and permissions.",
     "quote_history": "Quote history (latest 50 records)",
     "vat": "VAT"
+  },
+  "custom_payments": {
+    "manage": "Manage payment methods",
+    "hint": "Custom methods for orders. Rename or disable them here; existing payments keep their original label. Standard methods remain available.",
+    "name": "Method name",
+    "add": "Add method",
+    "active": "Available for new payments",
+    "save": "Save changes",
+    "failed": "Could not save. Check permissions and whether another method already uses that name."
   }
 }

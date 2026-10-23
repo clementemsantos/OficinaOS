@@ -57,6 +57,56 @@ describe("order finance panel", () => {
       })
     );
   });
+  it("selects an active custom method and hides disabled options", async () => {
+    mocks.get.mockResolvedValue({
+      data: {
+        data: {
+          ...finance,
+          methods: [
+            { id: "custom1", name: "Cheque", isActive: true },
+            { id: "old", name: "Disabled method", isActive: false },
+          ],
+        },
+      },
+    });
+    const onChanged = vi.fn();
+    render(<OrderFinance id="o1" onChanged={onChanged} />);
+    await screen.findByRole("option", { name: "Cheque" });
+    expect(
+      screen.queryByRole("option", { name: "Disabled method" })
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("order_finance.method"), {
+      target: { value: "CUSTOM:custom1" },
+    });
+    fireEvent.change(screen.getByLabelText("order_finance.amount"), {
+      target: { value: "10" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "order_finance.record" })
+    );
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    expect(mocks.post).toHaveBeenCalledWith(
+      "/purchase-orders/o1/payments",
+      expect.objectContaining({ method: "OTHER", customMethodId: "custom1" })
+    );
+  });
+  it("lets an administrator add a method from the management panel", async () => {
+    render(<OrderFinance id="o1" onChanged={() => undefined} />);
+    await screen.findByText("custom_payments.manage");
+    fireEvent.click(screen.getByText("custom_payments.manage"));
+    fireEvent.change(screen.getByLabelText("custom_payments.name"), {
+      target: { value: "Crédito da loja" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "custom_payments.add" })
+    );
+    await waitFor(() =>
+      expect(mocks.post).toHaveBeenCalledWith(
+        "/purchase-orders/payment-methods",
+        { name: "Crédito da loja" }
+      )
+    );
+  });
   it("does not request or show financial records without permission", () => {
     mocks.canView = false;
     render(<OrderFinance id="o1" onChanged={() => undefined} />);

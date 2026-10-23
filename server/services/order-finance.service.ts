@@ -49,6 +49,22 @@ export async function orderPaidTotal(
   });
   return new Prisma.Decimal(result._sum.amount ?? 0);
 }
+async function customPaymentLabel(
+  tx: Prisma.TransactionClient,
+  input: z.infer<typeof orderPaymentFields>
+) {
+  if (!input.customMethodId) {
+    return;
+  }
+  await tx.$queryRaw`SELECT id FROM custom_payment_methods WHERE id = ${input.customMethodId} FOR SHARE`;
+  const method = await tx.customPaymentMethod.findUnique({
+    where: { id: input.customMethodId },
+  });
+  if (!method?.isActive || input.method !== "OTHER") {
+    throw new AppError("VALIDATION_ERROR");
+  }
+  return method.name;
+}
 export function recordOrderPayment(
   prisma: PrismaClient,
   id: string,
@@ -66,6 +82,7 @@ export function recordOrderPayment(
         previous.amount.toString() !==
           new Prisma.Decimal(input.amount).toString() ||
         previous.method !== input.method ||
+        (previous.customMethodId ?? "") !== (input.customMethodId ?? "") ||
         (previous.reference ?? "") !== (input.reference ?? "") ||
         (previous.note ?? "") !== (input.note ?? "")
       ) {
@@ -79,6 +96,7 @@ export function recordOrderPayment(
     ) {
       throw new AppError("CONFLICT");
     }
+    const customMethodName = await customPaymentLabel(tx, input);
     const paid = await orderPaidTotal(tx, id);
     const balance = orderQuoteTotal(order).minus(paid);
     if (new Prisma.Decimal(input.amount).greaterThan(balance)) {
@@ -91,6 +109,8 @@ export function recordOrderPayment(
         orderId: id,
         amount: input.amount,
         method: input.method,
+        customMethodId: input.customMethodId,
+        customMethodName,
         requestKey: input.requestKey,
         reference: input.reference,
         note: input.note,
@@ -111,6 +131,8 @@ export function recordOrderPayment(
         paymentId: payment.id,
         amount: String(input.amount),
         method: input.method,
+        customMethodId: input.customMethodId,
+        customMethodName,
       },
     });
     return payment;

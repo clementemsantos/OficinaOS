@@ -2826,5 +2826,14 @@
     "failed": "Não foi possível guardar. Atualize a encomenda e verifique o orçamento, o valor em falta e as permissões.",
     "quote_history": "Histórico de orçamentos (últimos 50 registos)",
     "vat": "IVA"
+  },
+  "custom_payments": {
+    "manage": "Gerir métodos de pagamento",
+    "hint": "Métodos personalizados para encomendas. Pode alterar o nome ou desativá-los; os pagamentos antigos mantêm o nome original. Os métodos habituais continuam disponíveis.",
+    "name": "Nome do método",
+    "add": "Adicionar método",
+    "active": "Disponível para novos pagamentos",
+    "save": "Guardar alterações",
+    "failed": "Não foi possível guardar. Verifique as permissões e se já existe um método com esse nome."
   }
 }

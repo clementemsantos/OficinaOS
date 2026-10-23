@@ -1,3 +1,4 @@
+import { Prisma } from "@generated/client";
 import { AppError } from "@shared/errors/app-error.js";
 import {
   orderPaymentFields,
@@ -35,13 +36,14 @@ export const orderFinanceRoutes: FastifyPluginAsync = (app) => {
     if (!order) {
       throw new AppError("NOT_FOUND");
     }
-    const [payments, paid, quotes] = await Promise.all([
+    const [payments, paid, quotes, methods] = await Promise.all([
       app.prisma.orderPayment.findMany({
         where: { orderId: id },
         orderBy: { createdAt: "asc" },
         select: {
           id: true,
           method: true,
+          customMethodName: true,
           amount: true,
           reference: true,
           note: true,
@@ -63,6 +65,10 @@ export const orderFinanceRoutes: FastifyPluginAsync = (app) => {
         take: 50,
         select: { id: true, createdAt: true, metadata: true },
       }),
+      app.prisma.customPaymentMethod.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, isActive: true },
+      }),
     ]);
     const total = orderQuoteTotal(order);
     return {
@@ -74,6 +80,7 @@ export const orderFinanceRoutes: FastifyPluginAsync = (app) => {
         paid: paid.toFixed(2),
         balance: total.minus(paid).toFixed(2),
         payments,
+        methods,
         quotes,
       },
     };
@@ -117,6 +124,69 @@ export const orderFinanceRoutes: FastifyPluginAsync = (app) => {
       const { reason } = parseInput(voidOrderPaymentFields, req.body);
       await voidOrderPayment(app.prisma, id, paymentId, reason, getUserId(req));
       return { saved: true };
+    }
+  );
+
+  app.post(
+    "/payment-methods",
+    { preHandler: requirePermission({ settings: ["edit"] }) },
+    async (req, reply) => {
+      const data = parseInput(
+        z.object({ name: z.string().trim().min(1).max(80) }),
+        req.body
+      );
+      try {
+        return reply.code(201).send({
+          data: await app.prisma.customPaymentMethod.create({ data }),
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new AppError("CONFLICT");
+        }
+        throw error;
+      }
+    }
+  );
+  app.patch(
+    "/payment-methods/:methodId",
+    { preHandler: requirePermission({ settings: ["edit"] }) },
+    async (req) => {
+      const { methodId } = parseInput(
+        z.object({ methodId: z.string().min(1).max(100) }),
+        req.params
+      );
+      const data = parseInput(
+        z.object({
+          name: z.string().trim().min(1).max(80),
+          isActive: z.boolean(),
+        }),
+        req.body
+      );
+      try {
+        return {
+          data: await app.prisma.customPaymentMethod.update({
+            where: { id: methodId },
+            data,
+          }),
+        };
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new AppError("CONFLICT");
+        }
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new AppError("NOT_FOUND");
+        }
+        throw error;
+      }
     }
   );
   return Promise.resolve();
