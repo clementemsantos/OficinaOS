@@ -100,7 +100,7 @@ function AtlasEditor(props: {
       };
       const result = form.id
         ? await api.patch<{ data: AtlasEntry }>(
-            "/atlas/entries/" + form.id,
+            `/atlas/entries/${form.id}`,
             payload
           )
         : await api.post<{ data: AtlasEntry }>("/atlas/entries", payload);
@@ -251,7 +251,7 @@ function GuideDetails(props: {
   const publish = async () => {
     setBusy(true);
     try {
-      await api.post("/atlas/entries/" + entry.id + "/publish");
+      await api.post(`/atlas/entries/${entry.id}/publish`);
       toast.success("Guia publicado para a equipa");
       await props.onRefresh();
     } catch (error) {
@@ -265,7 +265,7 @@ function GuideDetails(props: {
     try {
       const data = new FormData();
       data.append("file", file);
-      await api.post("/atlas/entries/" + entry.id + "/media", data);
+      await api.post(`/atlas/entries/${entry.id}/media`, data);
       toast.success("Imagem adicionada");
       await props.onRefresh();
     } catch (error) {
@@ -304,10 +304,10 @@ function GuideDetails(props: {
       <div className="flex flex-wrap gap-2 text-xs">
         {[entry.brand, entry.model, entry.difficulty, ...entry.tags]
           .filter(Boolean)
-          .map((label, i) => (
+          .map((label) => (
             <span
               className="rounded-full bg-surface-container-high px-3 py-1"
-              key={String(label) + i}
+              key={String(label)}
             >
               {label}
             </span>
@@ -325,10 +325,12 @@ function GuideDetails(props: {
               key={image.id}
             >
               <img
-                alt={"Imagem técnica: " + image.filename}
+                height={480}
+                width={640}
+                alt={`Imagem técnica: ${image.filename}`}
                 className="max-h-80 w-full rounded-lg object-contain"
                 loading="lazy"
-                src={"/api/atlas/entries/" + entry.id + "/media/" + image.id}
+                src={`/api/atlas/entries/${entry.id}/media/${image.id}`}
               />
               <figcaption className="mt-2 break-all text-on-surface-variant text-xs">
                 {image.filename}
@@ -386,7 +388,7 @@ export default function AtlasLibraryPage() {
   const open = async (id: string) => {
     try {
       const { data } = await api.get<{ data: AtlasEntry }>(
-        "/atlas/entries/" + id
+        `/atlas/entries/${id}`
       );
       setSelected(data.data);
     } catch (error) {
