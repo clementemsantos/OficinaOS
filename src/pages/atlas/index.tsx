@@ -5,6 +5,7 @@ import { DeviceDiagram } from "@/components/modules/atlas/device-diagram";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   ATLAS_CATEGORIES,
@@ -211,7 +212,7 @@ function AtlasGuideContent({
                   }))
                 }
               />
-              <label
+              <Label
                 className={
                   completed[i]
                     ? "cursor-pointer text-on-surface-variant line-through"
@@ -220,7 +221,7 @@ function AtlasGuideContent({
                 htmlFor={`atlas-check-${guide.id}-${i}`}
               >
                 {item}
-              </label>
+              </Label>
             </div>
           ))}
         </div>
