@@ -2776,5 +2776,6 @@
     "line_note": "Unidades em RMA (não cobradas): {{count}}",
     "payment_note": "Este desconto não regista um reembolso ao cliente.",
     "units": "unidades"
-  }
+  },
+  "atlas_nav": "Atlas de Reparações"
 }
