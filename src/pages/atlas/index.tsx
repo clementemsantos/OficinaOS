@@ -7,9 +7,9 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   ATLAS_CATEGORIES,
   ATLAS_GUIDES,
+  type AtlasGuide,
   categoryForDevice,
   searchAtlasGuides,
-  type AtlasGuide,
 } from "@/lib/repair-atlas";
 
 function AtlasFlow({ guide }: { guide: AtlasGuide }) {
@@ -17,9 +17,15 @@ function AtlasFlow({ guide }: { guide: AtlasGuide }) {
     <div className="flex flex-wrap items-center gap-2">
       {guide.flow.map((item, index) => (
         <div className="flex items-center gap-2" key={item}>
-          {index > 0 && <Icon className="text-sm text-on-surface-variant" name="arrow_forward" />}
+          {index > 0 && (
+            <Icon
+              className="text-on-surface-variant text-sm"
+              name="arrow_forward"
+            />
+          )}
           <span className="rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 font-semibold text-on-surface text-sm">
-            <span className="me-2 text-primary">{index + 1}.</span>{item}
+            <span className="me-2 text-primary">{index + 1}.</span>
+            {item}
           </span>
         </div>
       ))}
@@ -43,8 +49,7 @@ function AtlasGuideContent({
     const ok = await copyTextToClipboard(url.toString());
     if (ok) {
       toast.success("Ligação interna do guia copiada");
-    }
-    else {
+    } else {
       toast.error("Não foi possível copiar a ligação");
     }
   };
@@ -85,7 +90,12 @@ function AtlasGuideContent({
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           {guide.symptoms.map((symptom) => (
-            <span className="rounded-lg border border-outline-variant/50 px-3 py-1.5 text-on-surface-variant text-xs" key={symptom}>{symptom}</span>
+            <span
+              className="rounded-lg border border-outline-variant/50 px-3 py-1.5 text-on-surface-variant text-xs"
+              key={symptom}
+            >
+              {symptom}
+            </span>
           ))}
         </div>
       </header>
@@ -94,7 +104,8 @@ function AtlasGuideContent({
 
       <section className="rounded-2xl bg-surface-container p-5 sm:p-7">
         <h2 className="mb-4 flex items-center gap-2 font-bold font-headline text-lg">
-          <Icon className="text-primary" name="timeline" /> Percurso do diagnóstico
+          <Icon className="text-primary" name="timeline" /> Percurso do
+          diagnóstico
         </h2>
         <AtlasFlow guide={guide} />
       </section>
@@ -104,7 +115,9 @@ function AtlasGuideContent({
           <Icon name="warning" /> Segurança antes de começar
         </h2>
         <ul className="list-disc space-y-2 ps-5 text-sm leading-relaxed">
-          {guide.precautions.map((rule) => <li key={rule}>{rule}</li>)}
+          {guide.precautions.map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
         </ul>
       </section>
 
@@ -116,7 +129,10 @@ function AtlasGuideContent({
           <ul className="space-y-3">
             {guide.tools.map((tool) => (
               <li className="flex gap-2 text-sm" key={tool}>
-                <Icon className="shrink-0 text-sm text-primary" name="check_circle" />
+                <Icon
+                  className="shrink-0 text-primary text-sm"
+                  name="check_circle"
+                />
                 <span>{tool}</span>
               </li>
             ))}
@@ -124,14 +140,26 @@ function AtlasGuideContent({
         </section>
         <section className="rounded-2xl bg-surface-container p-5 lg:col-span-2">
           <h2 className="mb-4 flex items-center gap-2 font-bold font-headline text-lg">
-            <Icon className="text-primary" name="troubleshoot" /> Pontos de verificação
+            <Icon className="text-primary" name="troubleshoot" /> Pontos de
+            verificação
           </h2>
           <div className="space-y-4">
             {guide.checkpoints.map((checkpoint, i) => (
-              <div className="rounded-xl bg-surface-container-low p-4" key={checkpoint.question}>
-                <h3 className="font-bold text-sm">{i + 1}. {checkpoint.question}</h3>
-                <p className="mt-2 text-on-surface-variant text-sm"><strong className="text-on-surface">Verificar:</strong> {checkpoint.check}</p>
-                <p className="mt-1 text-on-surface-variant text-sm"><strong className="text-on-surface">Interpretação:</strong> {checkpoint.meaning}</p>
+              <div
+                className="rounded-xl bg-surface-container-low p-4"
+                key={checkpoint.question}
+              >
+                <h3 className="font-bold text-sm">
+                  {i + 1}. {checkpoint.question}
+                </h3>
+                <p className="mt-2 text-on-surface-variant text-sm">
+                  <strong className="text-on-surface">Verificar:</strong>{" "}
+                  {checkpoint.check}
+                </p>
+                <p className="mt-1 text-on-surface-variant text-sm">
+                  <strong className="text-on-surface">Interpretação:</strong>{" "}
+                  {checkpoint.meaning}
+                </p>
               </div>
             ))}
           </div>
@@ -140,12 +168,15 @@ function AtlasGuideContent({
 
       <section className="rounded-2xl bg-surface-container p-5 sm:p-7">
         <h2 className="mb-4 flex items-center gap-2 font-bold font-headline text-lg">
-          <Icon className="text-primary" name="fact_check" /> Procedimento recomendado
+          <Icon className="text-primary" name="fact_check" /> Procedimento
+          recomendado
         </h2>
         <ol className="space-y-4">
           {guide.steps.map((step, i) => (
             <li className="flex gap-4" key={step}>
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">{i + 1}</span>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
+                {i + 1}
+              </span>
               <p className="pt-1 text-sm leading-relaxed">{step}</p>
             </li>
           ))}
@@ -155,7 +186,8 @@ function AtlasGuideContent({
       <section className="rounded-2xl bg-surface-container p-5 sm:p-7">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-bold font-headline text-lg">
-            <Icon className="text-primary" name="verified" /> Checklist de verificação final
+            <Icon className="text-primary" name="verified" /> Checklist de
+            verificação final
           </h2>
           <span className="rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary text-xs">
             {progress}/{guide.validation.length} verificados
@@ -170,21 +202,34 @@ function AtlasGuideContent({
               <input
                 checked={Boolean(completed[i])}
                 className="mt-0.5 size-4 accent-primary"
-                onChange={(event) => setCompleted((prev) => ({ ...prev, [i]: event.target.checked }))}
+                onChange={(event) =>
+                  setCompleted((prev) => ({
+                    ...prev,
+                    [i]: event.target.checked,
+                  }))
+                }
                 type="checkbox"
               />
-              <span className={completed[i] ? "text-on-surface-variant line-through" : ""}>{item}</span>
+              <span
+                className={
+                  completed[i] ? "text-on-surface-variant line-through" : ""
+                }
+              >
+                {item}
+              </span>
             </label>
           ))}
         </div>
         <p className="mt-4 text-on-surface-variant text-xs">
-          Esta checklist é temporária e não altera a ficha da reparação. Regista os resultados oficiais na ordem de serviço.
+          Esta checklist é temporária e não altera a ficha da reparação. Regista
+          os resultados oficiais na ordem de serviço.
         </p>
       </section>
       <p className="rounded-xl bg-surface-container-low p-4 text-on-surface-variant text-xs leading-relaxed">
-        Atlas Técnico OficinaOS — referência de formação e triagem. Os diagramas são genéricos;
-        não são esquemas elétricos nem instruções específicas do fabricante. A decisão final e os
-        trabalhos em circuitos energizados cabem a técnicos habilitados.
+        Atlas Técnico OficinaOS — referência de formação e triagem. Os diagramas
+        são genéricos; não são esquemas elétricos nem instruções específicas do
+        fabricante. A decisão final e os trabalhos em circuitos energizados
+        cabem a técnicos habilitados.
       </p>
     </article>
   );
@@ -199,15 +244,17 @@ export default function RepairAtlasPage() {
   );
   const guideId = params.get("guia");
   const selected = ATLAS_GUIDES.find((item) => item.id === guideId);
-  const matching = useMemo(() => searchAtlasGuides(query, category), [query, category]);
+  const matching = useMemo(
+    () => searchAtlasGuides(query, category),
+    [query, category]
+  );
   const fromJob = params.get("obra");
 
   const selectGuide = (id: string | null) => {
     const next = new URLSearchParams(params);
     if (id) {
       next.set("guia", id);
-    }
-    else {
+    } else {
       next.delete("guia");
     }
     setParams(next);
@@ -215,7 +262,13 @@ export default function RepairAtlasPage() {
   };
 
   if (selected) {
-    return <AtlasGuideContent key={selected.id} guide={selected} onBack={() => selectGuide(null)} />;
+    return (
+      <AtlasGuideContent
+        guide={selected}
+        key={selected.id}
+        onBack={() => selectGuide(null)}
+      />
+    );
   }
 
   return (
@@ -223,14 +276,17 @@ export default function RepairAtlasPage() {
       <header className="rounded-2xl bg-surface-container p-5 sm:p-8">
         <div className="mb-3 flex items-center gap-2 text-primary">
           <Icon name="menu_book" size="lg" />
-          <span className="font-bold text-xs uppercase tracking-wider">Biblioteca técnica • OficinaOS</span>
+          <span className="font-bold text-xs uppercase tracking-wider">
+            Biblioteca técnica • OficinaOS
+          </span>
         </div>
         <h1 className="font-extrabold font-headline text-3xl text-on-surface sm:text-4xl">
           Atlas de Reparações
         </h1>
         <p className="mt-3 max-w-2xl text-on-surface-variant leading-relaxed">
-          Guias práticos para a bancada: identificar sintomas, seguir um diagnóstico
-          estruturado e confirmar os resultados antes de entregar o equipamento.
+          Guias práticos para a bancada: identificar sintomas, seguir um
+          diagnóstico estruturado e confirmar os resultados antes de entregar o
+          equipamento.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3 text-on-surface-variant text-xs">
           <span>{ATLAS_GUIDES.length} guias originais</span>
@@ -250,7 +306,10 @@ export default function RepairAtlasPage() {
       </header>
 
       <div className="relative">
-        <Icon className="pointer-events-none absolute top-1/2 start-4 -translate-y-1/2 text-on-surface-variant" name="search" />
+        <Icon
+          className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+          name="search"
+        />
         <input
           aria-label="Pesquisar avaria, sintoma, componente ou ferramenta"
           className="min-h-14 w-full rounded-2xl border border-outline-variant/50 bg-surface-container ps-12 pe-4 text-on-surface outline-none placeholder:text-on-surface-variant focus:border-primary"
@@ -283,15 +342,25 @@ export default function RepairAtlasPage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-bold font-headline text-xl">Guias disponíveis</h2>
-          <span className="text-on-surface-variant text-sm">{matching.length} resultado(s)</span>
+          <span className="text-on-surface-variant text-sm">
+            {matching.length} resultado(s)
+          </span>
         </div>
         {matching.length === 0 ? (
           <div className="rounded-2xl bg-surface-container p-10 text-center">
-            <Icon className="mx-auto text-3xl text-on-surface-variant" name="search_off" />
-            <p className="mt-3 font-semibold">Não encontrámos guias com estes critérios.</p>
+            <Icon
+              className="mx-auto text-3xl text-on-surface-variant"
+              name="search_off"
+            />
+            <p className="mt-3 font-semibold">
+              Não encontrámos guias com estes critérios.
+            </p>
             <button
               className="mt-4 min-h-11 rounded-xl bg-primary px-5 font-semibold text-on-primary text-sm"
-              onClick={() => { setQuery(""); setCategory("all"); }}
+              onClick={() => {
+                setQuery("");
+                setCategory("all");
+              }}
               type="button"
             >
               Mostrar todos os guias
@@ -308,19 +377,42 @@ export default function RepairAtlasPage() {
               >
                 <div className="mb-4 flex items-center justify-between">
                   <span className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 font-semibold text-primary text-xs">
-                    <Icon className="text-sm" name={ATLAS_CATEGORIES.find((c) => c.id === guide.category)?.icon ?? "build"} />
-                    {ATLAS_CATEGORIES.find((c) => c.id === guide.category)?.name}
+                    <Icon
+                      className="text-sm"
+                      name={
+                        ATLAS_CATEGORIES.find((c) => c.id === guide.category)
+                          ?.icon ?? "build"
+                      }
+                    />
+                    {
+                      ATLAS_CATEGORIES.find((c) => c.id === guide.category)
+                        ?.name
+                    }
                   </span>
-                  <Icon className="text-on-surface-variant group-hover:text-primary" name="arrow_forward" />
+                  <Icon
+                    className="text-on-surface-variant group-hover:text-primary"
+                    name="arrow_forward"
+                  />
                 </div>
-                <h3 className="font-bold font-headline text-lg text-on-surface">{guide.title}</h3>
-                <p className="mt-2 flex-1 text-on-surface-variant text-sm leading-relaxed">{guide.summary}</p>
+                <h3 className="font-bold font-headline text-lg text-on-surface">
+                  {guide.title}
+                </h3>
+                <p className="mt-2 flex-1 text-on-surface-variant text-sm leading-relaxed">
+                  {guide.summary}
+                </p>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {guide.tags.slice(0, 3).map((tag) => (
-                    <span className="rounded-md bg-surface-container-high px-2 py-1 text-on-surface-variant text-xs" key={tag}>{tag}</span>
+                    <span
+                      className="rounded-md bg-surface-container-high px-2 py-1 text-on-surface-variant text-xs"
+                      key={tag}
+                    >
+                      {tag}
+                    </span>
                   ))}
                 </div>
-                <p className="mt-4 text-on-surface-variant text-xs">Nível: {guide.difficulty}</p>
+                <p className="mt-4 text-on-surface-variant text-xs">
+                  Nível: {guide.difficulty}
+                </p>
               </button>
             ))}
           </div>
@@ -328,9 +420,10 @@ export default function RepairAtlasPage() {
       </section>
 
       <aside className="rounded-2xl border border-outline-variant/50 bg-surface-container-low p-5 text-on-surface-variant text-sm leading-relaxed">
-        <strong className="text-on-surface">Sobre a partilha:</strong> a ligação de cada guia pode
-        ser enviada a outros técnicos com acesso ao OficinaOS. Os guias não incluem dados de
-        clientes nem acesso público, e não substituem os manuais técnicos dos fabricantes.
+        <strong className="text-on-surface">Sobre a partilha:</strong> a ligação
+        de cada guia pode ser enviada a outros técnicos com acesso ao OficinaOS.
+        Os guias não incluem dados de clientes nem acesso público, e não
+        substituem os manuais técnicos dos fabricantes.
       </aside>
     </div>
   );
