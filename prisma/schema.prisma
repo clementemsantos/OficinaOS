@@ -182,6 +182,8 @@ enum AiMessageFeedback {
 // ─────────────────────────────────────────────
 
 model User {
+  atlasEntries        AtlasEntry[]    @relation("AtlasAuthor")
+  atlasRevisions      AtlasRevision[] @relation("AtlasRevisionEditor")
   supportTickets      SupportTicket[]
   businessMessages    BusinessMessage[]
   id                  String            @id @default(cuid())
@@ -1888,4 +1890,58 @@ model IntegrationReceipt {
 
   @@unique([source, externalId])
   @@map("integration_receipts")
+}
+
+// Atlas V2 — additive, isolated from repair/customer records.
+model AtlasEntry {
+  id          String          @id @default(cuid())
+  title       String          @db.VarChar(180)
+  summary     String          @db.VarChar(600)
+  content     String          @db.Text
+  category    String          @db.VarChar(32)
+  brand       String?         @db.VarChar(80)
+  model       String?         @db.VarChar(120)
+  tags        String[]        @default([])
+  difficulty  String          @default("Intermédio") @db.VarChar(32)
+  status      String          @default("DRAFT") @db.VarChar(32)
+  authorId    String
+  author      User            @relation("AtlasAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  images      AtlasMedia[]
+  revisions   AtlasRevision[]
+  createdAt   DateTime        @default(now()) @db.Timestamptz
+  updatedAt   DateTime        @updatedAt @db.Timestamptz
+
+  @@index([status, category, updatedAt])
+  @@index([authorId, updatedAt])
+  @@map("atlas_entries")
+}
+
+model AtlasRevision {
+  id         String     @id @default(cuid())
+  entryId    String
+  entry      AtlasEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  number     Int
+  snapshot   Json
+  editorId   String
+  editor     User       @relation("AtlasRevisionEditor", fields: [editorId], references: [id], onDelete: Restrict)
+  createdAt  DateTime   @default(now()) @db.Timestamptz
+
+  @@unique([entryId, number])
+  @@map("atlas_revisions")
+}
+
+model AtlasMedia {
+  id         String     @id @default(cuid())
+  entryId    String
+  entry      AtlasEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  storageKey String     @unique
+  filename   String     @db.VarChar(180)
+  mime       String     @db.VarChar(50)
+  size       Int
+  caption    String     @default("") @db.VarChar(400)
+  license    String     @default("OWN_WORK") @db.VarChar(50)
+  createdAt  DateTime   @default(now()) @db.Timestamptz
+
+  @@index([entryId, createdAt])
+  @@map("atlas_media")
 }

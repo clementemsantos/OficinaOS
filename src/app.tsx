@@ -34,6 +34,8 @@ const PartRequestsPage = lazy(() => import("@/pages/part-requests"));
 const MarketPricesPage = lazy(() => import("@/pages/market-prices"));
 const JobsPage = lazy(() => import("@/pages/jobs"));
 const RepairAtlasPage = lazy(() => import("@/pages/atlas"));
+const AtlasLibraryPage = lazy(() => import("@/pages/atlas/library"));
+const IphoneAtlasPage = lazy(() => import("@/pages/atlas/iphones"));
 const DocumentsPage = lazy(() => import("@/pages/business/documents"));
 const PurchaseOrdersPage = lazy(() => import("@/pages/purchase-orders"));
 const BusinessPage = lazy(() => import("@/pages/business"));
@@ -149,6 +151,22 @@ export default function App() {
                   </DashboardLayout>
                 }
                 path="/atlas"
+              />
+              <Route
+                element={
+                  <DashboardLayout>
+                    <AtlasLibraryPage />
+                  </DashboardLayout>
+                }
+                path="/atlas/colaborativo"
+              />
+              <Route
+                element={
+                  <DashboardLayout>
+                    <IphoneAtlasPage />
+                  </DashboardLayout>
+                }
+                path="/atlas/iphones"
               />
             </Route>
             <Route
