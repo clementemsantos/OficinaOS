@@ -117,7 +117,7 @@ function AtlasEditor(props: {
       className="space-y-5 rounded-2xl bg-surface-container p-5 sm:p-8"
       onSubmit={(event) => {
         event.preventDefault();
-        void save();
+        save();
       }}
     >
       <h2 className="font-bold text-2xl">
@@ -291,7 +291,7 @@ function GuideDetails(props: {
               disabled={busy}
               icon="publish"
               onClick={() => {
-                void publish();
+                publish();
               }}
             >
               Publicar na loja
@@ -348,7 +348,7 @@ function GuideDetails(props: {
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) {
-                  void upload(file);
+                  upload(file);
                 }
                 event.target.value = "";
               }}
@@ -394,7 +394,7 @@ export default function AtlasLibraryPage() {
     }
   };
   useEffect(() => {
-    void load();
+    load();
   }, [load]);
   const refresh = async () => {
     await load();
@@ -486,7 +486,7 @@ export default function AtlasLibraryPage() {
                 }
                 key={entry.id}
                 onClick={() => {
-                  void open(entry.id);
+                  open(entry.id);
                 }}
                 type="button"
               >
