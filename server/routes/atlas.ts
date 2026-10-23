@@ -38,7 +38,10 @@ const querySchema = z.object({
   q: z.string().max(100).optional(),
   category: z.string().max(32).optional(),
 });
-type Entry = { authorId: string; status: string };
+interface Entry {
+  authorId: string;
+  status: string;
+}
 type AtlasInput = z.infer<typeof entryFields>;
 
 function allowViewing(req: FastifyRequest, entry: Entry) {
@@ -105,7 +108,7 @@ function prepared(input: AtlasInput) {
   return { ...input, tags: normalizedTags(input.tags) };
 }
 
-export const atlasRoutes: FastifyPluginAsync = async (app) => {
+export const atlasRoutes: FastifyPluginAsync = (app) => {
   app.addHook("preHandler", requirePermission({ jobs: ["view"] }));
 
   app.get("/entries", async (req) => {
