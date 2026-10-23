@@ -257,20 +257,24 @@ export function normalizeAtlasSearch(text: string): string {
   return text.toLocaleLowerCase("pt-PT").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+const ATLAS_WORD_SEPARATOR = /[^a-z0-9]+/;
+
 const COMMON_WORDS = new Set([
   "com", "sem", "para", "que", "uma", "uns", "por", "mas", "dos", "das",
   "tem", "está", "esta", "não", "nao", "quando", "depois", "antes",
   "equipamento", "problema", "cliente", "meu", "minha",
 ]);
 
-export function searchAtlasGuides(query: string, category: string = "all"): AtlasGuide[] {
+export function searchAtlasGuides(query: string, category = "all"): AtlasGuide[] {
   const words = normalizeAtlasSearch(query)
-    .split(/[^a-z0-9]+/)
+    .split(ATLAS_WORD_SEPARATOR)
     .filter((word) => word.length >= 3 && !COMMON_WORDS.has(word));
   const candidates = ATLAS_GUIDES.filter(
     (guide) => category === "all" || guide.category === category
   );
-  if (words.length === 0) return candidates;
+  if (words.length === 0) {
+    return candidates;
+  }
   return candidates.map((guide) => {
     const title = normalizeAtlasSearch(guide.title);
     const symptoms = normalizeAtlasSearch(guide.symptoms.join(" "));
