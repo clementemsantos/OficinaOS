@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OrderFinance } from "../order-finance";
 
 const mocks = vi.hoisted(() => ({
@@ -30,6 +30,7 @@ beforeEach(() => {
   mocks.get.mockResolvedValue({ data: { data: finance } });
   mocks.post.mockResolvedValue({ data: { saved: true } });
 });
+afterEach(() => vi.unstubAllGlobals());
 describe("order finance panel", () => {
   it("shows quoted, received and remaining amounts and records a partial payment with method and retry key", async () => {
     const onChanged = vi.fn();
@@ -106,6 +107,16 @@ describe("order finance panel", () => {
         { name: "Crédito da loja" }
       )
     );
+  });
+  it("opens an order on HTTP where crypto.randomUUID is unavailable", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: globalThis.crypto.getRandomValues.bind(
+        globalThis.crypto
+      ),
+    });
+    render(<OrderFinance id="o1" onChanged={() => undefined} />);
+    await screen.findByText("75.00 EUR");
+    expect(screen.getByText("100.00 EUR")).toBeInTheDocument();
   });
   it("does not request or show financial records without permission", () => {
     mocks.canView = false;

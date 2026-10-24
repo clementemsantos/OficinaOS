@@ -156,6 +156,12 @@ export const NAV_ITEMS: NavItem[] = [
     perm: { ai: ["access"] },
   },
   {
+    icon: "campaign",
+    labelKey: "marketing.title",
+    to: "/marketing",
+    perm: { settings: ["edit"] },
+  },
+  {
     icon: "settings",
     labelKey: "settings",
     to: "/settings",

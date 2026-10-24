@@ -39,6 +39,7 @@ import { jobRoutes } from "./routes/jobs.js";
 import { keymasterRoutes } from "./routes/keymaster.js";
 import { keymasterActiveJobsRoutes } from "./routes/keymaster-active-jobs.js";
 import { marketPricesRoutes } from "./routes/market-prices.js";
+import { marketingRoutes } from "./routes/marketing.js";
 import { notificationsRoutes } from "./routes/notifications.js";
 import { onlineBackupRoutes } from "./routes/online-backup.js";
 import { orderFinanceRoutes } from "./routes/order-finance.js";
@@ -229,6 +230,7 @@ app.register(documentsRoutes, { prefix: "/api/documents" });
 app.register(businessRoutes, { prefix: "/api/business" });
 app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
 app.register(purchaseOrdersRoutes, { prefix: "/api/purchase-orders" });
+app.register(marketingRoutes, { prefix: "/api/marketing" });
 app.register(orderFinanceRoutes, { prefix: "/api/purchase-orders" });
 app.register(tasksRoutes, { prefix: "/api/tasks" });
 

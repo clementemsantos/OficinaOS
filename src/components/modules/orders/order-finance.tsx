@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { useCan } from "@/hooks/use-can";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
 import api from "@/lib/api";
+import { createRequestId } from "@/lib/request-id";
 
 import {
   type CustomPaymentMethod,
@@ -66,7 +67,7 @@ export function OrderFinance({
   const canQuote = useCan({ parts: ["manageCatalog"] });
   const [data, setData] = useState<Finance | null>(null);
   const [busy, setBusy] = useState(false);
-  const requestKey = useRef(crypto.randomUUID());
+  const requestKey = useRef(createRequestId());
   const load = useCallback(async () => {
     if (!canView) {
       return;
@@ -87,7 +88,7 @@ export function OrderFinance({
       await api.post(`/purchase-orders/${id}/${path}`, payload);
       await load();
       onChanged();
-      requestKey.current = crypto.randomUUID();
+      requestKey.current = createRequestId();
       toast.success(t("order_finance.saved"));
     } catch {
       toast.error(t("order_finance.failed"));

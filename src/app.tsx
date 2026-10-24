@@ -39,6 +39,7 @@ const AtlasLibraryPage = lazy(() => import("@/pages/atlas/library"));
 const IphoneAtlasPage = lazy(() => import("@/pages/atlas/iphones"));
 const DocumentsPage = lazy(() => import("@/pages/business/documents"));
 const PurchaseOrdersPage = lazy(() => import("@/pages/purchase-orders"));
+const MarketingPage = lazy(() => import("@/pages/marketing"));
 const BusinessPage = lazy(() => import("@/pages/business"));
 const TasksPage = lazy(() => import("@/pages/tasks"));
 const JobDetailPage = lazy(() => import("@/pages/jobs/detail"));
@@ -203,6 +204,14 @@ export default function App() {
             <Route
               element={<RequirePermission perm={{ settings: ["edit"] }} />}
             >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <MarketingPage />
+                  </DashboardLayout>
+                }
+                path="/marketing"
+              />
               <Route
                 element={
                   <DashboardLayout>

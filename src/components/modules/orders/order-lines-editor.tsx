@@ -46,6 +46,7 @@ export function OrderLinesEditor({
                 partId: null,
                 supplierId: supplierId || null,
                 costGross: "0",
+                costKnown: false,
                 quoteGross: "0",
                 costVatRate: "0",
                 saleVatRate: "0",

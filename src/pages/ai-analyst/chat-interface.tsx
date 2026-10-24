@@ -13,6 +13,7 @@ import ChatEmptyState from "@/components/modules/ai-analyst/chat-empty-state";
 import { Button } from "@/components/ui/button";
 import { useModalEffects } from "@/hooks/use-modal-effects";
 import api, { fetchCsrfToken } from "@/lib/api";
+import { createRequestId } from "@/lib/request-id";
 import { useAiChatStore } from "@/stores/ai-chat";
 
 const MarkdownRenderer = React.lazy(() => import("./markdown-renderer"));
@@ -781,13 +782,13 @@ function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
       setMessages((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: createRequestId(),
           role: "user",
           content: trimmed,
           timestamp: new Date(),
         },
         {
-          id: crypto.randomUUID(),
+          id: createRequestId(),
           role: "assistant",
           content: "",
           timestamp: new Date(),

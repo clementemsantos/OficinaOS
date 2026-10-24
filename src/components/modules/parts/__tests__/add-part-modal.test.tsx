@@ -51,6 +51,15 @@ describe("AddPartModal", () => {
     );
   });
 
+  it("keeps focus in the chosen field while typing several characters", () => {
+    render(<AddPartModal onClose={vi.fn()} onSubmit={vi.fn()} />);
+    const price = screen.getByLabelText("add_part_modal.default_price");
+    price.focus();
+    for (const value of ["1", "12", "12.5"]) {
+      fireEvent.change(price, { target: { value } });
+      expect(price).toHaveFocus();
+    }
+  });
   it("does not offer an opening stock field when editing", () => {
     render(
       <AddPartModal

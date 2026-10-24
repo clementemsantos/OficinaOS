@@ -163,10 +163,11 @@ export default function AddPartModal({
   useModalEffects(true, handleRequestClose, dialogRef);
 
   async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (submitting) {
       return;
     }
-    e.preventDefault();
     const newErrors: Partial<
       Record<"name" | "category" | "defaultPrice", string>
     > = {};

@@ -266,6 +266,7 @@ model Account {
 // ─────────────────────────────────────────────
 
 model Customer {
+  marketingLeads       MarketingLead[]
   customCategoryId     String?
   customCategory       CatalogCategory?      @relation(fields: [customCategoryId], references: [id], onDelete: SetNull)
   supplierRole         Supplier?
@@ -1984,4 +1985,42 @@ model CustomPaymentMethod {
   payments  OrderPayment[]
 
   @@map("custom_payment_methods")
+}
+
+model MarketingCampaign {
+  id         String          @id @default(cuid())
+  name       String
+  channel    String
+  status     String          @default("DRAFT")
+  objective  String          @default("")
+  budget     Decimal         @db.Decimal(14, 2)
+  spend      Decimal         @db.Decimal(14, 2)
+  startDate  String?
+  endDate    String?
+  landingUrl String          @default("")
+  createdAt  DateTime        @default(now()) @db.Timestamptz
+  updatedAt  DateTime        @updatedAt @db.Timestamptz
+  leads      MarketingLead[]
+
+  @@map("marketing_campaigns")
+}
+
+model MarketingLead {
+  id           String             @id @default(cuid())
+  title        String
+  customerId   String?
+  customer     Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  campaignId   String?
+  campaign     MarketingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  stage        String             @default("NEW")
+  value        Decimal            @db.Decimal(14, 2)
+  followUpDate String?
+  notes        String             @default("")
+  createdAt    DateTime           @default(now()) @db.Timestamptz
+  updatedAt    DateTime           @updatedAt @db.Timestamptz
+
+  @@index([campaignId, stage])
+  @@index([customerId])
+  @@index([followUpDate])
+  @@map("marketing_leads")
 }

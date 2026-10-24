@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import api from "@/lib/api";
+import { createRequestId } from "@/lib/request-id";
 
 export interface InAppAlert {
   createdAt: string;
@@ -55,7 +56,7 @@ export const useAlertsStore = create<AlertsState>((set, get) => ({
       }
       const newAlert: InAppAlert = {
         createdAt: alert.createdAt ?? new Date().toISOString(),
-        id: alert.id ?? crypto.randomUUID(),
+        id: alert.id ?? createRequestId(),
         job: alert.job,
         message: alert.message,
         readAt: alert.readAt ?? null,

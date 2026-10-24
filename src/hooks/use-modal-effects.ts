@@ -28,6 +28,8 @@ export function useModalEffects(
   dialogRef?: RefObject<HTMLElement | null>,
   options?: { closeOnEscape?: boolean }
 ) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const previousFocus = useRef<HTMLElement | null>(null);
   // A consumer that needs a two-stage Escape (clear the filter first, close
   // second) turns this off and handles the key on its own element.
@@ -38,7 +40,7 @@ export function useModalEffects(
       if (e.key === "Escape") {
         e.preventDefault();
         if (closeOnEscape) {
-          onClose();
+          onCloseRef.current();
         }
         return;
       }
@@ -46,7 +48,7 @@ export function useModalEffects(
         trapFocus(e, dialogRef.current);
       }
     },
-    [closeOnEscape, onClose, dialogRef]
+    [closeOnEscape, dialogRef]
   );
 
   useEffect(() => {

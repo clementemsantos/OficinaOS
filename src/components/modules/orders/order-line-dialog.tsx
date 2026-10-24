@@ -56,6 +56,28 @@ export function OrderLineDialog({
       open
       title={t("order_lines.line_title")}
     >
+      <Field label={t("order_lines.catalog_product")}>
+        <PartPicker
+          initialPart={part}
+          label={t("order_lines.catalog_product")}
+          onChange={(id, selected) => {
+            if (!selected) {
+              set({ partId: id || null });
+              return;
+            }
+            set({
+              partId: id,
+              name: selected.name,
+              quoteGross: String(selected.defaultPrice ?? form.quoteGross),
+              costGross: String(selected.acquisitionCost ?? form.costGross),
+              costKnown: selected.acquisitionCost != null,
+              supplierId: selected.supplierId ?? form.supplierId,
+            });
+          }}
+          onCreatingChange={setCreatingPart}
+          value={form.partId ?? ""}
+        />
+      </Field>
       <form
         aria-label={t("order_lines.line_title")}
         className="space-y-3"
@@ -67,27 +89,6 @@ export function OrderLineDialog({
           }
         }}
       >
-        <Field label={t("order_lines.catalog_product")}>
-          <PartPicker
-            initialPart={part}
-            label={t("order_lines.catalog_product")}
-            onChange={(id, selected) => {
-              if (!selected) {
-                set({ partId: id || null });
-                return;
-              }
-              set({
-                partId: id,
-                name: selected.name,
-                quoteGross: String(selected.defaultPrice ?? form.quoteGross),
-                costGross: String(selected.acquisitionCost ?? form.costGross),
-                supplierId: selected.supplierId ?? form.supplierId,
-              });
-            }}
-            onCreatingChange={setCreatingPart}
-            value={form.partId ?? ""}
-          />
-        </Field>
         <Field label={t("order_lines.description")} required>
           <Input
             maxLength={200}

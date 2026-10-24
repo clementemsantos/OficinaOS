@@ -15,12 +15,14 @@ export interface CatalogPartOption {
   supplierId?: string | null;
 }
 export function PartPicker({
+  id,
   value,
   onChange,
   initialPart,
   label,
   onCreatingChange,
 }: {
+  id?: string;
   value: string;
   onChange: (id: string, part?: CatalogPartOption) => void;
   label?: string;
@@ -68,6 +70,7 @@ export function PartPicker({
   return (
     <>
       <SearchPicker
+        id={id}
         label={label ?? t("rmas.part")}
         onChange={(id) =>
           onChange(
