@@ -43,3 +43,6 @@ backups/
 
 # Online backup OAuth tokens and encryption keys
 backup-rclone/
+
+# Local Compose overrides
+compose.override.y*ml

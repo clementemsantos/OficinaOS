@@ -222,9 +222,9 @@ function MetricsGrid({
 
       <MetricCard
         detail={
-          data
-            ? `${formatPct(revenueChangePct)}% ${t("dashboard_page.vs_month", { month: prevMonthName })}`
-            : ""
+          data?.revenueChangePct == null
+            ? ""
+            : `${formatPct(revenueChangePct)}% ${t("dashboard_page.vs_month", { month: prevMonthName })}`
         }
         icon="payments"
         iconColor="text-on-secondary-container"
@@ -233,7 +233,7 @@ function MetricsGrid({
         unit={currencySymbol(currency)}
         value={data ? data.revenueThisMonth.toFixed(2) : "--"}
       >
-        {data && data.revenueThisMonth > 0 && (
+        {data?.revenueChangePct != null && data.revenueThisMonth > 0 && (
           <div
             className={`flex items-center gap-1 font-bold text-xs ${revenueDir === "up" ? "text-on-secondary-container" : "text-error"}`}
           >
@@ -288,16 +288,16 @@ function MetricsGrid({
 
       <MetricCard
         detail={
-          data
-            ? `${formatPct(marginChange)}pp ${t("dashboard_page.vs_month", { month: prevMonthName })}`
-            : ""
+          data?.avgProfitMarginChange == null
+            ? ""
+            : `${formatPct(marginChange)}pp ${t("dashboard_page.vs_month", { month: prevMonthName })}`
         }
         icon="bar_chart"
         label={t("avg_profit_margin")}
         unit="%"
         value={data ? `${Math.round(data.avgProfitMargin)}` : "--"}
       >
-        {data && data.avgProfitMargin > 0 && (
+        {data?.avgProfitMarginChange != null && data.avgProfitMargin > 0 && (
           <span
             className={`font-bold text-xs ${marginDir === "up" ? "text-on-secondary-container" : "text-error"}`}
           >

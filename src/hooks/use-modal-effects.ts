@@ -28,9 +28,13 @@ export function useModalEffects(
   dialogRef?: RefObject<HTMLElement | null>,
   options?: { closeOnEscape?: boolean }
 ) {
+  const previousFocus = useRef<HTMLElement | null>(null);
+  // Consumers pass onClose as a useCallback that often changes identity every
+  // keystroke (e.g. a dirty-check callback depending on form state). Keep it in
+  // a ref so handleKeyDown stays stable — otherwise the effect below re-runs
+  // per render and `first?.focus()` steals focus to the dialog's close button.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const previousFocus = useRef<HTMLElement | null>(null);
   // A consumer that needs a two-stage Escape (clear the filter first, close
   // second) turns this off and handles the key on its own element.
   const closeOnEscape = options?.closeOnEscape ?? true;

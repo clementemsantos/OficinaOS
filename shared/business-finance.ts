@@ -32,7 +32,13 @@ export function orderMargin(input: {
     profitAfterVat: money(profit),
     vatBalance: money(quoteGross - revenueNet - (costGross - costNet)),
     marginPercent:
-      revenueNet === 0n ? null : Number((profit * 10000n) / revenueNet) / 100,
+      revenueNet === 0n
+        ? null
+        : Number(
+            profit >= 0n
+              ? (profit * 10000n + revenueNet / 2n) / revenueNet
+              : -((-profit * 10000n + revenueNet / 2n) / revenueNet)
+          ) / 100,
   };
 }
 export function commissionGross(
@@ -87,7 +93,13 @@ export function orderLinesTotals(lines: readonly OrderLineMoney[]) {
       profitAfterVat: money(profit),
       vatBalance: money(vat),
       marginPercent:
-        revenueNet === 0n ? null : Number((profit * 10000n) / revenueNet) / 100,
+        revenueNet === 0n
+          ? null
+          : Number(
+              profit >= 0n
+                ? (profit * 10000n + revenueNet / 2n) / revenueNet
+                : -((-profit * 10000n + revenueNet / 2n) / revenueNet)
+            ) / 100,
     },
   };
 }

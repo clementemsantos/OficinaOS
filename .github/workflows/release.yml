@@ -65,8 +65,11 @@ jobs:
           bun run build
 
       - name: Download Bun runtime for Windows
+        # Fixado na engines.bun do package.json — a v1.0.15 apanhou um bun
+        # de releases/latest mais novo que o testado no setup-bun do job.
         run: |
-          Invoke-WebRequest "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip" -OutFile bun-win.zip
+          $bunVersion = (Get-Content package.json -Raw | ConvertFrom-Json).engines.bun
+          Invoke-WebRequest "https://github.com/oven-sh/bun/releases/download/bun-v$bunVersion/bun-windows-x64.zip" -OutFile bun-win.zip
           Expand-Archive bun-win.zip bun-tmp
 
       - name: Download portable PostgreSQL binaries
@@ -120,16 +123,29 @@ jobs:
           Push-Location "$b\app"
           bun build server/index.ts --target bun --outdir "$env:RUNNER_TEMP\server-check"
           if ($LASTEXITCODE -ne 0) { throw "bun build falhou no bundle podado" }
-          # Prova: o prisma CLI ainda arranca (start:prod corre migrate deploy).
-          bunx prisma migrate deploy --help | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "prisma migrate deploy falhou no bundle podado" }
+          # Prova: o prisma CLI ainda arranca — entry point direto com bun.
+          # Nem `bunx` nem o trampolim .bin\*.exe: em 1.4.x ambos penduram no
+          # runner 73–90s sem saída (um processo-filho segura o pipe do step
+          # e o passo morre sem mensagem). CHECKPOINT_DISABLE corta a única
+          # chamada de rede que o CLI faz no arranque (update-check). A saída
+          # fica capturada — numa falha futura o log mostra o erro real.
+          $env:CHECKPOINT_DISABLE = "1"
+          $prismaHelp = & bun node_modules\prisma\build\index.js migrate deploy --help 2>&1 | Out-String
+          Remove-Item Env:\CHECKPOINT_DISABLE
+          if ($LASTEXITCODE -ne 0) {
+            throw "prisma migrate deploy falhou no bundle podado:`n$prismaHelp"
+          }
           Pop-Location
           # Cache de engines que o prisma CLI baixa ao correr — não vai no zip.
           Remove-Item "$b\app\node_modules\.cache" -Recurse -Force -ErrorAction SilentlyContinue
           Copy-Item bun-tmp\bun-windows-x64\bun.exe "$b\bun\"
           Expand-Archive pg.zip "$b"
           Copy-Item scripts\portable\* "$b\"
-          tar -a -cf oficinaos-portable.zip -C "$env:RUNNER_TEMP" oficinaos-portable
+          # `tar -a -cf` (bsdtar) fazia segfault 0xC0000005 a comprimir o
+          # bundle — 3 releases seguidas morreram aqui aos ~80s de silêncio.
+          # Compress-Archive é .NET puro — mais lento (~45s) mas não crasha.
+          Compress-Archive -Path "$env:RUNNER_TEMP\oficinaos-portable" `
+            -DestinationPath oficinaos-portable.zip -CompressionLevel Optimal
 
       - name: Smoke test the portable bundle (extract → start → health → stop)
         # 3 releases seguidas saíram com o portátil partido (título vazio,
@@ -144,7 +160,7 @@ jobs:
           # o smoke replica esse caminho.
           $smoke = "$env:SystemDrive\oficinaos-smoke"
           New-Item -ItemType Directory -Force $smoke | Out-Null
-          tar -xf oficinaos-portable.zip -C $smoke
+          Expand-Archive oficinaos-portable.zip $smoke
           $root = "$smoke\oficinaos-portable"
           Remove-Item "$root\data" -Recurse -Force -ErrorAction SilentlyContinue
           # O `choice` do autostart assume N em CI (INICIAR.bat `if defined
@@ -174,7 +190,8 @@ jobs:
         # O zip de update é exactamente a app\ do bundle — instalação fresca e
         # instalação actualizada ficam sempre com o mesmo conteúdo.
         run: |
-          tar -a -cf oficinaos-app-update.zip -C "$env:RUNNER_TEMP\oficinaos-portable" app
+          Compress-Archive -Path "$env:RUNNER_TEMP\oficinaos-portable\app" `
+            -DestinationPath oficinaos-app-update.zip -CompressionLevel Optimal
           # Formato sha256sum ("hash  ficheiro") — `sha256sum -c` funciona direto.
           $h = (Get-FileHash oficinaos-app-update.zip -Algorithm SHA256).Hash.ToLower()
           "$h  oficinaos-app-update.zip" |

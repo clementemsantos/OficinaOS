@@ -104,18 +104,28 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
       };
     }
   );
-  const whereParties = async (query: unknown) => {
-    const { customerId, supplierId, cursor, recordId } = parseInput(
-      filterFields,
-      query
-    );
+  const canViewCatalog = async (req: Parameters<typeof getRole>[0]) =>
+    (
+      await app.auth.api.userHasPermission({
+        body: { role: getRole(req), permissions: { parts: ["viewCatalog"] } },
+      })
+    ).success;
+  const whereParties = async (query: unknown, viewCatalog = true) => {
+    const {
+      customerId,
+      cursor,
+      recordId,
+      supplierId: requestedSupplier,
+    } = parseInput(filterFields, query);
+    const supplierId = viewCatalog ? requestedSupplier : undefined;
     await parties({ customerId, supplierId });
-    const linked = customerId
-      ? await app.prisma.supplier.findUnique({
-          where: { customerId },
-          select: { id: true },
-        })
-      : null;
+    const linked =
+      customerId && viewCatalog
+        ? await app.prisma.supplier.findUnique({
+            where: { customerId },
+            select: { id: true },
+          })
+        : null;
     const supplier = supplierId
       ? await app.prisma.supplier.findUnique({
           where: { id: supplierId },
@@ -142,9 +152,10 @@ export const businessRoutes: FastifyPluginAsync = (app) => {
     "/tickets",
     { preHandler: requirePermission({ jobs: ["view"] }) },
     async (req) => {
+      const viewCatalog = await canViewCatalog(req);
       const data = await app.prisma.supportTicket.findMany({
-        ...(await whereParties(req.query)),
-        include,
+        ...(await whereParties(req.query, viewCatalog)),
+        include: viewCatalog ? include : { customer: include.customer },
       });
       return { data, nextCursor: data.length === 50 ? data.at(-1)?.id : null };
     }

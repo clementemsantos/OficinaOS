@@ -52,3 +52,9 @@ capacitor.config.ts
 .bun-version
 pnpm-workspace.yaml
 backup-rclone
+
+# Local database archives must not be copied into application images.
+backups/
+*.dump
+*.sql.gz
+*.backup

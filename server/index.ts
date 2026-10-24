@@ -286,7 +286,7 @@ const reconcileTasks = async () => {
   }
 };
 if (!isSandbox) {
-  const taskTimer = setInterval(reconcileTasks, 30_000);
+  const taskTimer = setInterval(reconcileTasks, 300_000);
   taskTimer.unref();
   app.addHook("onReady", reconcileTasks);
   app.addHook("onClose", () => {
