@@ -8,7 +8,8 @@ portas 4000/4001 e sem desviar o telemóvel Amigo.
 
 ```bash
 cd ~/Inovito-VoIP-teste/infra/inovito-voip
-bash start-lab.sh
+sudo bash start-lab.sh
+sudo bash check-lab.sh
 docker compose -f compose.yml ps
 docker compose -f compose.yml exec -T asterisk asterisk -rx 'core show version'
 docker compose -f compose.yml exec -T asterisk asterisk -rx 'pjsip show endpoints'
@@ -27,7 +28,7 @@ git clone --depth=1 -b feature/inovito-voice-call-log \
   abrir 5060, 8088 nem RTP no router/firewall.
 - ARI e HTTP desativados nesta etapa. Sem gateway Gemini nem encaminhamento
   de chamadas reais. Asterisk **não** está integrado com a Amigo nesta fase.
-- O utilizador de testes `inovito-lab` tem uma senha aleatória em
+- O arranque corrige automaticamente as permissões do ficheiro privado de\n  credenciais, garantindo que o processo Asterisk consegue lê-lo sem o tornar\n  público. Ao atualizar uma instalação antiga, repetir `sudo bash start-lab.sh`.\n- O utilizador de testes `inovito-lab` tem uma senha aleatória em
   `runtime/pjsip-peer.conf`, gerada localmente, não enviada para o GitHub.
 - O contexto `inovito-lab` oferece apenas a extensão **999 (eco)**;
   não admite chamadas externas nem chamadas de saída.
@@ -56,3 +57,34 @@ docker compose -f compose.yml down
    `POST /api/inovito-voice/gateway/event` (registo de chamadas comerciais).
 5. Testar contactos excluídos, chamadas ocultas, RGPD e contingência antes
    de colocar o número real em serviço.
+
+## Estado depois do teste 999
+
+Se `check-lab.sh` apresentar todas as linhas `OK`, isso confirma apenas
+o serviço SIP, a extensão, o transporte e o encaminhamento para a função
+`Echo()`. **Não equivale a um teste de áudio/RTP nem a um atendedor com IA**.
+
+Para ativar chamadas reais do cartão SIM secundário do STRONG:
+
+1. É preciso um **gateway FXO** compatível com a porta TEL/RJ11 do router
+   (ex.: Grandstream HT813). A porta FXS do HT813 não é a porta correta
+   para receber a linha do router.
+2. O gateway FXO tem de estar autorizado a comunicar com o Asterisk por SIP
+   e RTP. O laboratório só expõe SIP em `127.0.0.1:15060`, logo **não**
+   aceitará ligações de um HT813 na LAN sem configuração adicional.
+3. Criar identidade SIP de gateway distinta de `inovito-lab`, firewall
+   limitada ao endereço do HT813, media RTP, proteção de chamadas de saída
+   e uma rota de entrada separada. **Não** abrir SIP na Internet.
+4. Implementar e testar o serviço que integra o áudio do Asterisk com a
+   voz em tempo real da IA. Os módulos ARI e HTTP permanecem desligados
+   neste laboratório por segurança.
+5. Integrar o registo de eventos no OficinaOS Misto, depois de cópia de
+   segurança e validação do ramo de software. Não misturar esta experiência
+   com a instância original.
+6. Fazer chamadas reais de teste para o **número secundário**, verificar
+   Caller ID e números excluídos, áudio bidirecional, silêncio, desligamento,
+   limite de duração, falha de Internet e proteção de dados. Só depois
+   considerar desviar o número habitual da loja.
+
+A configuração atual é deliberadamente segura para um laboratório, não
+um pacote de produção pronto a receber chamadas.
