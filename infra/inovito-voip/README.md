@@ -28,7 +28,10 @@ git clone --depth=1 -b feature/inovito-voice-call-log \
   abrir 5060, 8088 nem RTP no router/firewall.
 - ARI e HTTP desativados nesta etapa. Sem gateway Gemini nem encaminhamento
   de chamadas reais. Asterisk **não** está integrado com a Amigo nesta fase.
-- O arranque corrige automaticamente as permissões do ficheiro privado de\n  credenciais, garantindo que o processo Asterisk consegue lê-lo sem o tornar\n  público. Ao atualizar uma instalação antiga, repetir `sudo bash start-lab.sh`.\n- O utilizador de testes `inovito-lab` tem uma senha aleatória em
+- O arranque corrige automaticamente as permissões do ficheiro privado de
+  credenciais, garantindo que o processo Asterisk consegue lê-lo sem o tornar
+  público. Ao atualizar uma instalação antiga, repetir `sudo bash start-lab.sh`.
+- O utilizador de testes `inovito-lab` tem uma senha aleatória em
   `runtime/pjsip-peer.conf`, gerada localmente, não enviada para o GitHub.
 - O contexto `inovito-lab` oferece apenas a extensão **999 (eco)**;
   não admite chamadas externas nem chamadas de saída.
