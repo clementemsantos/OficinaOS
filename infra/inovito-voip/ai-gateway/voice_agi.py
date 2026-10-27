@@ -47,7 +47,7 @@ def api_reply(audio: bytes, history: list) -> tuple[str, list]:
         model=MODEL,
         contents=all_contents,
         config=types.GenerateContentConfig(
-            system_instruction=PROMPT, max_output_tokens=220, temperature=0.35
+            system_instruction=PROMPT,\n            max_output_tokens=700,\n            thinking_config=types.ThinkingConfig(thinking_level="low")
         ),
     )
     answer = (result.text or "").strip()
