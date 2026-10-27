@@ -54,6 +54,24 @@ fi
 docker compose -f compose.yml config -q
 docker compose -f compose.yml up -d
 
+# Asterisk runs as an unprivileged user. A private file created with mode 600
+# is not readable by it, so PJSIP silently starts without endpoints.
+# Grant read access only to Asterisk's primary group; never make it world-readable.
+if [[ -L runtime/pjsip-peer.conf ]]; then
+  echo "Recusado: runtime/pjsip-peer.conf não pode ser uma ligação simbólica." >&2
+  exit 1
+fi
+if ! docker compose -f compose.yml exec -T -u asterisk asterisk test -r /etc/asterisk/pjsip-peer.conf; then
+  ASTERISK_GID="$(docker compose -f compose.yml exec -T asterisk id -g asterisk | tr -d '\r\n')"
+  if [[ ! "$ASTERISK_GID" =~ ^[0-9]+$ ]]; then
+    echo "Não foi possível identificar o grupo do utilizador Asterisk." >&2
+    exit 1
+  fi
+  chgrp "$ASTERISK_GID" runtime/pjsip-peer.conf
+  chmod 640 runtime/pjsip-peer.conf
+  docker compose -f compose.yml restart asterisk
+fi
+
 ready=0
 for attempt in {1..15}; do
   if docker compose -f compose.yml exec -T asterisk asterisk -rx 'core show version' >/dev/null 2>&1; then
