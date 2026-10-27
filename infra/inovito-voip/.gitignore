@@ -1,3 +1,5 @@
 /runtime/
 /.env
+/.env.ai
+/sounds/
 *.log
