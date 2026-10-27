@@ -19,7 +19,8 @@ services:
     tmpfs:
       - /tmp:size=32m
     cap_drop:
-      - ALL
+      - NET_RAW
+      - NET_ADMIN
     security_opt:
       - no-new-privileges:true
     healthcheck:
