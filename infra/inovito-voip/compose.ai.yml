@@ -1,0 +1,32 @@
+# Compose overlay for extension 997; no public listening ports.
+# Launch only with: docker compose -f compose.yml -f compose.ai.yml ...
+services:
+  asterisk:
+    volumes:
+      - ./runtime/recordings:/var/spool/asterisk/recording:rw
+  voice-gateway:
+    build: ./ai-gateway
+    restart: unless-stopped
+    env_file:
+      - .env.ai
+    environment:
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - INOVITO_TTS_VOICE=pt-PT-DuarteNeural
+    volumes:
+      - ./runtime/recordings:/shared/recordings:rw
+      - ./sounds/en/custom:/shared/sounds:rw
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',4573),2); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    # No ports: the FastAGI service stays on the Compose internal network.
