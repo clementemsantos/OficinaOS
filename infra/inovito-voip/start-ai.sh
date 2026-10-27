@@ -18,7 +18,12 @@ docker inspect inovito-asterisk-lab >/dev/null 2>&1 || {
   exit 1
 }
 
-# Prevent accidental commits even when only these new files are copied into a working tree.\nif [[ -f .gitignore ]] && ! grep -qxF "/.env.ai" .gitignore; then\n  printf "/.env.ai\\n" >> .gitignore\nfi\n\n# Keep credentials strictly local and never print their contents.
+# Prevent accidental commits of credentials even with only the new files copied locally.
+if [[ -f .gitignore ]] && ! grep -qxF '/.env.ai' .gitignore; then
+  printf '/.env.ai\n' >> .gitignore
+fi
+
+# Keep credentials strictly local and never print their contents.
 if [[ ! -s .env.ai ]]; then
   read -r -s -p "Chave Gemini API (não será mostrada): " API_KEY
   printf "\n"
