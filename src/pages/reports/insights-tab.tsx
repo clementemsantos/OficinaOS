@@ -1,10 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/ui/metric-card";
+import { useFormatCurrency } from "@/hooks/use-format-currency";
+import { formatNumber } from "@/lib/format";
 import { useReportsStore } from "@/stores/reports";
 
 export default function InsightsTab() {
   const { t } = useTranslation();
+  const fmt = useFormatCurrency();
   const state = useReportsStore((s) => s.insights);
 
   if (state.loading) {
@@ -54,13 +57,13 @@ export default function InsightsTab() {
           icon="repeat"
           label={t("reports.repeatRate")}
           unit="%"
-          value={String(summary.repeatRate)}
+          value={formatNumber(summary.repeatRate, 1)}
         />
         <MetricCard
           detail=""
           icon="payments"
           label={t("reports.avgSpendPerVisit")}
-          value={summary.avgSpendPerVisit.toLocaleString()}
+          value={fmt(summary.avgSpendPerVisit)}
         />
         <MetricCard
           detail=""
@@ -75,8 +78,8 @@ export default function InsightsTab() {
           <h2 className="mb-3 font-bold text-on-surface text-sm uppercase tracking-wide">
             {t("reports.topCustomers")}
           </h2>
-          <div className="overflow-x-auto rounded-xl bg-surface-container-low">
-            <table className="w-full text-left text-sm">
+          <div className="oos-scrollbar overflow-x-auto rounded-xl bg-surface-container-low">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-outline-variant border-b text-on-surface-variant text-xs uppercase tracking-wide">
                   <th className="px-4 py-3">{t("reports.customerName")}</th>
@@ -109,7 +112,7 @@ export default function InsightsTab() {
                       {c.totalJobs}
                     </td>
                     <td className="px-4 py-3 text-end tabular-nums">
-                      {c.totalRevenue.toLocaleString()}
+                      {fmt(c.totalRevenue)}
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
                       {c.lastVisit
@@ -117,7 +120,7 @@ export default function InsightsTab() {
                         : "\u2014"}
                     </td>
                     <td className="px-4 py-3 text-end tabular-nums">
-                      {c.avgSpend.toLocaleString()}
+                      {fmt(c.avgSpend)}
                     </td>
                   </tr>
                 ))}

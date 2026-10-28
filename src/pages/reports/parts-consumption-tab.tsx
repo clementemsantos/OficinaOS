@@ -1,7 +1,9 @@
 import type { PartConsumptionRow } from "@shared/types/reports";
 import { useTranslation } from "react-i18next";
 import { MetricCard } from "@/components/ui/metric-card";
+import { useFormatCurrency } from "@/hooks/use-format-currency";
 import { downloadCsv } from "@/lib/export-csv";
+import { formatNumber } from "@/lib/format";
 import { useReportsStore } from "@/stores/reports";
 
 function TrendBadge({ value }: { value: number | undefined }) {
@@ -27,13 +29,14 @@ function TrendBadge({ value }: { value: number | undefined }) {
         {up ? "trending_up" : "trending_down"}
       </span>
       {up ? "+" : ""}
-      {value}%
+      {formatNumber(value, 1)}%
     </span>
   );
 }
 
 export default function PartsConsumptionTab() {
   const { t } = useTranslation();
+  const fmt = useFormatCurrency();
   const state = useReportsStore((s) => s.partsConsumption);
 
   if (state.loading) {
@@ -111,7 +114,7 @@ export default function PartsConsumptionTab() {
           detail=""
           icon="payments"
           label={t("reports.partsCost")}
-          value={summary.totalCost.toLocaleString()}
+          value={fmt(summary.totalCost)}
         />
       </div>
 
@@ -130,8 +133,8 @@ export default function PartsConsumptionTab() {
             {t("reports.partsConsumptionEmpty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl bg-surface-container-low">
-            <table className="w-full text-left text-sm">
+          <div className="oos-scrollbar overflow-x-auto rounded-xl bg-surface-container-low">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-outline-variant border-b text-on-surface-variant text-xs uppercase tracking-wide">
                   <th className="px-4 py-3">{t("reports.partName")}</th>
@@ -171,10 +174,10 @@ export default function PartsConsumptionTab() {
                       {row.usageCount}
                     </td>
                     <td className="px-4 py-3 text-end tabular-nums">
-                      {row.avgUnitCost.toLocaleString()}
+                      {fmt(row.avgUnitCost)}
                     </td>
                     <td className="px-4 py-3 text-end tabular-nums">
-                      {row.totalCost.toLocaleString()}
+                      {fmt(row.totalCost)}
                     </td>
                   </tr>
                 ))}

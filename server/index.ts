@@ -14,56 +14,12 @@ import { startMdnsResponder } from "./lib/mdns.js";
 import { isFileRequestPath } from "./lib/spa-fallback.js";
 import { cacheControlFor } from "./lib/static-cache.js";
 import authPlugin from "./plugins/auth.js";
+import demoPlugin from "./plugins/demo.js";
 import { localePlugin } from "./plugins/locale.js";
 import prismaPlugin from "./plugins/prisma.js";
 import securityPlugin from "./plugins/security.js";
 import { websocketPlugin, wsBroadcast } from "./plugins/websocket.js";
-import { aiRoutes } from "./routes/ai.js";
-import { atlasRoutes } from "./routes/atlas.js";
-import { atlasCasesRoutes } from "./routes/atlas-cases.js";
-import { authRoutes } from "./routes/auth.js";
-import { businessRoutes } from "./routes/business.js";
-import { catalogCategoriesRoutes } from "./routes/catalog-categories.js";
-import { customersRoutes } from "./routes/customers.js";
-import { dashboardRoutes } from "./routes/dashboard.js";
-import { dataIoRoutes } from "./routes/data-io.js";
-import { devicesRoutes } from "./routes/devices.js";
-import { documentsRoutes } from "./routes/documents.js";
-import { equipmentRoutes } from "./routes/equipment.js";
-import { feedbackRoutes } from "./routes/feedback.js";
-import { healthRoutes } from "./routes/health.js";
-import { intakeRequestsRoutes } from "./routes/intake-requests.js";
-import { integrationsRoutes } from "./routes/integrations.js";
-import { invoicingRoutes } from "./routes/invoicing.js";
-import { jobRoutes } from "./routes/jobs.js";
-import { keymasterRoutes } from "./routes/keymaster.js";
-import { keymasterActiveJobsRoutes } from "./routes/keymaster-active-jobs.js";
-import { marketPricesRoutes } from "./routes/market-prices.js";
-import { marketingRoutes } from "./routes/marketing.js";
-import { notificationsRoutes } from "./routes/notifications.js";
-import { onlineBackupRoutes } from "./routes/online-backup.js";
-import { orderFinanceRoutes } from "./routes/order-finance.js";
-import { partRequestsRoutes } from "./routes/part-requests.js";
-import { partsRoutes } from "./routes/parts.js";
-import { paymentRoutes } from "./routes/payments.js";
-import { publicRoutes } from "./routes/public.js";
-import { purchaseOrdersRoutes } from "./routes/purchase-orders.js";
-import { receiptRoutes } from "./routes/receipts.js";
-import { referralsRoutes } from "./routes/referrals.js";
-import { repairCatalogRoutes } from "./routes/repairs.js";
-import { reportsRoutes } from "./routes/reports.js";
-import { returnClaimsRoutes } from "./routes/return-claims.js";
-import { rmaDeductionRoutes } from "./routes/rma-deductions.js";
-import { saleRoutes } from "./routes/sales.js";
-import { settingsRoutes } from "./routes/settings.js";
-import { setupRoutes } from "./routes/setup.js";
-import { signatureSessionRoutes } from "./routes/signature-sessions.js";
-import { storefrontRoutes } from "./routes/storefront.js";
-import { supplierRmasRoutes, suppliersRoutes } from "./routes/suppliers.js";
-import { tasksRoutes } from "./routes/tasks.js";
-import { tradeInsRoutes } from "./routes/trade-ins.js";
-import { usersRoutes } from "./routes/users.js";
-import { workflowRoutes } from "./routes/workflow.js";
+import { registerApiRoutes } from "./register-api-routes.js";
 import { syncIntegration } from "./services/integrations.service.js";
 import { startLowStockScheduler } from "./services/low-stock.service.js";
 import { cleanupReadNotifications } from "./services/notification-inapp.service.js";
@@ -99,6 +55,7 @@ app.addHook("onSend", (request, reply, _payload, done) => {
 });
 
 await app.register(securityPlugin);
+await app.register(demoPlugin);
 
 if (!IS_PROD) {
   await app.register(swagger, {
@@ -149,13 +106,31 @@ if (!IS_PROD) {
   });
 }
 
-await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+// Demo uploads are capped at 1 MB per file (images only — enforced by the
+// per-route MIME allowlists) so the shared instance cannot fill the disk.
+await app.register(multipart, {
+  limits: {
+    fileSize: env.DEMO_MODE ? 1024 * 1024 : 5 * 1024 * 1024,
+  },
+});
 await app.register(websocket);
 await app.register(localePlugin);
 
 await app.register(prismaPlugin);
-await app.register(authRoutes);
-await app.register(setupRoutes);
+
+// DEMO_MODE first boot: an empty database would leave the demo dead —
+// /setup is disabled and nobody could sign in. Seed the fictional
+// dataset once (seedDemo refuses non-"demo" database names itself).
+if (env.DEMO_MODE) {
+  const userCount = await app.prisma.user.count();
+  if (userCount === 0) {
+    app.log.info("DEMO_MODE: empty database — seeding fictional dataset");
+    const { seedDemo } = await import("../prisma/seed-demo.js");
+    await seedDemo(app.prisma as never);
+    app.log.info("DEMO_MODE: demo dataset seeded");
+  }
+}
+
 await app.register(authPlugin);
 await app.register(websocketPlugin);
 (app.decorate as (name: string, value: unknown) => void)(
@@ -167,12 +142,17 @@ setAppInstance(app);
 // An isolated restore-test must never send queued customer messages, trigger
 // remarketing, poll cloud integrations or mutate historical tasks on startup.
 const isSandbox = process.env.OFICINAOS_SANDBOX === "true";
+const blockOutbound = isSandbox || env.DEMO_MODE;
 const stopNoop = () => undefined;
 const stopOverdue = isSandbox ? stopNoop : startOverdueScheduler(app);
-const stopCloudPoller = isSandbox ? stopNoop : startCloudPoller(app);
+const stopCloudPoller = blockOutbound ? stopNoop : startCloudPoller(app);
 const stopLowStock = isSandbox ? stopNoop : startLowStockScheduler(app);
-const stopRemarketing = isSandbox ? stopNoop : startRemarketingScheduler(app);
-const stopOutboxWorker = isSandbox ? stopNoop : startOutboxWorker(app.prisma);
+const stopRemarketing = blockOutbound
+  ? stopNoop
+  : startRemarketingScheduler(app);
+const stopOutboxWorker = blockOutbound
+  ? stopNoop
+  : startOutboxWorker(app.prisma);
 const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const cleanupHandle = isSandbox
   ? null
@@ -192,53 +172,14 @@ app.addHook("onReady", async () => {
   await initValidationI18n();
 });
 
-app.register(healthRoutes);
-app.register(publicRoutes, { prefix: "/api/public" });
-app.register(intakeRequestsRoutes, { prefix: "/api/intake-requests" });
-app.register(jobRoutes, { prefix: "/api/jobs" });
-app.register(paymentRoutes, { prefix: "/api/payments" });
-app.register(receiptRoutes, { prefix: "/api/receipts" });
-app.register(partsRoutes, { prefix: "/api/parts" });
-app.register(repairCatalogRoutes, { prefix: "/api/repairs" });
-app.register(atlasRoutes, { prefix: "/api/atlas" });
-app.register(atlasCasesRoutes, { prefix: "/api/atlas" });
-app.register(customersRoutes, { prefix: "/api/customers" });
-app.register(devicesRoutes, { prefix: "/api/brands" });
-app.register(equipmentRoutes, { prefix: "/api/equipment" });
-app.register(usersRoutes, { prefix: "/api/users" });
-app.register(notificationsRoutes, { prefix: "/api/notifications" });
-app.register(settingsRoutes, { prefix: "/api/settings" });
-app.register(signatureSessionRoutes, { prefix: "/api/sign-sessions" });
-app.register(dashboardRoutes, { prefix: "/api/dashboard" });
-app.register(aiRoutes, { prefix: "/api/ai" });
-app.register(reportsRoutes, { prefix: "/api/reports" });
-app.register(saleRoutes, { prefix: "/api/sales" });
-app.register(returnClaimsRoutes, { prefix: "/api/return-claims" });
-app.register(tradeInsRoutes, { prefix: "/api/trade-ins" });
-app.register(partRequestsRoutes, { prefix: "/api/part-requests" });
-app.register(marketPricesRoutes, { prefix: "/api/market-prices" });
-app.register(storefrontRoutes, { prefix: "/api/storefront" });
-app.register(invoicingRoutes, { prefix: "/api/invoicing" });
-app.register(feedbackRoutes, { prefix: "/api/feedback" });
-app.register(suppliersRoutes, { prefix: "/api/suppliers" });
-app.register(rmaDeductionRoutes, { prefix: "/api/supplier-rmas" });
-app.register(supplierRmasRoutes, { prefix: "/api/supplier-rmas" });
-app.register(workflowRoutes, { prefix: "/api/workflow" });
-app.register(onlineBackupRoutes, { prefix: "/api/online-backup" });
-app.register(integrationsRoutes, { prefix: "/api/integrations" });
-app.register(documentsRoutes, { prefix: "/api/documents" });
-app.register(businessRoutes, { prefix: "/api/business" });
-app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
-app.register(purchaseOrdersRoutes, { prefix: "/api/purchase-orders" });
-app.register(marketingRoutes, { prefix: "/api/marketing" });
-app.register(orderFinanceRoutes, { prefix: "/api/purchase-orders" });
-app.register(tasksRoutes, { prefix: "/api/tasks" });
-
 // Opt-in integrations work in Misto too; restoring a copy requires disabling them.
+await registerApiRoutes(app);
+
 let integrationsRunning = false;
 const integrationTimer = setInterval(async () => {
   if (
     integrationsRunning ||
+    env.DEMO_MODE ||
     (isSandbox && process.env.OFICINAOS_ENABLE_INTEGRATION_POLLING !== "true")
   ) {
     return;
@@ -294,10 +235,6 @@ if (!isSandbox) {
     return Promise.resolve();
   });
 }
-app.register(referralsRoutes, { prefix: "/api" });
-app.register(dataIoRoutes, { prefix: "/api" });
-app.register(keymasterRoutes, { prefix: "/api" });
-app.register(keymasterActiveJobsRoutes, { prefix: "/api" });
 
 if (IS_PROD) {
   const distRoot = path.resolve("dist");

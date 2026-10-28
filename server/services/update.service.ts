@@ -14,6 +14,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { AppError } from "@shared/errors/app-error.js";
+import { assertNotDemoMode } from "../lib/demo.js";
 import { logger } from "../utils/logger.js";
 import { getAppVersionInfo } from "./app-version.service.js";
 
@@ -58,6 +59,12 @@ export interface UpdateState {
 
 const UPDATE_ZIP = "oficinaos-app-update.zip";
 const UPDATE_SHA = "oficinaos-app-update.zip.sha256";
+// The release also ships the apply script itself — always run the version
+// from the release, never the installed copy. The installed script may be
+// the very thing being fixed (a pre-v1.0.20 swap could delete app\ without
+// restoring app.prev when a file was locked).
+const APPLY_SCRIPT = "update-apply.ps1";
+const APPLY_SCRIPT_SHA = `${APPLY_SCRIPT}.sha256`;
 const RELEASES_LATEST_DOWNLOAD =
   "https://github.com/braindeadpt/OficinaOS/releases/latest/download";
 const IN_PROGRESS: ReadonlySet<UpdatePhase> = new Set([
@@ -284,11 +291,45 @@ async function applyUpdate(
     return;
   }
 
-  // Run the apply script from staging — the app dir is about to be replaced.
-  await copyFile(
-    path.join(paths.appDir, "scripts", "update-apply.ps1"),
-    paths.applyScript
-  );
+  // Fetch the apply script from the release itself and verify its sha256 —
+  // running the installed copy means the updater bugs this release fixes
+  // would still run. A missing asset (release predating it) falls back to
+  // the installed copy; a sha mismatch means tampering — abort, don't fall
+  // back.
+  const applyShaFile = path.join(paths.stagingDir, APPLY_SCRIPT_SHA);
+  try {
+    await Promise.all([
+      downloadFile(
+        `${RELEASES_LATEST_DOWNLOAD}/${APPLY_SCRIPT}`,
+        paths.applyScript,
+        fetchImpl
+      ),
+      downloadFile(
+        `${RELEASES_LATEST_DOWNLOAD}/${APPLY_SCRIPT_SHA}`,
+        applyShaFile,
+        fetchImpl
+      ),
+    ]);
+    const applySha = await readFile(applyShaFile, "utf-8");
+    if (!verifySha256(paths.applyScript, applySha)) {
+      throw new Error("update-apply.ps1 sha256 não corresponde");
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("sha256")) {
+      setStatus({
+        state: "failed",
+        detail: err.message,
+        updatedAt: now(),
+      });
+      return;
+    }
+    // Release without the standalone script asset — same behaviour as
+    // before: run the copy installed with the app.
+    await copyFile(
+      path.join(paths.appDir, "scripts", APPLY_SCRIPT),
+      paths.applyScript
+    );
+  }
 
   setStatus({ state: "starting", detail: "", updatedAt: now() });
   // Win32_Process.Create (update-launch.ps1) cria o updater fora da nossa
@@ -337,6 +378,9 @@ async function applyUpdate(
 export async function startUpdate(
   fetchImpl: typeof fetch = fetch
 ): Promise<UpdateState> {
+  // Self-update spawns a PowerShell that swaps the install — never on a
+  // shared public demo.
+  assertNotDemoMode();
   const state = await getUpdateState();
   if (!(state.updateAvailable && state.latest)) {
     throw new AppError("VALIDATION_ERROR", { reason: "no update available" });

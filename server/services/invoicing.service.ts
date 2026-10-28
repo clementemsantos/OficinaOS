@@ -2,6 +2,7 @@ import type { PrismaClient } from "@generated/client";
 import { AppError } from "@shared/errors/app-error.js";
 import type { FastifyBaseLogger } from "fastify";
 import { decryptSecret } from "../lib/crypto.js";
+import { assertNotDemoMode } from "../lib/demo.js";
 import { claimFinancialRecord } from "../lib/financial-record-lock.js";
 import { getOrCreateShopSettings } from "../repositories/settings.repository.js";
 
@@ -114,6 +115,7 @@ async function ixFetch(
   path: string,
   init: { method?: string; body?: unknown } = {}
 ): Promise<IxDocument> {
+  assertNotDemoMode();
   const res = await fetch(
     `https://${account}.app.invoicexpress.com${path}?api_key=${encodeURIComponent(apiKey)}`,
     {

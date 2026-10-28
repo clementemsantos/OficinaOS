@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f compose.misto.yaml && -f .env.misto ]] || { echo "Faltam compose.misto.yaml ou .env.misto. Não foi alterado nenhum serviço."; exit 1; }
-git merge-base --is-ancestor e25dfaea96ea99aa39826578755fdb6de095e9bf HEAD || { echo "É necessário obter primeiro a versão Misto que integra a v1.0.18."; exit 1; }
+git merge-base --is-ancestor f5132469e53b17cf3457181ec2f93893698b6325 HEAD || { echo "É necessário obter primeiro a versão Misto que integra a v1.0.21."; exit 1; }
 changes=$(git diff --name-only HEAD -- . ':!compose.misto.yaml')
 [[ -z "$changes" ]] || { echo "Existem alterações locais ao código. Rever antes de instalar:"; printf '%s\n' "$changes"; exit 1; }
 sudo -v
@@ -11,7 +11,7 @@ compose=(sudo docker compose -p oficinaos-misto --env-file .env.misto -f compose
 db=oficinaos-misto-db-1
 app=oficinaos-misto-app-1
 stamp=$(date +%Y%m%d-%H%M%S)
-backup="/var/backups/oficinaos-misto/antes-v1.0.18-$stamp"
+backup="/var/backups/oficinaos-misto/antes-v1.0.21-$stamp"
 sudo docker inspect "$db" "$app" > /dev/null
 sudo install -d -m 700 "$backup" "$backup/uploads"
 echo "A guardar base de dados, anexos e configuração..."

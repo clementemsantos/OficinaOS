@@ -22,6 +22,7 @@ import { Icon } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useDirtyState } from "@/hooks/use-dirty-state";
 import { useModalEffects } from "@/hooks/use-modal-effects";
+import { useDemoMode } from "@/lib/demo";
 import { useSettingsStore } from "@/stores/settings";
 import { useUsersStore } from "@/stores/users";
 
@@ -47,6 +48,7 @@ const TAB_ICONS: Record<SettingsTab, string> = {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+  const isDemo = useDemoMode();
   const baseId = useId();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
@@ -223,14 +225,14 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <div
           aria-label={t("settings_page")}
-          className="grid grid-cols-5 gap-1 lg:sticky lg:top-24 lg:flex lg:w-52 lg:shrink-0 lg:flex-col lg:self-start"
+          className="grid grid-cols-3 gap-1 sm:grid-cols-6 lg:sticky lg:top-24 lg:flex lg:w-52 lg:shrink-0 lg:flex-col lg:self-start"
           role="tablist"
         >
           {tabs.map(({ key, label }) => (
             <button
               aria-controls={panelId(key)}
               aria-selected={activeTab === key}
-              className={`flex min-h-16 flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-center transition-all lg:min-h-12 lg:flex-row lg:gap-2.5 lg:px-4 lg:py-3 lg:text-start ${
+              className={`flex min-h-16 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-center transition-all lg:min-h-12 lg:flex-row lg:gap-2.5 lg:px-4 lg:py-3 lg:text-start ${
                 activeTab === key
                   ? "bg-primary-fixed font-bold text-primary"
                   : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
@@ -247,7 +249,9 @@ export default function SettingsPage() {
               type="button"
             >
               <Icon className="text-[20px]" name={TAB_ICONS[key]} />
-              <span className="text-xs leading-tight lg:hidden">{label}</span>
+              <span className="line-clamp-2 text-balance text-xs leading-tight lg:hidden">
+                {label}
+              </span>
               <span className="hidden lg:inline">{label}</span>
             </button>
           ))}
@@ -277,7 +281,17 @@ export default function SettingsPage() {
                 {sectionDescriptions[activeTab]}
               </p>
             </div>
-            {activeTab === "ai" && (
+            {/* DEMO_MODE: integrations, users and data tabs are blocked
+                server-side (403) — the UI shows a notice instead. */}
+            {isDemo && activeTab !== "shop" && activeTab !== "notifications" ? (
+              <p
+                className="rounded-xl bg-surface-container px-4 py-5 text-center text-on-surface-variant text-sm"
+                role="status"
+              >
+                {t("demo_unavailable")}
+              </p>
+            ) : null}
+            {activeTab === "ai" && !isDemo && (
               <SettingsAiTab
                 onDirtyChange={(d) => markDirty("ai", d)}
                 onSavingChange={setSaving}
@@ -287,7 +301,7 @@ export default function SettingsPage() {
                 ref={aiTabRef}
               />
             )}
-            {activeTab === "cloud" && (
+            {activeTab === "cloud" && !isDemo && (
               <SettingsCloudTab
                 onToast={(msg, type) =>
                   type === "error" ? toast.error(msg) : toast.success(msg)
@@ -309,7 +323,7 @@ export default function SettingsPage() {
                 onEditTemplate={(tpl) => setEditingTemplate(tpl)}
               />
             )}
-            {activeTab === "users" && (
+            {activeTab === "users" && !isDemo && (
               <SettingsUsersTab
                 onAddUser={() => setShowAddUserModal(true)}
                 onEditUser={(id) => navigate(`/profile/${id}`)}
@@ -319,7 +333,7 @@ export default function SettingsPage() {
                 }}
               />
             )}
-            {activeTab === "data" && <SettingsDataTab />}
+            {activeTab === "data" && !isDemo && <SettingsDataTab />}
           </div>
 
           <UnsavedChangesBar

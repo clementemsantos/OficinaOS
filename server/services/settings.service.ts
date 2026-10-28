@@ -10,6 +10,7 @@ import type {
   UpdateWhatsAppSettingsInput,
 } from "@shared/schemas/settings.schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../lib/crypto.js";
+import { assertNotDemoMode } from "../lib/demo.js";
 import { findNotificationTemplateUnique } from "../repositories/notification.repository.js";
 import {
   findAiSettingsUnique,
@@ -149,6 +150,7 @@ const shopCreate = (input: UpdateShopSettingsInput) => ({
   printerMode: input.printerMode ?? "browser",
   printerHost: input.printerHost ?? null,
   printerPort: input.printerPort ?? 9100,
+  printerHighContrast: input.printerHighContrast ?? false,
   monthlyRevenueGoal: input.monthlyRevenueGoal ?? null,
   reviewUrl: input.reviewUrl?.trim() || null,
   embedAllowedOrigins: normalizeOriginList(input.embedAllowedOrigins),
@@ -171,6 +173,7 @@ const shopUpdate = (input: UpdateShopSettingsInput) => ({
   printerMode: input.printerMode,
   printerHost: input.printerHost,
   printerPort: input.printerPort,
+  printerHighContrast: input.printerHighContrast,
   monthlyRevenueGoal:
     input.monthlyRevenueGoal === undefined
       ? undefined
@@ -218,6 +221,7 @@ export async function updateNotificationTemplate(
 }
 
 export async function testAiConnection(prisma: PrismaClient) {
+  assertNotDemoMode();
   const settings = await findAiSettingsUnique(prisma);
   if (!settings) {
     return { message: "AI settings not configured", success: false };

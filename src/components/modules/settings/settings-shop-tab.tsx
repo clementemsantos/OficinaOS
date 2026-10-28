@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
+import { parseRevenueGoalInput } from "@/lib/parse-revenue-goal";
 import { getPhonePlaceholder } from "@/lib/phone-formats";
 import { useSettingsStore } from "@/stores/settings";
 
@@ -155,6 +156,7 @@ const SHOP_FORM_DEFAULT = {
   printerMode: "browser" as "browser" | "escpos",
   printerHost: "",
   printerPort: 9100,
+  printerHighContrast: false,
   monthlyRevenueGoal: "",
   reviewUrl: "",
 };
@@ -181,6 +183,7 @@ function formFromSettings(shopSettings: ShopSettings) {
       : "browser") as "browser" | "escpos",
     printerHost: shopSettings.printerHost ?? "",
     printerPort: shopSettings.printerPort ?? 9100,
+    printerHighContrast: shopSettings.printerHighContrast ?? false,
     monthlyRevenueGoal:
       shopSettings.monthlyRevenueGoal === null ||
       shopSettings.monthlyRevenueGoal === undefined
@@ -216,6 +219,7 @@ export default function SettingsShopTab({
 
   const [shopForm, setShopForm] = useState(SHOP_FORM_DEFAULT);
   const [shopFormInitial, setShopFormInitial] = useState(shopForm);
+  const [goalError, setGoalError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     requestSubmit: () => formRef.current?.requestSubmit(),
@@ -227,6 +231,7 @@ export default function SettingsShopTab({
       const form = formFromSettings(shopSettings);
       setShopForm(form);
       setShopFormInitial(form);
+      setGoalError(null);
     }
   }, [shopSettings]);
 
@@ -244,14 +249,18 @@ export default function SettingsShopTab({
       onToast(t("settings_error_shop_name_required"), "error");
       return;
     }
+    const parsedGoal = parseRevenueGoalInput(shopForm.monthlyRevenueGoal);
+    if (parsedGoal === undefined) {
+      // Never turn a typo into a silent `null` — keep the field and explain.
+      setGoalError(t("shop_revenue_goal_invalid"));
+      return;
+    }
+    setGoalError(null);
     onSavingChange(true);
     try {
-      const goal = shopForm.monthlyRevenueGoal.trim();
-      const parsedGoal = Number(goal.replace(",", "."));
       await saveShopSettings({
         ...shopForm,
-        monthlyRevenueGoal:
-          goal === "" || !Number.isFinite(parsedGoal) ? null : parsedGoal,
+        monthlyRevenueGoal: parsedGoal,
         printerHost: shopForm.printerHost.trim() || null,
       });
       setShopFormInitial({ ...shopForm });
@@ -397,6 +406,7 @@ export default function SettingsShopTab({
             />
           </Field>
           <Field
+            error={goalError}
             hint={t("shop_revenue_goal_help")}
             label={t("shop_revenue_goal")}
           >
@@ -408,6 +418,7 @@ export default function SettingsShopTab({
                   ...f,
                   monthlyRevenueGoal: e.target.value,
                 }));
+                setGoalError(null);
                 onDirtyChange(true);
               }}
               placeholder="2500"
@@ -508,6 +519,26 @@ export default function SettingsShopTab({
               </Field>
             </>
           )}
+        </div>
+        <div className="mt-5 flex items-center gap-3">
+          <span
+            className="flex-1 font-medium text-on-surface-variant text-sm"
+            id="print-high-contrast-label"
+          >
+            {t("print_high_contrast")}
+            <span className="mt-0.5 block font-normal text-xs">
+              {t("print_high_contrast_help")}
+            </span>
+          </span>
+          <Switch
+            ariaLabelledBy="print-high-contrast-label"
+            checked={shopForm.printerHighContrast}
+            id="print-high-contrast"
+            onChange={(checked) => {
+              setShopForm((f) => ({ ...f, printerHighContrast: checked }));
+              onDirtyChange(true);
+            }}
+          />
         </div>
         {shopForm.printerMode === "escpos" && (
           <button

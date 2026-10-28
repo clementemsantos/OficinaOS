@@ -1,4 +1,4 @@
-import type { RoleType } from "@shared/constants/roles";
+import { Role, type RoleType } from "@shared/constants/roles";
 import { AppError } from "@shared/errors/app-error.js";
 import {
   activityListQuerySchema,
@@ -10,6 +10,7 @@ import {
   userListQuerySchema,
 } from "@shared/schemas/auth.schema";
 import type { FastifyPluginAsync } from "fastify";
+import { assertNotDemoMode } from "../lib/demo.js";
 import { requirePermission } from "../middlewares/rbac.js";
 import { deleteAvatar, uploadAvatar } from "../services/avatar.service.js";
 import {
@@ -72,7 +73,13 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
           ),
         });
       }
-      const result = await listUsers(app.prisma, parsed.data);
+      // Owners manage accounts and need the full row. Everyone else only
+      // needs a picker (assignee/technician), so return the minimal DTO.
+      const result = await listUsers(
+        app.prisma,
+        parsed.data,
+        getRole(request) !== Role.OWNER
+      );
       return reply.send(result);
     }
   );
@@ -107,8 +114,15 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
         body: { type: "object", additionalProperties: true },
       },
       preHandler: [requirePermission({ user: ["create"] })],
+      // User creation is the only 10/min endpoint in this family — the
+      // central map's prefix match would cap GETs too, so the budget
+      // lives on the route itself.
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     },
     async (request, reply) => {
+      // Defense in depth — the global demo guard already rejects this,
+      // but a bypass must never turn into a created user.
+      assertNotDemoMode();
       const parsed = createUserSchema.safeParse(request.body);
       if (!parsed.success) {
         throw new AppError("VALIDATION_ERROR", {
@@ -153,6 +167,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       preHandler: [requirePermission({ user: ["update"] })],
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id } = request.params as { id: string };
       const parsed = toggleUserStatusSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -195,6 +210,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       preHandler: [requirePermission({ user: ["update"] })],
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id } = request.params as { id: string };
       const parsed = resetPasswordSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -232,6 +248,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id } = request.params as { id: string };
 
       if (!(await canAccessUser(request.user, id, { user: ["update"] }))) {
@@ -366,6 +383,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id, sessionId } = request.params as {
         id: string;
         sessionId: string;
@@ -395,6 +413,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id } = request.params as { id: string };
 
       if (getUserId(request) !== id) {
@@ -432,6 +451,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
+      assertNotDemoMode();
       const { id } = request.params as { id: string };
 
       if (getUserId(request) !== id) {
