@@ -48,6 +48,7 @@ interface AddPartModalProps {
   editingPart?: PartsCatalog | null;
   onClose: () => void;
   onSubmit: (data: AddPartSubmitData) => Promise<void> | void;
+  terminology?: "part" | "item";
 }
 
 const PRICE_REGEX = /^\d*\.?\d{0,2}$/;
@@ -99,6 +100,7 @@ function isDirty(
 }
 
 export default function AddPartModal({
+  terminology = "part",
   editingPart,
   onClose,
   onSubmit,
@@ -238,10 +240,20 @@ export default function AddPartModal({
                   className="font-bold font-headline text-on-surface text-xl tracking-tight"
                   id="add-part-modal-title"
                 >
-                  {isEditing ? t("edit_part") : t("add_part_modal.title")}
+                  {isEditing
+                    ? t("edit_part")
+                    : t(
+                        terminology === "item"
+                          ? "order_lines.new_item"
+                          : "add_part_modal.title"
+                      )}
                 </h2>
                 <p className="mt-0.5 text-on-surface-variant text-sm">
-                  {t("add_part_modal.subtitle")}
+                  {t(
+                    terminology === "item"
+                      ? "order_lines.item_hint"
+                      : "add_part_modal.subtitle"
+                  )}
                 </p>
               </div>
               <button
@@ -258,7 +270,11 @@ export default function AddPartModal({
           <div className="flex flex-col gap-5 px-6 py-6">
             <div>
               <Label className="mb-2 block" htmlFor="part-name">
-                {t("add_part_modal.part_name")}
+                {t(
+                  terminology === "item"
+                    ? "order_lines.item_name"
+                    : "add_part_modal.part_name"
+                )}
               </Label>
               <Input
                 aria-describedby={errors.name ? "error-part-name" : undefined}
@@ -266,7 +282,11 @@ export default function AddPartModal({
                 autoComplete="off"
                 id="part-name"
                 onChange={(e) => update("name", e.target.value)}
-                placeholder={t("add_part_modal.part_name_placeholder")}
+                placeholder={t(
+                  terminology === "item"
+                    ? "order_lines.item_placeholder"
+                    : "add_part_modal.part_name_placeholder"
+                )}
                 required
                 value={form.name}
               />
@@ -482,7 +502,13 @@ export default function AddPartModal({
               loading={submitting}
               type="submit"
             >
-              {isEditing ? t("save") : t("add_part_modal.add_part")}
+              {isEditing
+                ? t("save")
+                : t(
+                    terminology === "item"
+                      ? "order_lines.create_item"
+                      : "add_part_modal.add_part"
+                  )}
             </Button>
           </div>
         </form>

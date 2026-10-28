@@ -49,6 +49,16 @@ function build() {
   return { app, db };
 }
 describe("order and repair case overviews", () => {
+  it("supports the mixed-order filter before pagination", async () => {
+    const { app, db } = build();
+    expect((await app.inject({ url: "/orders?kind=MIXED" })).statusCode).toBe(
+      200
+    );
+    expect(db.purchaseOrder.findMany.mock.calls[0]?.[0]).toMatchObject({
+      where: { kind: "MIXED" },
+    });
+    await app.close();
+  });
   it("combines state and text search before pagination, returning state without financial access", async () => {
     const { app, db } = build();
     const res = await app.inject({

@@ -63,6 +63,34 @@ function setup() {
   return { db, tx, existing, prisma: db as unknown as PrismaClient };
 }
 describe("purchase orders with multiple products", () => {
+  it("accepts mixed parts and products while preserving line links, quantities and totals", async () => {
+    const { prisma, tx } = setup();
+    await createOrder(
+      prisma,
+      createOrderFields.parse({
+        title: "Screen and laptop",
+        kind: "MIXED",
+        partId: "p1",
+        lines: [
+          { ...base, name: "Screen", partId: "p1", quantity: 1 },
+          { ...base, name: "Laptop", partId: "p2", quantity: 2 },
+        ],
+      })
+    );
+    const data = tx.purchaseOrder.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      kind: "MIXED",
+      partId: "p1",
+      costGross: "369.00",
+      quoteGross: "738.00",
+    });
+    expect(data.lines.create).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Screen", partId: "p1", quantity: 1 }),
+        expect.objectContaining({ name: "Laptop", partId: "p2", quantity: 2 }),
+      ])
+    );
+  });
   it("does not let a changed quote fall below payments already received", async () => {
     const { prisma, tx, existing } = setup();
     tx.orderPayment.aggregate.mockResolvedValue({

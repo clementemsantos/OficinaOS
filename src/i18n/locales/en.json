@@ -2676,7 +2676,8 @@
       "SUSPENDED": "Suspended",
       "ENDED": "Ended",
       "PRODUCT": "Product order",
-      "PART": "Parts order"
+      "PART": "Parts order",
+      "MIXED": "Parts and products"
     },
     "open_record": "Open record"
   },
@@ -2703,11 +2704,11 @@
     "customer": "Customer"
   },
   "order_lines": {
-    "title": "Products in this order",
-    "add": "Add product line",
-    "line_title": "Product line",
-    "catalog_product": "Search inventory (optional)",
-    "description": "Product / description",
+    "title": "Order parts and products",
+    "add": "Add part or product",
+    "line_title": "Order part / product",
+    "catalog_product": "Search inventory parts and products (optional)",
+    "description": "Part / product / description",
     "costGross": "Unit cost incl. VAT",
     "quoteGross": "Unit customer price incl. VAT",
     "costVatRate": "Purchase VAT (%)",
@@ -2715,14 +2716,19 @@
     "line_total": "Line total incl. VAT",
     "total_cost": "Total cost incl. VAT",
     "total_quote": "Customer total incl. VAT",
-    "empty": "No products added yet.",
+    "empty": "No parts or products added yet.",
     "apply": "Apply line",
     "invalid": "Check the description, quantity, amounts, VAT rates and purchase link.",
-    "stock_hint": "Adding products to an order does not move inventory stock.",
+    "stock_hint": "Adding parts or products to an order does not move inventory stock.",
     "conflict": "This order was changed elsewhere. Reload it before saving again.",
     "saved": "Order saved.",
-    "limit": "Add between 1 and 100 valid product lines.",
-    "new_order": "New order"
+    "limit": "Add between 1 and 100 valid part or product lines.",
+    "new_order": "New order",
+    "new_item": "Add inventory part or product",
+    "item_hint": "Create an item for this order and other operations.",
+    "item_name": "Part / product name",
+    "item_placeholder": "E.g. phone screen, laptop or keyboard",
+    "create_item": "Add item"
   },
   "supplier_vat": {
     "charges": "Supplier charges VAT on purchases",
@@ -2783,7 +2789,7 @@
     "margin": "Margin",
     "open": "Open order",
     "status": "Status",
-    "search": "Search reference, product or contact",
+    "search": "Search reference, part, product or contact",
     "all": "All",
     "kind": "Type",
     "product": "Products",
@@ -2791,7 +2797,8 @@
     "from": "From",
     "to": "Through",
     "filter": "Apply filters",
-    "clear": "Clear filters"
+    "clear": "Clear filters",
+    "mixed": "Parts and products"
   },
   "rma_discount": {
     "title": "Remove the RMA part value",

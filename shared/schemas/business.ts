@@ -70,7 +70,7 @@ export const orderFields = z.object({
   ...parties,
   notes: z.string().max(8000).optional(),
   reference: z.string().max(100).optional(),
-  kind: z.enum(["PRODUCT", "PART"]).default("PRODUCT"),
+  kind: z.enum(["PRODUCT", "PART", "MIXED"]).default("PRODUCT"),
   purchaseUrl: z
     .union([z.literal(""), z.url().refine((value) => HTTP_URL.test(value))])
     .optional(),

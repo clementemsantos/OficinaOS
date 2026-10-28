@@ -71,6 +71,7 @@ export function OrderFilters({
           <option value="">{t("orders_list.all")}</option>
           <option value="PRODUCT">{t("orders_list.product")}</option>
           <option value="PART">{t("orders_list.part")}</option>
+          <option value="MIXED">{t("orders_list.mixed")}</option>
         </Select>
       </label>
       {(

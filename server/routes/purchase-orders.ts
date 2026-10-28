@@ -197,7 +197,7 @@ export const purchaseOrdersRoutes: FastifyPluginAsync = (app) => {
       z.object({
         q: z.string().trim().max(100).optional(),
         stateId: z.string().optional(),
-        kind: z.enum(["PRODUCT", "PART"]).optional(),
+        kind: z.enum(["PRODUCT", "PART", "MIXED"]).optional(),
         from: z.iso.date().optional(),
         to: z.iso.date().optional(),
         cursor: z.string().optional(),

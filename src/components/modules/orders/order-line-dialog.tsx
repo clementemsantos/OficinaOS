@@ -75,6 +75,7 @@ export function OrderLineDialog({
             });
           }}
           onCreatingChange={setCreatingPart}
+          terminology="item"
           value={form.partId ?? ""}
         />
       </Field>

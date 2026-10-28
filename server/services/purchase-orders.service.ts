@@ -67,7 +67,7 @@ async function validateReferences(
   if ((await Promise.all(references)).some((row) => !row)) {
     throw new AppError("NOT_FOUND");
   }
-  if (header.partId && header.kind !== "PART") {
+  if (header.partId && header.kind === "PRODUCT") {
     throw new AppError("VALIDATION_ERROR");
   }
 }

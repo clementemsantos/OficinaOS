@@ -45,6 +45,9 @@ describe("inventory creation from an order", () => {
     fireEvent.change(screen.getByLabelText("workflow.order_title"), {
       target: { value: "New keyboard" },
     });
+    fireEvent.change(screen.getByLabelText("business.fields.kind"), {
+      target: { value: "MIXED" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "order_lines.add" }));
     const lineDialog = screen.getByRole("dialog", {
       name: "order_lines.line_title",
@@ -58,9 +61,9 @@ describe("inventory creation from an order", () => {
       within(lineDialog).getByRole("button", { name: "catalog.create" })
     );
     const partDialog = screen.getByRole("dialog", {
-      name: "add_part_modal.title",
+      name: "order_lines.new_item",
     });
-    const name = within(partDialog).getByLabelText("add_part_modal.part_name");
+    const name = within(partDialog).getByLabelText("order_lines.item_name");
     name.focus();
     for (const value of ["K", "Ke", "Keyboard"]) {
       fireEvent.change(name, { target: { value } });
@@ -82,12 +85,12 @@ describe("inventory creation from an order", () => {
     );
     fireEvent.click(
       within(partDialog).getByRole("button", {
-        name: "add_part_modal.add_part",
+        name: "order_lines.create_item",
       })
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "add_part_modal.title" })
+        screen.queryByRole("dialog", { name: "order_lines.new_item" })
       ).not.toBeInTheDocument()
     );
     expect(mocks.post).toHaveBeenCalledTimes(1);
@@ -111,6 +114,7 @@ describe("inventory creation from an order", () => {
     expect(mocks.post).toHaveBeenCalledWith(
       "/purchase-orders",
       expect.objectContaining({
+        kind: "MIXED",
         lines: [
           expect.objectContaining({
             partId: "part-new",

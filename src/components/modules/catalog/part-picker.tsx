@@ -21,7 +21,9 @@ export function PartPicker({
   initialPart,
   label,
   onCreatingChange,
+  terminology = "part",
 }: {
+  terminology?: "part" | "item";
   id?: string;
   value: string;
   onChange: (id: string, part?: CatalogPartOption) => void;
@@ -92,6 +94,7 @@ export function PartPicker({
             onChange(data.id, data);
             setCreating(false);
           }}
+          terminology={terminology}
         />
       )}
     </>

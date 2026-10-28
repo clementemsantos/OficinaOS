@@ -2676,7 +2676,8 @@
       "SUSPENDED": "Suspenso",
       "ENDED": "Terminado",
       "PRODUCT": "Encomenda de produto",
-      "PART": "Encomenda de peças"
+      "PART": "Encomenda de peças",
+      "MIXED": "Peças e produtos"
     },
     "open_record": "Abrir registo"
   },
@@ -2703,11 +2704,11 @@
     "customer": "Cliente"
   },
   "order_lines": {
-    "title": "Produtos da encomenda",
-    "add": "Adicionar linha de produto",
-    "line_title": "Linha de produto",
-    "catalog_product": "Pesquisar no inventário (opcional)",
-    "description": "Produto / descrição",
+    "title": "Peças e produtos da encomenda",
+    "add": "Adicionar peça ou produto",
+    "line_title": "Peça / produto da encomenda",
+    "catalog_product": "Pesquisar peças e produtos no inventário (opcional)",
+    "description": "Peça / produto / descrição",
     "costGross": "Custo unitário com IVA",
     "quoteGross": "Preço unitário ao cliente com IVA",
     "costVatRate": "IVA da compra (%)",
@@ -2715,14 +2716,19 @@
     "line_total": "Total da linha com IVA",
     "total_cost": "Custo total com IVA",
     "total_quote": "Total ao cliente com IVA",
-    "empty": "Ainda não adicionou produtos.",
+    "empty": "Ainda não adicionou peças ou produtos.",
     "apply": "Aplicar linha",
     "invalid": "Verifique a descrição, quantidade, valores, taxas de IVA e ligação de compra.",
-    "stock_hint": "Adicionar produtos à encomenda não movimenta o stock do inventário.",
+    "stock_hint": "Adicionar peças ou produtos à encomenda não movimenta o stock do inventário.",
     "conflict": "Esta encomenda foi alterada noutro local. Volte a carregá-la antes de guardar.",
     "saved": "Encomenda guardada.",
-    "limit": "Adicione entre 1 e 100 linhas de produtos válidas.",
-    "new_order": "Nova encomenda"
+    "limit": "Adicione entre 1 e 100 linhas de peças ou produtos válidas.",
+    "new_order": "Nova encomenda",
+    "new_item": "Adicionar peça ou produto ao inventário",
+    "item_hint": "Crie o artigo para o utilizar nesta encomenda e noutras operações.",
+    "item_name": "Nome da peça / produto",
+    "item_placeholder": "Ex.: ecrã iPhone, portátil ou teclado",
+    "create_item": "Adicionar artigo"
   },
   "supplier_vat": {
     "charges": "Fornecedor cobra IVA na compra",
@@ -2783,7 +2789,7 @@
     "margin": "Margem",
     "open": "Abrir encomenda",
     "status": "Estado",
-    "search": "Pesquisar referência, produto ou contacto",
+    "search": "Pesquisar referência, peça, produto ou contacto",
     "all": "Todos",
     "kind": "Tipo",
     "product": "Produtos",
@@ -2791,7 +2797,8 @@
     "from": "Desde",
     "to": "Até",
     "filter": "Aplicar filtros",
-    "clear": "Limpar filtros"
+    "clear": "Limpar filtros",
+    "mixed": "Peças e produtos"
   },
   "rma_discount": {
     "title": "Retirar valor da peça em RMA",

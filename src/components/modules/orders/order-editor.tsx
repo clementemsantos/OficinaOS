@@ -101,7 +101,7 @@ export function OrderEditor({
         customerId: form.customerId || null,
         jobId: form.jobId || null,
         customCategoryId: form.customCategoryId || null,
-        partId: form.kind === "PART" ? (order?.partId ?? null) : null,
+        partId: form.kind === "PRODUCT" ? null : (order?.partId ?? null),
         lines: parsed.data,
       };
       const response = order
@@ -160,7 +160,7 @@ export function OrderEditor({
               }
               value={form.kind}
             >
-              {["PRODUCT", "PART"].map((kind) => (
+              {["PRODUCT", "PART", "MIXED"].map((kind) => (
                 <option key={kind} value={kind}>
                   {t(`business.values.${kind}`)}
                 </option>
