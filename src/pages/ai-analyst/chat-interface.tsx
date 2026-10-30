@@ -6,13 +6,14 @@ import React, {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import AgentSelector from "@/components/modules/ai-analyst/agent-selector";
 import ChatEmptyState from "@/components/modules/ai-analyst/chat-empty-state";
 import { Button } from "@/components/ui/button";
 import { useModalEffects } from "@/hooks/use-modal-effects";
 import api, { fetchCsrfToken } from "@/lib/api";
+import { readInovitoDraft } from "@/lib/inovito-intents";
 import { createRequestId } from "@/lib/request-id";
 import { useAiChatStore } from "@/stores/ai-chat";
 
@@ -416,6 +417,8 @@ interface ChatInterfaceProps {
 
 function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const activeConversationId = useAiChatStore((s) => s.activeConversationId);
   const getDraft = useAiChatStore((s) => s.getDraft);
   const setDraft = useAiChatStore((s) => s.setDraft);
@@ -425,6 +428,7 @@ function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [inovitoSuggestion, setInovitoSuggestion] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [agentName, setAgentName] = useState(
     () => localStorage.getItem(AGENT_NAME_STORAGE_KEY) ?? DEFAULT_AGENT
@@ -441,6 +445,15 @@ function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);
+
+  useEffect(() => {
+    const suggestedQuestion = readInovitoDraft(location.state);
+    if (!suggestedQuestion) {
+      return;
+    }
+    setInovitoSuggestion(suggestedQuestion);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const scrollToBottom = useCallback(() => {
     userScrolledUpRef.current = false;
@@ -1056,6 +1069,42 @@ function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
         )}
 
         <div className="shrink-0 border-outline-variant border-t bg-surface-container-lowest px-4 py-3 md:px-6">
+          {inovitoSuggestion && (
+            <div className="mx-auto mb-2 max-w-3xl rounded-xl border border-outline-variant bg-surface-container-high p-3">
+              <p className="font-semibold text-on-surface text-sm">
+                Pergunta preparada pelo Inovito
+              </p>
+              <p className="mt-1 break-words text-on-surface text-sm">
+                {inovitoSuggestion}
+              </p>
+              <p className="mt-1 text-on-surface-variant text-xs">
+                Nada foi enviado à IA. Revê o texto antes de enviar.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  disabled={isTyping || !agentEnabled}
+                  onClick={() => {
+                    setInput(inovitoSuggestion);
+                    setInovitoSuggestion(null);
+                    inputRef.current?.focus();
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  Usar no campo
+                </Button>
+                <Button
+                  onClick={() => setInovitoSuggestion(null)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Descartar
+                </Button>
+              </div>
+            </div>
+          )}
           <form
             className="mx-auto flex max-w-3xl gap-2"
             onSubmit={handleSubmit}
