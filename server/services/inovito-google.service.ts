@@ -1,4 +1,9 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { loadEnv, resolveUrls } from "../config/env.js";
 import { decryptSecret, encryptSecret } from "../lib/crypto.js";
 
@@ -60,11 +65,16 @@ export function verifyGoogleState(
   }
   const expected = hmac(parts[0], secret);
   const received = Buffer.from(parts[1], "base64url");
-  if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+  if (
+    received.length !== expected.length ||
+    !timingSafeEqual(received, expected)
+  ) {
     return null;
   }
   try {
-    const data = JSON.parse(Buffer.from(parts[0], "base64url").toString()) as StatePayload;
+    const data = JSON.parse(
+      Buffer.from(parts[0], "base64url").toString()
+    ) as StatePayload;
     if (
       data.userId !== userId ||
       data.sessionId !== sessionId ||
@@ -92,10 +102,18 @@ function connectionConfig() {
   const clientId = process.env.INOVITO_GOOGLE_CLIENT_ID;
   const clientSecret = process.env.INOVITO_GOOGLE_CLIENT_SECRET;
   const url = new URL(apiUrl || "http://localhost:4000");
-  if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+  if (
+    url.protocol !== "https:" &&
+    url.hostname !== "localhost" &&
+    url.hostname !== "127.0.0.1"
+  ) {
     return null;
   }
-  if (!(clientId && clientSecret) || env.DEMO_MODE || process.env.OFICINAOS_SANDBOX === "true") {
+  if (
+    !(clientId && clientSecret) ||
+    env.DEMO_MODE ||
+    process.env.OFICINAOS_SANDBOX === "true"
+  ) {
     return null;
   }
   return {
@@ -110,13 +128,18 @@ export function googleIsConfigured(): boolean {
   return connectionConfig() !== null;
 }
 
-export function createGoogleAuthorizeUrl(userId: string, sessionId: string): string | null {
+export function createGoogleAuthorizeUrl(
+  userId: string,
+  sessionId: string
+): string | null {
   const config = connectionConfig();
   if (!config) {
     return null;
   }
   const state = makeGoogleState(userId, sessionId, config.stateSecret);
-  const payload = JSON.parse(Buffer.from(state.split(".")[0], "base64url").toString()) as StatePayload;
+  const payload = JSON.parse(
+    Buffer.from(state.split(".")[0], "base64url").toString()
+  ) as StatePayload;
   const verifier = googlePkceVerifier(payload.nonce, config.stateSecret);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -139,7 +162,9 @@ interface TokenResponse {
   scope?: string;
 }
 
-async function requestGoogleToken(params: URLSearchParams): Promise<TokenResponse> {
+async function requestGoogleToken(
+  params: URLSearchParams
+): Promise<TokenResponse> {
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -162,18 +187,25 @@ export async function exchangeGoogleCode(
   if (!config) {
     throw new Error("Google OAuth not configured");
   }
-  const payload = verifyGoogleState(state, userId, sessionId, config.stateSecret);
+  const payload = verifyGoogleState(
+    state,
+    userId,
+    sessionId,
+    config.stateSecret
+  );
   if (!payload || !code || code.length > 2048) {
     throw new Error("Invalid Google OAuth response");
   }
-  const token = await requestGoogleToken(new URLSearchParams({
-    code,
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    code_verifier: googlePkceVerifier(payload.nonce, config.stateSecret),
-    redirect_uri: config.redirectUri,
-    grant_type: "authorization_code",
-  }));
+  const token = await requestGoogleToken(
+    new URLSearchParams({
+      code,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      code_verifier: googlePkceVerifier(payload.nonce, config.stateSecret),
+      redirect_uri: config.redirectUri,
+      grant_type: "authorization_code",
+    })
+  );
   if (!(token.access_token && token.refresh_token)) {
     throw new Error("No offline access granted by Google");
   }
@@ -186,7 +218,10 @@ export async function exchangeGoogleCode(
     refreshToken: token.refresh_token,
     expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000,
   };
-  return { credentials: encryptSecret(JSON.stringify(credentials)), scopes: GOOGLE_READ_SCOPES.join(" ") };
+  return {
+    credentials: encryptSecret(JSON.stringify(credentials)),
+    scopes: GOOGLE_READ_SCOPES.join(" "),
+  };
 }
 
 export async function googleAccessToken(encrypted: string): Promise<{
@@ -204,12 +239,14 @@ export async function googleAccessToken(encrypted: string): Promise<{
   if (parsed.accessToken && Date.now() < parsed.expiresAt - 60_000) {
     return { accessToken: parsed.accessToken, updatedCredentials: null };
   }
-  const token = await requestGoogleToken(new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    refresh_token: parsed.refreshToken,
-    grant_type: "refresh_token",
-  }));
+  const token = await requestGoogleToken(
+    new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      refresh_token: parsed.refreshToken,
+      grant_type: "refresh_token",
+    })
+  );
   if (!token.access_token) {
     throw new Error("Google token refresh failed");
   }
@@ -218,7 +255,10 @@ export async function googleAccessToken(encrypted: string): Promise<{
     refreshToken: parsed.refreshToken,
     expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000,
   };
-  return { accessToken: next.accessToken, updatedCredentials: encryptSecret(JSON.stringify(next)) };
+  return {
+    accessToken: next.accessToken,
+    updatedCredentials: encryptSecret(JSON.stringify(next)),
+  };
 }
 
 async function googleGet(url: URL, accessToken: string): Promise<unknown> {
@@ -239,7 +279,10 @@ export interface GoogleOverview {
 }
 
 interface GoogleCalendarData {
-  items?: Array<{ summary?: string; start?: { dateTime?: string; date?: string } }>;
+  items?: Array<{
+    summary?: string;
+    start?: { dateTime?: string; date?: string };
+  }>;
 }
 interface GoogleListsData {
   items?: Array<{ id?: string; title?: string }>;
@@ -251,8 +294,7 @@ interface GoogleMailData {
   resultSizeEstimate?: number;
 }
 
-export async function fetchGoogleOverview(accessToken: string): Promise<GoogleOverview> {
-  const eventsUrl = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
+export async function fetchGoogleOverview(
   eventsUrl.searchParams.set("timeMin", new Date().toISOString());
   eventsUrl.searchParams.set("maxResults", "8");
   eventsUrl.searchParams.set("singleEvents", "true");
