@@ -20,11 +20,11 @@ export const inovitoMetaWebhookRoutes: FastifyPluginAsync = (app) => {
     (_req, body, done) => done(null, body)
   );
 
-  app.get("/webhook", async (req, reply) => {
+  app.get("/webhook", (req, reply) => {
     reply.header("cache-control", "no-store");
     const enabled = process.env.INOVITO_META_WEBHOOK_ENABLED === "true";
     const token = process.env.INOVITO_META_VERIFY_TOKEN ?? "";
-    if (!enabled || !token) {
+    if (!(enabled && token)) {
       return reply.code(404).send("Not found");
     }
     const challenge = verifyMetaChallenge(req.query, token);
@@ -39,15 +39,13 @@ export const inovitoMetaWebhookRoutes: FastifyPluginAsync = (app) => {
     const enabled = process.env.INOVITO_META_WEBHOOK_ENABLED === "true";
     const secret = process.env.INOVITO_META_APP_SECRET ?? "";
     const raw = req.body;
-    if (!enabled || !secret) {
+    if (!(enabled && secret)) {
       return reply.code(404).send({ error: "Not enabled" });
     }
     if (
-      !Buffer.isBuffer(raw) ||
-      !verifyMetaSignature(
-        raw,
-        req.headers["x-hub-signature-256"],
-        secret
+      !(
+        Buffer.isBuffer(raw) &&
+        verifyMetaSignature(raw, req.headers["x-hub-signature-256"], secret)
       )
     ) {
       return reply.code(401).send({ error: "Invalid signature" });
