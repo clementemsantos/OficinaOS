@@ -91,61 +91,86 @@ const messengerEnvelope = z.object({
   })).optional(),
 });
 
-/** Accept only inbound text for the configured business number/page. */
+function parseWhatsApp(
+  body: unknown,
+  whatsappPhoneId: string
+): IncomingMetaText[] {
+  const payload = whatsappEnvelope.safeParse(body);
+  if (!payload.success || !whatsappPhoneId) {
+    return [];
+  }
+  const results: IncomingMetaText[] = [];
+  for (const entry of payload.data.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      if (change.value.metadata?.phone_number_id !== whatsappPhoneId) {
+        continue;
+      }
+      for (const message of change.value.messages ?? []) {
+        const text = message.text?.body.trim();
+        if (
+          message.type !== "text" ||
+          !text ||
+          !message.id ||
+          !message.from ||
+          text.length > 4000
+        ) {
+          continue;
+        }
+        results.push({
+          channel: "WHATSAPP",
+          correspondent: message.from,
+          externalId: [whatsappPhoneId, message.id].join(":").slice(0, 450),
+          text,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+function parseMessenger(
+  body: unknown,
+  messengerPageId: string
+): IncomingMetaText[] {
+  const payload = messengerEnvelope.safeParse(body);
+  if (!payload.success || !messengerPageId) {
+    return [];
+  }
+  const results: IncomingMetaText[] = [];
+  for (const entry of payload.data.entry ?? []) {
+    if (entry.id !== messengerPageId) {
+      continue;
+    }
+    for (const item of entry.messaging ?? []) {
+      const message = item.message;
+      const text = message?.text?.trim();
+      if (
+        !(message && text) ||
+        message.is_echo ||
+        !item.sender?.id ||
+        text.length > 4000
+      ) {
+        continue;
+      }
+      results.push({
+        channel: "MESSENGER",
+        correspondent: item.sender.id,
+        externalId: [messengerPageId, message.mid].join(":").slice(0, 450),
+        text,
+      });
+    }
+  }
+  return results;
+}
+
+/** Only inbound text from configured business accounts; capped per delivery. */
 export function extractIncomingMetaText(
   body: unknown,
   whatsappPhoneId: string,
   messengerPageId: string
 ): IncomingMetaText[] {
-  const messages: IncomingMetaText[] = [];
-  const whatsapp = whatsappEnvelope.safeParse(body);
-  if (whatsapp.success && whatsappPhoneId) {
-    for (const entry of whatsapp.data.entry ?? []) {
-      for (const change of entry.changes ?? []) {
-        if (change.value.metadata?.phone_number_id !== whatsappPhoneId) {
-          continue;
-        }
-        for (const message of change.value.messages ?? []) {
-          const value = message.text?.body.trim();
-          if (
-            message.type !== "text" ||
-            !value ||
-            !message.id ||
-            !message.from ||
-            value.length > 4000
-          ) {
-            continue;
-          }
-          messages.push({
-            channel: "WHATSAPP",
-            correspondent: message.from,
-            externalId: [whatsappPhoneId, message.id].join(":").slice(0, 450),
-            text: value,
-          });
-        }
-      }
-    }
-  }
-  const messenger = messengerEnvelope.safeParse(body);
-  if (messenger.success && messengerPageId) {
-    for (const entry of messenger.data.entry ?? []) {
-      if (entry.id !== messengerPageId) {
-        continue;
-      }
-      for (const item of entry.messaging ?? []) {
-        const msg = item.message;
-        const value = msg?.text?.trim();
-        if (!msg || !value || msg.is_echo || !item.sender?.id || value.length > 4000) {
-          continue;
-        }
-        messages.push({
-          channel: "MESSENGER",
-          correspondent: item.sender.id,
-          externalId: [messengerPageId, msg.mid].join(":").slice(0, 450),
-          text: value,
-        });
-      }
-    }
-  }
-  return messages.slice(0, 50);
+  return [
+    ...parseWhatsApp(body, whatsappPhoneId),
+    ...parseMessenger(body, messengerPageId),
+  ].slice(0, 50);
 }
