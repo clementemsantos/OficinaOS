@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import { requirePermission } from "../middlewares/rbac.js";
-import { getSessionId, getUserId } from "../utils/request.js";
 import {
   createGoogleAuthorizeUrl,
   exchangeGoogleCode,
@@ -8,6 +7,7 @@ import {
   googleAccessToken,
   googleIsConfigured,
 } from "../services/inovito-google.service.js";
+import { getSessionId, getUserId } from "../utils/request.js";
 
 export const inovitoRoutes: FastifyPluginAsync = (app) => {
   // All routes (including callback) require an authenticated owner session.
@@ -41,11 +41,13 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
     };
   });
 
-  app.get("/google/connect", async (req, reply) => {
+  app.get("/google/connect", (req, reply) => {
     reply.header("cache-control", "no-store");
     const url = createGoogleAuthorizeUrl(getUserId(req), getSessionId(req));
     if (!url) {
-      return reply.code(409).send({ message: "Integração Google não configurada no servidor." });
+      return reply
+        .code(409)
+        .send({ message: "Integração Google não configurada no servidor." });
     }
     return { url };
   });
