@@ -9,6 +9,10 @@ export function normalizeVoice(text: string): string {
     .trim();
 }
 
+const WAKE_PATTERN = /\binovito\b/;
+const NAVIGATION_PATTERN = /\b(abrir|abre|mostra|mostrar|ver|consulta|consultar|vai|ir|aceder)\b/;
+const HELP_PATTERN = /\b(o que podes fazer|ajuda me|como funcionas|comandos)\b/;
+
 export type HeardVoice =
   | { kind: "ignore" }
   | { kind: "wake" }
@@ -20,7 +24,7 @@ export function parseVoiceInput(
   awaitingCommand = false
 ): HeardVoice {
   const normalized = normalizeVoice(transcript);
-  const match = /\binovito\b/.exec(normalized);
+  const match = WAKE_PATTERN.exec(normalized);
   if (match) {
     const afterWake = normalized.slice(match.index + match[0].length).trim();
     return afterWake ? { kind: "command", text: afterWake } : { kind: "wake" };
@@ -39,7 +43,10 @@ const DESTINATIONS: ReadonlyArray<{ pattern: RegExp; path: string }> = [
   { pattern: /\b(fornecedores?)\b/, path: "/suppliers" },
   { pattern: /\b(stock|inventario|pecas?)\b/, path: "/parts" },
   { pattern: /\b(relatorios?|estatisticas?)\b/, path: "/reports" },
-  { pattern: /\b(assistente|inteligencia artificial|analista)\b/, path: "/ai-analyst" },
+  {
+    pattern: /\b(assistente|inteligencia artificial|analista)\b/,
+    path: "/ai-analyst",
+  },
   { pattern: /\b(painel|inicio|principal)\b/, path: "/" },
   { pattern: /\b(ajuda|manual)\b/, path: "/help" },
 ];
@@ -47,16 +54,15 @@ const DESTINATIONS: ReadonlyArray<{ pattern: RegExp; path: string }> = [
 /** Navegação permitida apenas para comandos explícitos de consulta/abertura. */
 export function matchVoiceDestination(command: string): string | null {
   const normalized = normalizeVoice(command);
-  if (!/\b(abrir|abre|mostra|mostrar|ver|consulta|consultar|vai|ir|aceder)\b/.test(normalized)) {
+  if (!NAVIGATION_PATTERN.test(normalized)) {
     return null;
   }
-  return DESTINATIONS.find((destination) =>
-    destination.pattern.test(normalized)
-  )?.path ?? null;
+  return (
+    DESTINATIONS.find((destination) => destination.pattern.test(normalized))
+      ?.path ?? null
+  );
 }
 
 export function isVoiceHelpRequest(command: string): boolean {
-  return /\b(o que podes fazer|ajuda me|como funcionas|comandos)\b/.test(
-    normalizeVoice(command)
-  );
+  return HELP_PATTERN.test(normalizeVoice(command));
 }
