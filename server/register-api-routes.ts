@@ -16,6 +16,7 @@ import { feedbackRoutes } from "./routes/feedback.js";
 import { healthRoutes } from "./routes/health.js";
 import { intakeRequestsRoutes } from "./routes/intake-requests.js";
 import { integrationsRoutes } from "./routes/integrations.js";
+import { inovitoRoutes } from "./routes/inovito.js";
 import { invoicingRoutes } from "./routes/invoicing.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { keymasterRoutes } from "./routes/keymaster.js";
@@ -86,6 +87,7 @@ export async function registerApiRoutes(app: FastifyInstance): Promise<void> {
   app.register(workflowRoutes, { prefix: "/api/workflow" });
   app.register(onlineBackupRoutes, { prefix: "/api/online-backup" });
   app.register(integrationsRoutes, { prefix: "/api/integrations" });
+  app.register(inovitoRoutes, { prefix: "/api/inovito" });
   app.register(documentsRoutes, { prefix: "/api/documents" });
   app.register(businessRoutes, { prefix: "/api/business" });
   app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
