@@ -340,9 +340,9 @@ export default function InovitoMobilePage() {
                 </div>
               )}
               <p className="mt-2 text-on-surface-variant text-xs">
-                Apresenta o remetente e o assunto de até 5 e-mails não lidos.
-                O corpo e os anexos não são lidos nem guardados no OficinaOS.
-                Não apresentar o painel perante clientes.
+                Apresenta o remetente e o assunto de até 5 e-mails não lidos. O
+                corpo e os anexos não são lidos nem guardados no OficinaOS. Não
+                apresentar o painel perante clientes.
               </p>
             </article>
           </div>
