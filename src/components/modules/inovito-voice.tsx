@@ -35,11 +35,18 @@ interface BrowserSpeechRecognition {
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onresult: ((event: VoiceEvent) => void) | null;
+  processLocally?: boolean;
   start: () => void;
   stop: () => void;
 }
 
-type SpeechConstructor = new () => BrowserSpeechRecognition;
+interface SpeechConstructor {
+  new (): BrowserSpeechRecognition;
+  available?: (options: {
+    langs: string[];
+    processLocally: boolean;
+  }) => Promise<string>;
+}
 
 const GREETING_PATTERN = /\b(bom dia|boa tarde|boa noite|ola)\b/;
 
@@ -62,6 +69,7 @@ export default function InovitoVoice() {
   const [enabled, setEnabled] = useState(false);
   const [continuousMode, setContinuousMode] = useState(false);
   const [typedCommand, setTypedCommand] = useState("");
+  const [checkingLocal, setCheckingLocal] = useState(false);
   const [status, setStatus] = useState("Desligado");
   const [feedback, setFeedback] = useState(
     "Carrega em «Falar» e diz, por exemplo, «resumo da loja»."
@@ -210,6 +218,9 @@ export default function InovitoVoice() {
     recognizer.lang = "pt-PT";
     recognizer.continuous = continuousMode;
     recognizer.interimResults = false;
+    if (continuousMode) {
+      recognizer.processLocally = true;
+    }
     recognizerRef.current = recognizer;
     listeningRef.current = true;
 
@@ -314,6 +325,44 @@ export default function InovitoVoice() {
     };
   }, [continuousMode, enabled, handleSpokenCommand, speak, startRecognition]);
 
+  const toggleContinuousMode = useCallback(() => {
+    if (continuousMode) {
+      setContinuousMode(false);
+      setFeedback("Modo por botão ativo.");
+      return;
+    }
+    const Constructor = recognitionConstructor();
+    if (!Constructor?.available) {
+      setFeedback(
+        "Este navegador não permite verificar reconhecimento local. O modo contínuo permanece indisponível."
+      );
+      return;
+    }
+    setCheckingLocal(true);
+    Constructor.available({
+      langs: ["pt-PT"],
+      processLocally: true,
+    })
+      .then((availability) => {
+        if (availability === "available") {
+          setContinuousMode(true);
+          setFeedback(
+            "Modo experimental local disponível. Carrega em ativar escuta para começar."
+          );
+        } else {
+          setFeedback(
+            "Não existe motor local de português de Portugal pronto neste navegador. O modo contínuo fica desligado."
+          );
+        }
+      })
+      .catch(() => {
+        setFeedback(
+          "Não foi possível verificar o reconhecimento local. O modo contínuo fica desligado."
+        );
+      })
+      .finally(() => setCheckingLocal(false));
+  }, [continuousMode]);
+
   useEffect(
     () => () => {
       summaryRequestRef.current?.abort();
@@ -363,13 +412,15 @@ export default function InovitoVoice() {
       <button
         aria-pressed={continuousMode}
         className="mt-2 w-full text-left text-on-surface-variant text-xs underline disabled:opacity-50"
-        disabled={enabled}
-        onClick={() => setContinuousMode((current) => !current)}
+        disabled={enabled || checkingLocal}
+        onClick={toggleContinuousMode}
         type="button"
       >
         {continuousMode
-          ? "Modo experimental contínuo — selecionar para desligar"
-          : "Ativar modo experimental «Inovito» (escuta contínua)"}
+          ? "Modo local experimental ligado — selecionar para desligar"
+          : checkingLocal
+            ? "A verificar motor local pt-PT…"
+            : "Verificar modo contínuo local «Inovito»"}
       </button>
       <form
         className="mt-2 flex items-center gap-2"
@@ -405,7 +456,8 @@ export default function InovitoVoice() {
       <p className="mt-2 text-[11px] text-on-surface-variant">
         Por defeito, só escuta ao carregar em «Falar». O reconhecimento
         do navegador pode enviar áudio para serviços externos. Não usar
-        junto de clientes. O modo contínuo é apenas experimental.
+        junto de clientes. A escuta contínua só é permitida se existir
+        reconhecimento local pt-PT, ainda experimental.
       </p>
     </aside>
   );
