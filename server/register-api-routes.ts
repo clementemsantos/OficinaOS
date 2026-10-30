@@ -15,6 +15,7 @@ import { equipmentRoutes } from "./routes/equipment.js";
 import { feedbackRoutes } from "./routes/feedback.js";
 import { healthRoutes } from "./routes/health.js";
 import { inovitoRoutes } from "./routes/inovito.js";
+import { inovitoMetaWebhookRoutes } from "./routes/inovito-meta-webhook.js";
 import { intakeRequestsRoutes } from "./routes/intake-requests.js";
 import { integrationsRoutes } from "./routes/integrations.js";
 import { invoicingRoutes } from "./routes/invoicing.js";
@@ -88,6 +89,7 @@ export async function registerApiRoutes(app: FastifyInstance): Promise<void> {
   app.register(onlineBackupRoutes, { prefix: "/api/online-backup" });
   app.register(integrationsRoutes, { prefix: "/api/integrations" });
   app.register(inovitoRoutes, { prefix: "/api/inovito" });
+  app.register(inovitoMetaWebhookRoutes, { prefix: "/api/public/inovito-meta" });
   app.register(documentsRoutes, { prefix: "/api/documents" });
   app.register(businessRoutes, { prefix: "/api/business" });
   app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
