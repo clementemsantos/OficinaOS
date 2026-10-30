@@ -394,7 +394,8 @@ export default function InovitoVoice() {
 
   let localModeLabel = "Verificar modo contínuo local «Inovito»";
   if (continuousMode) {
-    localModeLabel = "Modo local experimental ligado — selecionar para desligar";
+    localModeLabel =
+      "Modo local experimental ligado — selecionar para desligar";
   } else if (checkingLocal) {
     localModeLabel = "A verificar motor local pt-PT…";
   }
@@ -476,10 +477,10 @@ export default function InovitoVoice() {
         {feedback}
       </p>
       <p className="mt-2 text-[11px] text-on-surface-variant">
-        Por defeito, só escuta ao carregar em «Falar». O reconhecimento
-        do navegador pode enviar áudio para serviços externos. Não usar
-        junto de clientes. A escuta contínua só é permitida se existir
-        reconhecimento local pt-PT, ainda experimental.
+        Por defeito, só escuta ao carregar em «Falar». O reconhecimento do
+        navegador pode enviar áudio para serviços externos. Não usar junto de
+        clientes. A escuta contínua só é permitida se existir reconhecimento
+        local pt-PT, ainda experimental.
       </p>
     </aside>
   );
