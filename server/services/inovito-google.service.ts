@@ -15,6 +15,7 @@ export const GOOGLE_READ_SCOPES = [
 
 const MAX_STATE_AGE_MS = 10 * 60_000;
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const SCOPE_SEPARATOR = /\s+/;
 
 export interface GoogleCredentials {
   accessToken: string;
@@ -46,7 +47,7 @@ export function makeGoogleState(
     userId,
   };
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return data + "." + hmac(data, secret).toString("base64url");
+  return `${data}.${hmac(data, secret).toString("base64url")}`;
 }
 
 export function verifyGoogleState(
@@ -93,7 +94,7 @@ export function verifyGoogleState(
 }
 
 export function googlePkceVerifier(nonce: string, secret: string): string {
-  return hmac("google-pkce:" + nonce, secret).toString("base64url");
+  return hmac(`google-pkce:${nonce}`, secret).toString("base64url");
 }
 
 function connectionConfig() {
@@ -119,7 +120,7 @@ function connectionConfig() {
   return {
     clientId,
     clientSecret,
-    redirectUri: url.origin + "/api/inovito/google/callback",
+    redirectUri: `${url.origin}/api/inovito/google/callback`,
     stateSecret: env.BETTER_AUTH_SECRET,
   };
 }
@@ -193,7 +194,7 @@ export async function exchangeGoogleCode(
     sessionId,
     config.stateSecret
   );
-  if (!payload || !code || code.length > 2048) {
+  if (!(payload && code) || code.length > 2048) {
     throw new Error("Invalid Google OAuth response");
   }
   const token = await requestGoogleToken(
@@ -209,7 +210,7 @@ export async function exchangeGoogleCode(
   if (!(token.access_token && token.refresh_token)) {
     throw new Error("No offline access granted by Google");
   }
-  const grantedScopes = new Set((token.scope ?? "").split(/\s+/));
+  const grantedScopes = new Set((token.scope ?? "").split(SCOPE_SEPARATOR));
   if (!GOOGLE_READ_SCOPES.every((scope) => grantedScopes.has(scope))) {
     throw new Error("Not all Google read-only permissions were granted");
   }
@@ -263,7 +264,7 @@ export async function googleAccessToken(encrypted: string): Promise<{
 
 async function googleGet(url: URL, accessToken: string): Promise<unknown> {
   const response = await fetch(url, {
-    headers: { authorization: "Bearer " + accessToken },
+    headers: { authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(12_000),
   });
   if (!response.ok) {
@@ -313,7 +314,7 @@ export async function fetchGoogleOverview(
   const firstList = lists.items?.find((item) => item.id);
   let tasks: GoogleTasksData = {};
   if (firstList?.id) {
-    const taskUrl = new URL("https://tasks.googleapis.com/tasks/v1/lists/" + encodeURIComponent(firstList.id) + "/tasks");
+    const taskUrl = new URL(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(firstList.id)}/tasks`);
     taskUrl.searchParams.set("maxResults", "8");
     taskUrl.searchParams.set("showCompleted", "false");
     tasks = (await googleGet(taskUrl, accessToken)) as GoogleTasksData;
