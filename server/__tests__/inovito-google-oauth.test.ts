@@ -12,18 +12,30 @@ describe("Inovito Google OAuth — proteção de ligação", () => {
 
   it("vincula o estado à sessão e ao utilizador com validade curta", () => {
     const state = makeGoogleState("owner-1", "session-1", secret, fixed);
-    expect(verifyGoogleState(state, "owner-1", "session-1", secret, fixed)).not.toBeNull();
-    expect(verifyGoogleState(state, "owner-2", "session-1", secret, fixed)).toBeNull();
-    expect(verifyGoogleState(state, "owner-1", "session-2", secret, fixed)).toBeNull();
-    expect(verifyGoogleState(state, "owner-1", "session-1", secret, fixed + 600_001)).toBeNull();
+    expect(
+      verifyGoogleState(state, "owner-1", "session-1", secret, fixed)
+    ).not.toBeNull();
+    expect(
+      verifyGoogleState(state, "owner-2", "session-1", secret, fixed)
+    ).toBeNull();
+    expect(
+      verifyGoogleState(state, "owner-1", "session-2", secret, fixed)
+    ).toBeNull();
+    expect(
+      verifyGoogleState(state, "owner-1", "session-1", secret, fixed + 600_001)
+    ).toBeNull();
   });
 
   it("rejeita assinatura adulterada", () => {
     const state = makeGoogleState("owner-1", "session-1", secret, fixed);
     const [payload] = state.split(".");
-    const bad = payload + "." + "A".repeat(43);
-    expect(verifyGoogleState(bad, "owner-1", "session-1", secret, fixed)).toBeNull();
-    expect(verifyGoogleState("x", "owner-1", "session-1", secret, fixed)).toBeNull();
+    const bad = `${payload}.${"A".repeat(43)}`;
+    expect(
+      verifyGoogleState(bad, "owner-1", "session-1", secret, fixed)
+    ).toBeNull();
+    expect(
+      verifyGoogleState("x", "owner-1", "session-1", secret, fixed)
+    ).toBeNull();
   });
 
   it("deriva uma chave PKCE determinística sem revelar segredos", () => {
