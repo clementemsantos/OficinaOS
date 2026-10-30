@@ -89,7 +89,9 @@ export async function registerApiRoutes(app: FastifyInstance): Promise<void> {
   app.register(onlineBackupRoutes, { prefix: "/api/online-backup" });
   app.register(integrationsRoutes, { prefix: "/api/integrations" });
   app.register(inovitoRoutes, { prefix: "/api/inovito" });
-  app.register(inovitoMetaWebhookRoutes, { prefix: "/api/public/inovito-meta" });
+  app.register(inovitoMetaWebhookRoutes, {
+    prefix: "/api/public/inovito-meta",
+  });
   app.register(documentsRoutes, { prefix: "/api/documents" });
   app.register(businessRoutes, { prefix: "/api/business" });
   app.register(catalogCategoriesRoutes, { prefix: "/api/catalog-categories" });
