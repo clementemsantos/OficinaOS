@@ -32,6 +32,7 @@ interface GoogleOverview {
   calendar: Array<{ id: string; start: string; title: string }>;
   googleTasks: Array<{ id: string; due: string | null; title: string }>;
   unreadMailEstimate: number | null;
+  unreadMailHeaders: Array<{ id: string; from: string; subject: string }>;
 }
 
 function formatDate(value: string): string {
@@ -320,9 +321,27 @@ export default function InovitoMobilePage() {
                   {googleData.unreadMailEstimate ?? "indisponível"}
                 </strong>
               </p>
-              <p className="mt-1 text-on-surface-variant text-xs">
-                Por segurança, o Inovito não lê o corpo das mensagens nesta
-                fase.
+              {googleData.unreadMailHeaders.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {googleData.unreadMailHeaders.map((message) => (
+                    <div
+                      className="border-outline-variant border-b pb-2 text-sm"
+                      key={message.id}
+                    >
+                      <p className="font-semibold text-on-surface">
+                        {message.subject}
+                      </p>
+                      <p className="text-on-surface-variant text-xs">
+                        De: {message.from}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="mt-2 text-on-surface-variant text-xs">
+                Apresenta o remetente e o assunto de até 5 e-mails não lidos.
+                O corpo e os anexos não são lidos nem guardados no OficinaOS.
+                Não apresentar o painel perante clientes.
               </p>
             </article>
           </div>
