@@ -306,9 +306,13 @@ export async function fetchGoogleOverview(
   eventsUrl.searchParams.set("maxResults", "8");
   eventsUrl.searchParams.set("singleEvents", "true");
   eventsUrl.searchParams.set("orderBy", "startTime");
-  const listsUrl = new URL("https://tasks.googleapis.com/tasks/v1/users/@me/lists");
+  const listsUrl = new URL(
+    "https://tasks.googleapis.com/tasks/v1/users/@me/lists"
+  );
   listsUrl.searchParams.set("maxResults", "10");
-  const mailUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+  const mailUrl = new URL(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+  );
   mailUrl.searchParams.set("maxResults", "10");
   mailUrl.searchParams.set("labelIds", "UNREAD");
 
