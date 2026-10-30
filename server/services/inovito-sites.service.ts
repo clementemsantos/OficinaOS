@@ -54,12 +54,14 @@ export function parseSiteOrigin(raw: string): SiteConfig | null {
     }
     // Prevent IP literals and names with invalid label boundaries; the
     // integrationJson transport also rejects private/reserved resolved IPs.
-    const validLabels = host.split(".").every(
-      (label) =>
-        label.length > 0 &&
-        label.length <= 63 &&
-        SITE_LABEL_PATTERN.test(label)
-    );
+    const validLabels = host
+      .split(".")
+      .every(
+        (label) =>
+          label.length > 0 &&
+          label.length <= 63 &&
+          SITE_LABEL_PATTERN.test(label)
+      );
     if (!validLabels || host.split(".").length < 2) {
       return null;
     }
@@ -94,11 +96,13 @@ const storeProduct = z.object({
   id: z.number().int().positive(),
   name: z.string().max(400),
   permalink: z.string().url().max(1200),
-  prices: z.object({
-    price: z.string().regex(/^\d{1,12}$/),
-    currency_code: z.string().regex(/^[A-Z]{3}$/),
-    currency_minor_unit: z.number().int().min(0).max(4),
-  }).optional(),
+  prices: z
+    .object({
+      price: z.string().regex(/^\d{1,12}$/),
+      currency_code: z.string().regex(/^[A-Z]{3}$/),
+      currency_minor_unit: z.number().int().min(0).max(4),
+    })
+    .optional(),
 });
 
 export function normalizeSiteProducts(
@@ -130,12 +134,14 @@ export function normalizeSiteProducts(
           }).format(integer);
         }
       }
-      return [{
-        id: data.data.id,
-        name: data.data.name.trim().slice(0, MAX_NAME),
-        price,
-        permalink: link.href,
-      }];
+      return [
+        {
+          id: data.data.id,
+          name: data.data.name.trim().slice(0, MAX_NAME),
+          price,
+          permalink: link.href,
+        },
+      ];
     } catch {
       return [];
     }
