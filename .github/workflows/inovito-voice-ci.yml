@@ -15,6 +15,10 @@ on:
       - "src/pages/inovito/**"
       - "src/lib/navigation.ts"
       - "server/routes/inovito.ts"
+      - "server/routes/inovito-meta-webhook.ts"
+      - "server/services/inovito-meta.service.ts"
+      - "server/__tests__/inovito-meta.test.ts"
+      - "server/config/route-security.ts"
       - "server/services/inovito-google.service.ts"
       - "server/__tests__/inovito-google-oauth.test.ts"
       - "server/register-api-routes.ts"
@@ -48,6 +52,6 @@ jobs:
       - name: Validar tipos
         run: bun run typecheck
       - name: Testar comandos
-        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts server/__tests__/inovito-google-oauth.test.ts
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts server/__tests__/inovito-google-oauth.test.ts server/__tests__/inovito-meta.test.ts
       - name: Compilar funcionalidade ativada
         run: bun run build
