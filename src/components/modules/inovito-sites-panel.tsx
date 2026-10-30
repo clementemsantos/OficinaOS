@@ -55,7 +55,6 @@ export default function InovitoSitesPanel() {
     refreshSites();
   }, [refreshSites]);
 
-
   return (
     <section className="space-y-3 rounded-2xl bg-surface-container-low p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
