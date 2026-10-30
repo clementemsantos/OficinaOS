@@ -277,6 +277,7 @@ export interface GoogleOverview {
   calendar: Array<{ id: string; start: string; title: string }>;
   googleTasks: Array<{ id: string; due: string | null; title: string }>;
   unreadMailEstimate: number | null;
+  unreadMailHeaders: Array<{ id: string; from: string; subject: string }>;
 }
 
 interface GoogleCalendarData {
@@ -293,7 +294,65 @@ interface GoogleTasksData {
   items?: Array<{ id?: string; title?: string; due?: string; status?: string }>;
 }
 interface GoogleMailData {
+  messages?: Array<{ id?: string }>;
   resultSizeEstimate?: number;
+}
+
+interface GoogleMessageMetadata {
+  id?: string;
+  payload?: { headers?: Array<{ name?: string; value?: string }> };
+}
+
+const GMAIL_MESSAGE_ID = /^[a-zA-Z0-9_-]{1,100}$/;
+const HEADER_CONTROL = /[\r\n\t\u0000-\u001f\u007f]/g;
+
+/** Sanitise only metadata headers; no message body or attachment is exposed. */
+export function formatGmailHeaders(message: GoogleMessageMetadata): {
+  id: string;
+  from: string;
+  subject: string;
+} | null {
+  if (!message.id || !GMAIL_MESSAGE_ID.test(message.id)) {
+    return null;
+  }
+  const headers = message.payload?.headers ?? [];
+  const find = (name: string) =>
+    headers.find((header) => header.name?.toLowerCase() === name)?.value;
+  const clean = (value: string | undefined, fallback: string) =>
+    (value ?? fallback).replace(HEADER_CONTROL, " ").trim().slice(0, 160);
+  return {
+    id: message.id,
+    from: clean(find("from"), "Remetente não disponível"),
+    subject: clean(find("subject"), "(sem assunto)"),
+  };
+}
+
+async function unreadMailHeaders(
+  messages: GoogleMailData["messages"],
+  accessToken: string
+): Promise<Array<{ id: string; from: string; subject: string }>> {
+  const ids = (messages ?? [])
+    .map((message) => message.id)
+    .filter((id): id is string => Boolean(id && GMAIL_MESSAGE_ID.test(id)))
+    .slice(0, 5);
+  const details = await Promise.allSettled(
+    ids.map((id) => {
+      const url = new URL(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`
+      );
+      url.searchParams.set("format", "metadata");
+      url.searchParams.append("metadataHeaders", "From");
+      url.searchParams.append("metadataHeaders", "Subject");
+      return googleGet(url, accessToken) as Promise<GoogleMessageMetadata>;
+    })
+  );
+  return details.flatMap((detail) => {
+    if (detail.status !== "fulfilled") {
+      return [];
+    }
+    const item = formatGmailHeaders(detail.value);
+    return item ? [item] : [];
+  });
 }
 
 export async function fetchGoogleOverview(
@@ -321,6 +380,7 @@ export async function fetchGoogleOverview(
     googleGet(listsUrl, accessToken) as Promise<GoogleListsData>,
     googleGet(mailUrl, accessToken) as Promise<GoogleMailData>,
   ]);
+  const mailHeaders = await unreadMailHeaders(mail.messages, accessToken);
   const firstList = lists.items?.find((item) => item.id);
   let tasks: GoogleTasksData = {};
   if (firstList?.id) {
@@ -351,5 +411,6 @@ export async function fetchGoogleOverview(
       typeof mail.resultSizeEstimate === "number"
         ? mail.resultSizeEstimate
         : null,
+    unreadMailHeaders: mailHeaders,
   };
 }
