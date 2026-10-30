@@ -72,6 +72,7 @@ export default function InovitoVoice() {
   const awakeUntilRef = useRef(0);
   const restartTimerRef = useRef<number | undefined>(undefined);
   const awakeTimerRef = useRef<number | undefined>(undefined);
+  const summaryRequestRef = useRef<AbortController | null>(null);
 
   const startRecognition = useCallback(() => {
     if (
@@ -129,15 +130,29 @@ export default function InovitoVoice() {
           speak("O resumo completo da loja só está disponível para o proprietário.");
           return;
         }
+        summaryRequestRef.current?.abort();
+        const controller = new AbortController();
+        summaryRequestRef.current = controller;
         api
-          .get<OwnerDashboardDTO>("/dashboard/owner")
+          .get<OwnerDashboardDTO>("/dashboard/owner", {
+            signal: controller.signal,
+          })
           .then((response) => {
-            speak(formatOwnerSummary(response.data));
+            if (!controller.signal.aborted) {
+              speak(formatOwnerSummary(response.data));
+            }
           })
           .catch(() => {
-            speak(
-              "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
-            );
+            if (!controller.signal.aborted) {
+              speak(
+                "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
+              );
+            }
+          })
+          .finally(() => {
+            if (summaryRequestRef.current === controller) {
+              summaryRequestRef.current = null;
+            }
           });
         return;
       }
@@ -301,6 +316,7 @@ export default function InovitoVoice() {
 
   useEffect(
     () => () => {
+      summaryRequestRef.current?.abort();
       window.speechSynthesis?.cancel();
     },
     []
