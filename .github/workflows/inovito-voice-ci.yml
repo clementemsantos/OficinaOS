@@ -1,0 +1,39 @@
+name: Inovito voz — validação isolada
+
+on:
+  pull_request:
+    paths:
+      - "src/components/modules/inovito-voice.tsx"
+      - "src/lib/inovito-voice-commands.ts"
+      - "src/lib/__tests__/inovito-voice-commands.test.ts"
+      - "src/app.tsx"
+      - ".github/workflows/inovito-voice-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  voice:
+    name: Typecheck, comandos e compilação
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://reparilo:reparilo_test@localhost:5432/reparilo_test
+      BETTER_AUTH_SECRET: test-secret-at-least-thirty-two-chars-long-aaaa
+      AI_ENCRYPTION_KEY: test-aes-key-at-least-thirty-two-chars-ok-bbbb
+      NODE_ENV: test
+      VITE_INOVITO_VOICE_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+      - name: Gerar cliente Prisma
+        run: bun run db:generate
+      - name: Validar tipos
+        run: bun run typecheck
+      - name: Testar comandos
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts
+      - name: Compilar funcionalidade ativada
+        run: bun run build
