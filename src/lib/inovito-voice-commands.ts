@@ -10,7 +10,8 @@ export function normalizeVoice(text: string): string {
 }
 
 const WAKE_PATTERN = /\binovito\b/;
-const NAVIGATION_PATTERN = /\b(abrir|abre|mostra|mostrar|ver|consulta|consultar|vai|ir|aceder)\b/;
+const NAVIGATION_PATTERN =
+  /\b(abrir|abre|mostra|mostrar|ver|consulta|consultar|vai|ir|aceder)\b/;
 const HELP_PATTERN = /\b(o que podes fazer|ajuda me|como funcionas|comandos)\b/;
 
 export type HeardVoice =
