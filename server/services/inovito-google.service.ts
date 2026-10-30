@@ -297,6 +297,11 @@ interface GoogleMailData {
 }
 
 export async function fetchGoogleOverview(
+  accessToken: string
+): Promise<GoogleOverview> {
+  const eventsUrl = new URL(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+  );
   eventsUrl.searchParams.set("timeMin", new Date().toISOString());
   eventsUrl.searchParams.set("maxResults", "8");
   eventsUrl.searchParams.set("singleEvents", "true");
