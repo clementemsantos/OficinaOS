@@ -176,10 +176,12 @@ export default function InovitoVoice() {
     };
 
     recognizer.onerror = (event) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      if (
+        ["not-allowed", "service-not-allowed", "audio-capture", "network", "language-not-supported"].includes(event.error)
+      ) {
         listeningRef.current = false;
-        setFeedback("Não foi autorizado o microfone ou o serviço de voz.");
-        setStatus("Microfone sem autorização");
+        setFeedback("O microfone ou o serviço de reconhecimento não está disponível. Verifica as permissões, o navegador e a ligação.");
+        setStatus("Escuta interrompida");
         setEnabled(false);
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
         setStatus("Reconhecimento temporariamente indisponível");
