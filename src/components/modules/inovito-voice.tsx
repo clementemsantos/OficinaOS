@@ -1,9 +1,13 @@
+import type { OwnerDashboardDTO } from "@shared/types/dashboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { OwnerDashboardDTO } from "@shared/types/dashboard";
-import { can } from "@/hooks/use-can";
 import { Input } from "@/components/ui/input";
+import { can } from "@/hooks/use-can";
 import api from "@/lib/api";
+import {
+  formatOwnerSummary,
+  isOwnerSummaryRequest,
+} from "@/lib/inovito-owner-summary";
 import {
   isVoiceHelpRequest,
   matchVoiceDestination,
@@ -11,10 +15,6 @@ import {
   parseVoiceInput,
 } from "@/lib/inovito-voice-commands";
 import { NAV_ITEMS } from "@/lib/navigation";
-import {
-  formatOwnerSummary,
-  isOwnerSummaryRequest,
-} from "@/lib/inovito-owner-summary";
 import { useAuthStore } from "@/stores/auth";
 
 interface VoiceResult {
@@ -193,6 +193,33 @@ export default function InovitoVoice() {
     [navigate, role, speak]
   );
 
+  const handleHeard = useCallback(
+    (heard: ReturnType<typeof parseVoiceInput>) => {
+      if (heard.kind === "ignore") {
+        return;
+      }
+      if (heard.kind === "wake") {
+        if (!continuousMode) {
+          speak("Pede o comando completo depois de carregar em falar.");
+          return;
+        }
+        awakeUntilRef.current = Date.now() + 15_000;
+        window.clearTimeout(awakeTimerRef.current);
+        awakeTimerRef.current = window.setTimeout(() => {
+          awakeUntilRef.current = 0;
+          setStatus("À escuta de «Inovito»");
+        }, 15_000);
+        setStatus("Pronto para o comando");
+        speak("Sim, estou a ouvir.");
+        return;
+      }
+      awakeUntilRef.current = 0;
+      window.clearTimeout(awakeTimerRef.current);
+      handleSpokenCommand(heard.text);
+    },
+    [continuousMode, handleSpokenCommand, speak]
+  );
+
   useEffect(() => {
     if (!enabled) {
       return;
@@ -238,26 +265,10 @@ export default function InovitoVoice() {
           result[0]?.transcript ?? "",
           !continuousMode || Date.now() < awakeUntilRef.current
         );
-        if (heard.kind === "ignore") {
-          continue;
+        if (heard.kind !== "ignore") {
+          handleHeard(heard);
+          return;
         }
-        if (heard.kind === "wake" && !continuousMode) {
-          speak("Pede o comando completo depois de carregar em falar.");
-        } else if (heard.kind === "wake") {
-          awakeUntilRef.current = Date.now() + 15_000;
-          window.clearTimeout(awakeTimerRef.current);
-          awakeTimerRef.current = window.setTimeout(() => {
-            awakeUntilRef.current = 0;
-            setStatus("À escuta de «Inovito»");
-          }, 15_000);
-          setStatus("Pronto para o comando");
-          speak("Sim, estou a ouvir.");
-        } else {
-          awakeUntilRef.current = 0;
-          window.clearTimeout(awakeTimerRef.current);
-          handleSpokenCommand(heard.text);
-        }
-        return;
       }
     };
 
@@ -323,7 +334,7 @@ export default function InovitoVoice() {
       recognizerRef.current = null;
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [continuousMode, enabled, handleSpokenCommand, speak, startRecognition]);
+  }, [continuousMode, enabled, handleHeard, startRecognition]);
 
   const toggleContinuousMode = useCallback(() => {
     if (continuousMode) {
@@ -371,6 +382,23 @@ export default function InovitoVoice() {
     []
   );
 
+  let microphoneLabel = "Falar";
+  let microphoneAriaLabel = "Falar com o Inovito";
+  if (enabled) {
+    microphoneLabel = "Desligar";
+    microphoneAriaLabel = "Desligar o microfone do Inovito";
+  } else if (continuousMode) {
+    microphoneLabel = "Ativar escuta";
+    microphoneAriaLabel = "Ativar escuta experimental";
+  }
+
+  let localModeLabel = "Verificar modo contínuo local «Inovito»";
+  if (continuousMode) {
+    localModeLabel = "Modo local experimental ligado — selecionar para desligar";
+  } else if (checkingLocal) {
+    localModeLabel = "A verificar motor local pt-PT…";
+  }
+
   return (
     <aside
       aria-label="Assistente Inovito por voz"
@@ -384,13 +412,7 @@ export default function InovitoVoice() {
           </p>
         </div>
         <button
-          aria-label={
-            enabled
-              ? "Desligar o microfone do Inovito"
-              : continuousMode
-                ? "Ativar escuta experimental"
-                : "Falar com o Inovito"
-          }
+          aria-label={microphoneAriaLabel}
           aria-pressed={enabled}
           className={
             enabled
@@ -398,15 +420,19 @@ export default function InovitoVoice() {
               : "min-h-11 rounded-xl bg-primary px-3 text-on-primary text-sm"
           }
           onClick={() => {
-            setEnabled((current) => !current);
             if (enabled) {
+              listeningRef.current = false;
+              speakingRef.current = false;
+              summaryRequestRef.current?.abort();
+              window.speechSynthesis?.cancel();
               setStatus("Desligado");
               setFeedback("O microfone está desligado.");
             }
+            setEnabled((current) => !current);
           }}
           type="button"
         >
-          {enabled ? "Desligar" : continuousMode ? "Ativar escuta" : "Falar"}
+          {microphoneLabel}
         </button>
       </div>
       <button
@@ -416,11 +442,7 @@ export default function InovitoVoice() {
         onClick={toggleContinuousMode}
         type="button"
       >
-        {continuousMode
-          ? "Modo local experimental ligado — selecionar para desligar"
-          : checkingLocal
-            ? "A verificar motor local pt-PT…"
-            : "Verificar modo contínuo local «Inovito»"}
+        {localModeLabel}
       </button>
       <form
         className="mt-2 flex items-center gap-2"
