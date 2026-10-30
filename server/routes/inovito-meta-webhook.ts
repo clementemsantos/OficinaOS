@@ -59,7 +59,11 @@ export const inovitoMetaWebhookRoutes: FastifyPluginAsync = (app) => {
       return reply.code(400).send({ error: "Invalid JSON" });
     }
     // Safe dry-run by default. No message is saved until explicit opt-in.
-    if (process.env.INOVITO_META_CAPTURE_ENABLED !== "true") {
+    if (
+      process.env.INOVITO_META_CAPTURE_ENABLED !== "true" ||
+      process.env.OFICINAOS_SANDBOX === "true" ||
+      process.env.DEMO_MODE === "true"
+    ) {
       return { accepted: true, stored: 0 };
     }
     const whatsappPhoneId = process.env.INOVITO_META_WA_PHONE_NUMBER_ID ?? "";
