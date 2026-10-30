@@ -428,7 +428,9 @@ function ChatInterface({ agentEnabled = true }: ChatInterfaceProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [inovitoSuggestion, setInovitoSuggestion] = useState<string | null>(null);
+  const [inovitoSuggestion, setInovitoSuggestion] = useState<string | null>(
+    null
+  );
   const [isTyping, setIsTyping] = useState(false);
   const [agentName, setAgentName] = useState(
     () => localStorage.getItem(AGENT_NAME_STORAGE_KEY) ?? DEFAULT_AGENT
