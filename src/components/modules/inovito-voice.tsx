@@ -41,11 +41,11 @@ interface BrowserSpeechRecognition {
 }
 
 interface SpeechConstructor {
-  new (): BrowserSpeechRecognition;
   available?: (options: {
     langs: string[];
     processLocally: boolean;
   }) => Promise<string>;
+  new (): BrowserSpeechRecognition;
 }
 
 const GREETING_PATTERN = /\b(bom dia|boa tarde|boa noite|ola)\b/;
