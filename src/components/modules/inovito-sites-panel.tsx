@@ -62,8 +62,8 @@ export default function InovitoSitesPanel() {
         <div>
           <h2 className="font-bold text-lg">Os meus sites</h2>
           <p className="text-on-surface-variant text-xs">
-            Catálogo público consultado em tempo real; nunca altera os produtos,
-            preços ou encomendas do WordPress.
+            Catálogo público consultado em tempo real; nunca altera os
+            produtos, preços ou encomendas do WordPress.
           </p>
         </div>
         <Button
@@ -114,5 +114,37 @@ export default function InovitoSitesPanel() {
               className="flex items-center justify-between gap-2 border-outline-variant border-b pb-2 text-sm"
               key={product.id}
             >
+              <a
+                className="min-w-0 truncate text-on-surface underline"
+                href={product.permalink}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {product.name}
+              </a>
+              <strong className="shrink-0">{product.price ?? "—"}</strong>
+            </div>
+          ))}
+        </article>
+      ))}
+      {sites?.orderImport && (
+        <p className="text-on-surface-variant text-xs">
+          Importador de encomendas WooCommerce do OficinaOS:{" "}
+          {sites.orderImport.enabled ? "ativado" : "não ativado"}.
+          {sites.orderImport.lastSyncAt && (
+            <>
+              {" "}Última sincronização:{" "}
+              {formatDate(sites.orderImport.lastSyncAt)}.
+            </>
+          )}
+          {sites.orderImport.hasError && " Existe um erro a verificar."}
+          {" "}Atualmente, o importador de encomendas suporta uma única loja.
+        </p>
+      )}
+      <p className="text-on-surface-variant text-xs">
+        Outros sites WordPress/WooCommerce podem ser adicionados à lista
+        autorizada do servidor, sem publicar uma nova versão da app.
+      </p>
+    </section>
   );
 }
