@@ -4,9 +4,9 @@ import { lazy, Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Route, Routes } from "react-router";
 import CommandPalette from "@/components/modules/command-palette";
-import InovitoVoice from "@/components/modules/inovito-voice";
 import DashboardLayout from "@/components/modules/dashboard-layout";
 import DemoBanner from "@/components/modules/demo-banner";
+import InovitoVoice from "@/components/modules/inovito-voice";
 import ProtectedRoute, {
   RequirePermission,
 } from "@/components/modules/protected-route";
@@ -125,9 +125,10 @@ export default function App() {
       {/* Outside Suspense and outside any layout: the palette has to survive
           route changes and lazy chunk loading, and open from every screen. */}
       {isAuthenticated && <CommandPalette />}
-      {isAuthenticated && import.meta.env.VITE_INOVITO_VOICE_ENABLED === "true" && (
-        <InovitoVoice />
-      )}
+      {isAuthenticated &&
+        import.meta.env.VITE_INOVITO_VOICE_ENABLED === "true" && (
+          <InovitoVoice />
+        )}
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route element={<LoginPage />} path="/login" />
