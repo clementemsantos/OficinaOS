@@ -5,6 +5,12 @@ import { Input } from "@/components/ui/input";
 import { can } from "@/hooks/use-can";
 import api from "@/lib/api";
 import {
+  extractAiQuestion,
+  formatPendingTasks,
+  isPendingTasksRequest,
+  type PendingTasksPage,
+} from "@/lib/inovito-intents";
+import {
   formatOwnerSummary,
   isOwnerSummaryRequest,
 } from "@/lib/inovito-owner-summary";
@@ -81,6 +87,7 @@ export default function InovitoVoice() {
   const restartTimerRef = useRef<number | undefined>(undefined);
   const awakeTimerRef = useRef<number | undefined>(undefined);
   const summaryRequestRef = useRef<AbortController | null>(null);
+  const taskRequestRef = useRef<AbortController | null>(null);
 
   const startRecognition = useCallback(() => {
     if (
@@ -130,42 +137,94 @@ export default function InovitoVoice() {
     [continuousMode, startRecognition]
   );
 
+  const requestOwnerSummary = useCallback(() => {
+    if (!can(role, { dashboard: ["viewOwner"] })) {
+      speak(
+        "O resumo completo da loja só está disponível para o proprietário."
+      );
+      return;
+    }
+    summaryRequestRef.current?.abort();
+    const controller = new AbortController();
+    summaryRequestRef.current = controller;
+    api
+      .get<OwnerDashboardDTO>("/dashboard/owner", {
+        signal: controller.signal,
+      })
+      .then((response) => {
+        if (!controller.signal.aborted) {
+          speak(formatOwnerSummary(response.data));
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          speak(
+            "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
+          );
+        }
+      })
+      .finally(() => {
+        if (summaryRequestRef.current === controller) {
+          summaryRequestRef.current = null;
+        }
+      });
+  }, [role, speak]);
+
+  const requestPendingTasks = useCallback(() => {
+    if (!can(role, { jobs: ["view"] })) {
+      speak("Não tens autorização para consultar tarefas.");
+      return;
+    }
+    taskRequestRef.current?.abort();
+    const controller = new AbortController();
+    taskRequestRef.current = controller;
+    api
+      .get<PendingTasksPage>("/tasks", {
+        params: { completed: "false" },
+        signal: controller.signal,
+      })
+      .then((response) => {
+        if (!controller.signal.aborted) {
+          speak(formatPendingTasks(response.data));
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          speak("Não consegui consultar as tarefas neste momento.");
+        }
+      })
+      .finally(() => {
+        if (taskRequestRef.current === controller) {
+          taskRequestRef.current = null;
+        }
+      });
+  }, [role, speak]);
+
   const handleSpokenCommand = useCallback(
     (spoken: string) => {
       const command = normalizeVoice(spoken);
       if (isOwnerSummaryRequest(command)) {
-        if (!can(role, { dashboard: ["viewOwner"] })) {
-          speak(
-            "O resumo completo da loja só está disponível para o proprietário."
-          );
-          return;
-        }
-        summaryRequestRef.current?.abort();
-        const controller = new AbortController();
-        summaryRequestRef.current = controller;
-        api
-          .get<OwnerDashboardDTO>("/dashboard/owner", {
-            signal: controller.signal,
-          })
-          .then((response) => {
-            if (!controller.signal.aborted) {
-              speak(formatOwnerSummary(response.data));
-            }
-          })
-          .catch(() => {
-            if (!controller.signal.aborted) {
-              speak(
-                "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
-              );
-            }
-          })
-          .finally(() => {
-            if (summaryRequestRef.current === controller) {
-              summaryRequestRef.current = null;
-            }
-          });
+        requestOwnerSummary();
         return;
       }
+      if (isPendingTasksRequest(command)) {
+        requestPendingTasks();
+        return;
+      }
+
+      const question = extractAiQuestion(command);
+      if (question) {
+        if (!can(role, { ai: ["access"] })) {
+          speak("Não tens autorização para consultar o assistente de IA.");
+          return;
+        }
+        navigate("/ai-analyst", { state: { inovitoDraft: question } });
+        speak(
+          "A pergunta está preparada no assistente. Revê-a antes de enviar."
+        );
+        return;
+      }
+
       const route = matchVoiceDestination(command);
       if (route) {
         const destination = NAV_ITEMS.find((item) => item.to === route);
@@ -192,7 +251,7 @@ export default function InovitoVoice() {
         "Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis."
       );
     },
-    [navigate, role, speak]
+    [navigate, requestOwnerSummary, requestPendingTasks, role, speak]
   );
 
   const handleHeard = useCallback(
@@ -379,6 +438,7 @@ export default function InovitoVoice() {
   useEffect(
     () => () => {
       summaryRequestRef.current?.abort();
+      taskRequestRef.current?.abort();
       window.speechSynthesis?.cancel();
     },
     []
@@ -427,6 +487,7 @@ export default function InovitoVoice() {
               listeningRef.current = false;
               speakingRef.current = false;
               summaryRequestRef.current?.abort();
+              taskRequestRef.current?.abort();
               window.speechSynthesis?.cancel();
               setStatus("Desligado");
               setFeedback("O microfone está desligado.");
