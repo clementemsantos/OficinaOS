@@ -28,5 +28,25 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inovito JARVIS",
+      "short_name": "Inovito",
+      "description": "Abrir o assistente móvel da Inove.pt",
+      "url": "/inovito",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Tarefas da loja",
+      "short_name": "Tarefas",
+      "url": "/tasks"
+    }
   ]
 }

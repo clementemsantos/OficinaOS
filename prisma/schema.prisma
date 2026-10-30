@@ -231,6 +231,7 @@ model User {
   jobReferrals          JobReferral[]
   tasksAssigned         WorkshopTask[]      @relation("TaskAssignee")
   tasksCreated          WorkshopTask[]      @relation("TaskCreator")
+  inovitoGoogleConnection InovitoGoogleConnection?
   taskRulesAssigned     TaskRule[]          @relation("TaskRuleAssignee")
   taskRules             TaskRule[]
 
@@ -1895,6 +1896,18 @@ model IntegrationConnection {
   lastError  String?
 
   @@map("integration_connections")
+}
+
+// Read-only Google connection per user: encrypted credentials never reach the browser.
+model InovitoGoogleConnection {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentials String   @db.Text
+  scopes      String   @db.Text
+  connectedAt DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@map("inovito_google_connections")
 }
 
 model IntegrationReceipt {

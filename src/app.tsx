@@ -18,6 +18,7 @@ const AiAnalystLayout = lazy(() => import("@/pages/ai-analyst/layout"));
 const AiMemoriesPage = lazy(() => import("@/pages/ai-analyst/memories/page"));
 const ChangePasswordPage = lazy(() => import("@/pages/auth/change-password"));
 const HelpPage = lazy(() => import("@/pages/help"));
+const InovitoMobilePage = lazy(() => import("@/pages/inovito"));
 const LoginPage = lazy(() => import("@/pages/auth/login"));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password"));
 const SetupPage = lazy(() => import("@/pages/auth/setup"));
@@ -138,6 +139,20 @@ export default function App() {
             <Route element={<ChangePasswordPage />} path="/change-password" />
           </Route>
           <Route element={<ProtectedRoute />}>
+            <Route
+              element={
+                <RequirePermission perm={{ dashboard: ["viewOwner"] }} />
+              }
+            >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <InovitoMobilePage />
+                  </DashboardLayout>
+                }
+                path="/inovito"
+              />
+            </Route>
             <Route
               element={
                 <DashboardLayout>

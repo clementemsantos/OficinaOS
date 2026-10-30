@@ -12,6 +12,15 @@ on:
       - "src/lib/__tests__/inovito-owner-summary.test.ts"
       - "src/lib/__tests__/inovito-voice-commands.test.ts"
       - "src/app.tsx"
+      - "src/pages/inovito/**"
+      - "src/lib/navigation.ts"
+      - "server/routes/inovito.ts"
+      - "server/services/inovito-google.service.ts"
+      - "server/__tests__/inovito-google-oauth.test.ts"
+      - "server/register-api-routes.ts"
+      - "prisma/schema.prisma"
+      - "prisma/migrations/20261122000000_inovito_google_connections/**"
+      - "public/manifest.webmanifest"
       - ".github/workflows/inovito-voice-ci.yml"
 
 permissions:
@@ -39,6 +48,6 @@ jobs:
       - name: Validar tipos
         run: bun run typecheck
       - name: Testar comandos
-        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts server/__tests__/inovito-google-oauth.test.ts
       - name: Compilar funcionalidade ativada
         run: bun run build

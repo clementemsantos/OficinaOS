@@ -22,6 +22,12 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/",
     perm: { jobs: ["view"] },
   },
+  {
+    icon: "smart_toy",
+    labelKey: "Inovito JARVIS",
+    to: "/inovito",
+    perm: { dashboard: ["viewOwner"] },
+  },
   { icon: "build", labelKey: "jobs", to: "/jobs", perm: { jobs: ["view"] } },
   {
     icon: "menu_book",
