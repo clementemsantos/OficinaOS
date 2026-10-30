@@ -69,7 +69,8 @@ export default function InovitoMobilePage() {
   const [busy, setBusy] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  let googleStatusText = "É necessário configurar o cliente OAuth Google no servidor.";
+  let googleStatusText =
+    "É necessário configurar o cliente OAuth Google no servidor.";
   if (connections?.google.connected) {
     googleStatusText = "Conta Google autorizada para leitura.";
   } else if (connections?.google.configured) {
@@ -269,7 +270,10 @@ export default function InovitoMobilePage() {
                 </p>
               )}
               {googleData.calendar.map((event) => (
-                <p className="border-outline-variant border-b pb-2 text-sm" key={event.id}>
+                <p
+                  className="border-outline-variant border-b pb-2 text-sm"
+                  key={event.id}
+                >
                   <strong>{event.title}</strong>
                   <span className="block text-on-surface-variant text-xs">
                     {formatDate(event.start)}
@@ -285,7 +289,10 @@ export default function InovitoMobilePage() {
                 </p>
               )}
               {googleData.googleTasks.map((task) => (
-                <p className="border-outline-variant border-b pb-2 text-sm" key={task.id}>
+                <p
+                  className="border-outline-variant border-b pb-2 text-sm"
+                  key={task.id}
+                >
                   <strong>{task.title}</strong>
                   {task.due && (
                     <span className="block text-on-surface-variant text-xs">
