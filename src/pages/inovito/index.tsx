@@ -340,9 +340,16 @@ export default function InovitoMobilePage() {
         )}
         {connections && (
           <p className="text-on-surface-variant text-xs">
-            WhatsApp: {connections.whatsapp.webhookConfigured ? "webhook configurado" : "por configurar"}.
-            Messenger: {connections.messenger.webhookConfigured ? "webhook configurado" : "por configurar"}.
-            A receção automática só funciona após validação das subscrições oficiais da Meta.
+            WhatsApp:{" "}
+            {connections.whatsapp.webhookConfigured
+              ? "webhook configurado"
+              : "por configurar"}
+            . Messenger:{" "}
+            {connections.messenger.webhookConfigured
+              ? "webhook configurado"
+              : "por configurar"}
+            . A receção automática só funciona após validação das subscrições
+            oficiais da Meta.
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
