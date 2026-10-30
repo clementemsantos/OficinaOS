@@ -48,7 +48,11 @@ export function extractAiQuestion(phrase: string): string | null {
 
 /** O router state é não confiável: só aceitamos texto curto e simples. */
 export function readInovitoDraft(value: unknown): string | null {
-  if (typeof value !== "object" || value === null || !("inovitoDraft" in value)) {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("inovitoDraft" in value)
+  ) {
     return null;
   }
   const draft = value.inovitoDraft;
