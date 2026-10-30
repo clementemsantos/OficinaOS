@@ -324,7 +324,9 @@ export function formatGmailHeaders(message: GoogleMessageMetadata): {
   const find = (name: string) =>
     headers.find((header) => header.name?.toLowerCase() === name)?.value;
   const clean = (value: string | undefined, fallback: string) =>
-    removeHeaderControls(value ?? fallback).trim().slice(0, 160);
+    removeHeaderControls(value ?? fallback)
+      .trim()
+      .slice(0, 160);
   return {
     id: message.id,
     from: clean(find("from"), "Remetente não disponível"),
