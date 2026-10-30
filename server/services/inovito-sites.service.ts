@@ -9,6 +9,8 @@ import { integrationJson } from "../lib/integration-network.js";
 const DEFAULT_SITE = "https://inove.pt";
 const MAX_SITES = 8;
 const SITE_ORIGIN_PATTERN = /^[a-z0-9.-]{1,253}$/;
+const SITE_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+const IPV4_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
 const MAX_NAME = 160;
 
 export interface SiteConfig {
@@ -20,8 +22,8 @@ export interface SiteConfig {
 export interface SiteProduct {
   id: number;
   name: string;
-  price: string | null;
   permalink: string;
+  price: string | null;
 }
 
 export interface SitePreview extends SiteConfig {
@@ -56,12 +58,12 @@ export function parseSiteOrigin(raw: string): SiteConfig | null {
       (label) =>
         label.length > 0 &&
         label.length <= 63 &&
-        /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
+        SITE_LABEL_PATTERN.test(label)
     );
     if (!validLabels || host.split(".").length < 2) {
       return null;
     }
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    if (IPV4_PATTERN.test(host)) {
       return null;
     }
     return { id: host, name: host, origin: url.origin };
@@ -158,6 +160,6 @@ async function readSitePreview(site: SiteConfig): Promise<SitePreview> {
   }
 }
 
-export async function readConfiguredSites(): Promise<SitePreview[]> {
+export function readConfiguredSites(): Promise<SitePreview[]> {
   return Promise.all(configuredSites().map(readSitePreview));
 }
