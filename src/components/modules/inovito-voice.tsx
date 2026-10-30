@@ -1,6 +1,13 @@
+import type { OwnerDashboardDTO } from "@shared/types/dashboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { Input } from "@/components/ui/input";
 import { can } from "@/hooks/use-can";
+import api from "@/lib/api";
+import {
+  formatOwnerSummary,
+  isOwnerSummaryRequest,
+} from "@/lib/inovito-owner-summary";
 import {
   isVoiceHelpRequest,
   matchVoiceDestination,
@@ -28,11 +35,18 @@ interface BrowserSpeechRecognition {
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onresult: ((event: VoiceEvent) => void) | null;
+  processLocally?: boolean;
   start: () => void;
   stop: () => void;
 }
 
-type SpeechConstructor = new () => BrowserSpeechRecognition;
+interface SpeechConstructor {
+  available?: (options: {
+    langs: string[];
+    processLocally: boolean;
+  }) => Promise<string>;
+  new (): BrowserSpeechRecognition;
+}
 
 const GREETING_PATTERN = /\b(bom dia|boa tarde|boa noite|ola)\b/;
 
@@ -53,9 +67,12 @@ export default function InovitoVoice() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
   const [enabled, setEnabled] = useState(false);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [typedCommand, setTypedCommand] = useState("");
+  const [checkingLocal, setCheckingLocal] = useState(false);
   const [status, setStatus] = useState("Desligado");
   const [feedback, setFeedback] = useState(
-    "Ativa o microfone e diz «Inovito, abre as tarefas»."
+    "Carrega em «Falar» e diz, por exemplo, «resumo da loja»."
   );
   const recognizerRef = useRef<BrowserSpeechRecognition | null>(null);
   const listeningRef = useRef(false);
@@ -63,6 +80,7 @@ export default function InovitoVoice() {
   const awakeUntilRef = useRef(0);
   const restartTimerRef = useRef<number | undefined>(undefined);
   const awakeTimerRef = useRef<number | undefined>(undefined);
+  const summaryRequestRef = useRef<AbortController | null>(null);
 
   const startRecognition = useCallback(() => {
     if (
@@ -84,6 +102,10 @@ export default function InovitoVoice() {
     (message: string) => {
       setFeedback(message);
       if (!("speechSynthesis" in window)) {
+        if (!continuousMode) {
+          listeningRef.current = false;
+          setEnabled(false);
+        }
         return;
       }
       window.speechSynthesis.cancel();
@@ -93,18 +115,57 @@ export default function InovitoVoice() {
       utterance.lang = "pt-PT";
       const resume = () => {
         speakingRef.current = false;
-        startRecognition();
+        if (continuousMode) {
+          startRecognition();
+        } else {
+          listeningRef.current = false;
+          setEnabled(false);
+          setStatus("Microfone desligado");
+        }
       };
       utterance.onend = resume;
       utterance.onerror = resume;
       window.speechSynthesis.speak(utterance);
     },
-    [startRecognition]
+    [continuousMode, startRecognition]
   );
 
   const handleSpokenCommand = useCallback(
     (spoken: string) => {
       const command = normalizeVoice(spoken);
+      if (isOwnerSummaryRequest(command)) {
+        if (!can(role, { dashboard: ["viewOwner"] })) {
+          speak(
+            "O resumo completo da loja só está disponível para o proprietário."
+          );
+          return;
+        }
+        summaryRequestRef.current?.abort();
+        const controller = new AbortController();
+        summaryRequestRef.current = controller;
+        api
+          .get<OwnerDashboardDTO>("/dashboard/owner", {
+            signal: controller.signal,
+          })
+          .then((response) => {
+            if (!controller.signal.aborted) {
+              speak(formatOwnerSummary(response.data));
+            }
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) {
+              speak(
+                "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
+              );
+            }
+          })
+          .finally(() => {
+            if (summaryRequestRef.current === controller) {
+              summaryRequestRef.current = null;
+            }
+          });
+        return;
+      }
       const route = matchVoiceDestination(command);
       if (route) {
         const destination = NAV_ITEMS.find((item) => item.to === route);
@@ -134,6 +195,33 @@ export default function InovitoVoice() {
     [navigate, role, speak]
   );
 
+  const handleHeard = useCallback(
+    (heard: ReturnType<typeof parseVoiceInput>) => {
+      if (heard.kind === "ignore") {
+        return;
+      }
+      if (heard.kind === "wake") {
+        if (!continuousMode) {
+          speak("Pede o comando completo depois de carregar em falar.");
+          return;
+        }
+        awakeUntilRef.current = Date.now() + 15_000;
+        window.clearTimeout(awakeTimerRef.current);
+        awakeTimerRef.current = window.setTimeout(() => {
+          awakeUntilRef.current = 0;
+          setStatus("À escuta de «Inovito»");
+        }, 15_000);
+        setStatus("Pronto para o comando");
+        speak("Sim, estou a ouvir.");
+        return;
+      }
+      awakeUntilRef.current = 0;
+      window.clearTimeout(awakeTimerRef.current);
+      handleSpokenCommand(heard.text);
+    },
+    [continuousMode, handleSpokenCommand, speak]
+  );
+
   useEffect(() => {
     if (!enabled) {
       return;
@@ -157,8 +245,11 @@ export default function InovitoVoice() {
 
     const recognizer = new Constructor();
     recognizer.lang = "pt-PT";
-    recognizer.continuous = true;
+    recognizer.continuous = continuousMode;
     recognizer.interimResults = false;
+    if (continuousMode) {
+      recognizer.processLocally = true;
+    }
     recognizerRef.current = recognizer;
     listeningRef.current = true;
 
@@ -174,26 +265,12 @@ export default function InovitoVoice() {
         }
         const heard = parseVoiceInput(
           result[0]?.transcript ?? "",
-          Date.now() < awakeUntilRef.current
+          !continuousMode || Date.now() < awakeUntilRef.current
         );
-        if (heard.kind === "ignore") {
-          continue;
+        if (heard.kind !== "ignore") {
+          handleHeard(heard);
+          return;
         }
-        if (heard.kind === "wake") {
-          awakeUntilRef.current = Date.now() + 15_000;
-          window.clearTimeout(awakeTimerRef.current);
-          awakeTimerRef.current = window.setTimeout(() => {
-            awakeUntilRef.current = 0;
-            setStatus("À escuta de «Inovito»");
-          }, 15_000);
-          setStatus("Pronto para o comando");
-          speak("Sim, estou a ouvir.");
-        } else {
-          awakeUntilRef.current = 0;
-          window.clearTimeout(awakeTimerRef.current);
-          handleSpokenCommand(heard.text);
-        }
-        return;
       }
     };
 
@@ -225,16 +302,22 @@ export default function InovitoVoice() {
       if (!listeningRef.current || speakingRef.current) {
         return;
       }
+      if (!continuousMode) {
+        listeningRef.current = false;
+        setEnabled(false);
+        setStatus("Microfone desligado");
+        return;
+      }
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = window.setTimeout(startRecognition, 600);
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        recognizer.stop();
-        setStatus("Em pausa: separador em segundo plano");
-      } else {
-        startRecognition();
+        listeningRef.current = false;
+        recognizer.abort();
+        setEnabled(false);
+        setStatus("Microfone desligado: separador em segundo plano");
       }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -252,9 +335,72 @@ export default function InovitoVoice() {
       recognizer.abort();
       recognizerRef.current = null;
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.speechSynthesis?.cancel();
     };
-  }, [enabled, handleSpokenCommand, speak, startRecognition]);
+  }, [continuousMode, enabled, handleHeard, startRecognition]);
+
+  const toggleContinuousMode = useCallback(() => {
+    if (continuousMode) {
+      setContinuousMode(false);
+      setFeedback("Modo por botão ativo.");
+      return;
+    }
+    const Constructor = recognitionConstructor();
+    if (!Constructor?.available) {
+      setFeedback(
+        "Este navegador não permite verificar reconhecimento local. O modo contínuo permanece indisponível."
+      );
+      return;
+    }
+    setCheckingLocal(true);
+    Constructor.available({
+      langs: ["pt-PT"],
+      processLocally: true,
+    })
+      .then((availability) => {
+        if (availability === "available") {
+          setContinuousMode(true);
+          setFeedback(
+            "Modo experimental local disponível. Carrega em ativar escuta para começar."
+          );
+        } else {
+          setFeedback(
+            "Não existe motor local de português de Portugal pronto neste navegador. O modo contínuo fica desligado."
+          );
+        }
+      })
+      .catch(() => {
+        setFeedback(
+          "Não foi possível verificar o reconhecimento local. O modo contínuo fica desligado."
+        );
+      })
+      .finally(() => setCheckingLocal(false));
+  }, [continuousMode]);
+
+  useEffect(
+    () => () => {
+      summaryRequestRef.current?.abort();
+      window.speechSynthesis?.cancel();
+    },
+    []
+  );
+
+  let microphoneLabel = "Falar";
+  let microphoneAriaLabel = "Falar com o Inovito";
+  if (enabled) {
+    microphoneLabel = "Desligar";
+    microphoneAriaLabel = "Desligar o microfone do Inovito";
+  } else if (continuousMode) {
+    microphoneLabel = "Ativar escuta";
+    microphoneAriaLabel = "Ativar escuta experimental";
+  }
+
+  let localModeLabel = "Verificar modo contínuo local «Inovito»";
+  if (continuousMode) {
+    localModeLabel =
+      "Modo local experimental ligado — selecionar para desligar";
+  } else if (checkingLocal) {
+    localModeLabel = "A verificar motor local pt-PT…";
+  }
 
   return (
     <aside
@@ -269,11 +415,7 @@ export default function InovitoVoice() {
           </p>
         </div>
         <button
-          aria-label={
-            enabled
-              ? "Desligar o microfone do Inovito"
-              : "Ativar o microfone do Inovito"
-          }
+          aria-label={microphoneAriaLabel}
           aria-pressed={enabled}
           className={
             enabled
@@ -281,24 +423,66 @@ export default function InovitoVoice() {
               : "min-h-11 rounded-xl bg-primary px-3 text-on-primary text-sm"
           }
           onClick={() => {
-            setEnabled((current) => !current);
             if (enabled) {
+              listeningRef.current = false;
+              speakingRef.current = false;
+              summaryRequestRef.current?.abort();
+              window.speechSynthesis?.cancel();
               setStatus("Desligado");
               setFeedback("O microfone está desligado.");
             }
+            setEnabled((current) => !current);
           }}
           type="button"
         >
-          {enabled ? "Desligar" : "Ativar"}
+          {microphoneLabel}
         </button>
       </div>
+      <button
+        aria-pressed={continuousMode}
+        className="mt-2 w-full text-left text-on-surface-variant text-xs underline disabled:opacity-50"
+        disabled={enabled || checkingLocal}
+        onClick={toggleContinuousMode}
+        type="button"
+      >
+        {localModeLabel}
+      </button>
+      <form
+        className="mt-2 flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const command = typedCommand.trim();
+          if (!command) {
+            return;
+          }
+          setTypedCommand("");
+          handleSpokenCommand(command);
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <Input
+            aria-label="Escrever comando para o Inovito"
+            onChange={(event) => setTypedCommand(event.target.value)}
+            placeholder="Resumo da loja"
+            value={typedCommand}
+          />
+        </div>
+        <button
+          className="min-h-10 rounded-xl bg-primary px-3 text-on-primary text-sm"
+          disabled={!typedCommand.trim()}
+          type="submit"
+        >
+          Enviar
+        </button>
+      </form>
       <p aria-live="polite" className="mt-2 text-on-surface-variant text-xs">
         {feedback}
       </p>
       <p className="mt-2 text-[11px] text-on-surface-variant">
-        Escuta opcional enquanto esta página estiver aberta. O navegador poderá
-        processar a voz num serviço externo. Não usar para ditar dados de
-        clientes.
+        Por defeito, só escuta ao carregar em «Falar». O reconhecimento do
+        navegador pode enviar áudio para serviços externos. Não usar junto de
+        clientes. A escuta contínua só é permitida se existir reconhecimento
+        local pt-PT, ainda experimental.
       </p>
     </aside>
   );

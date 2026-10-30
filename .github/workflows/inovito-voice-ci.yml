@@ -5,6 +5,8 @@ on:
     paths:
       - "src/components/modules/inovito-voice.tsx"
       - "src/lib/inovito-voice-commands.ts"
+      - "src/lib/inovito-owner-summary.ts"
+      - "src/lib/__tests__/inovito-owner-summary.test.ts"
       - "src/lib/__tests__/inovito-voice-commands.test.ts"
       - "src/app.tsx"
       - ".github/workflows/inovito-voice-ci.yml"
@@ -34,6 +36,6 @@ jobs:
       - name: Validar tipos
         run: bun run typecheck
       - name: Testar comandos
-        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts
       - name: Compilar funcionalidade ativada
         run: bun run build
