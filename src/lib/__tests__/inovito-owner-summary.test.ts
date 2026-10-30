@@ -8,7 +8,9 @@ describe("Inovito — resumo agregado da loja", () => {
   it("reconhece pedidos habituais em português de Portugal", () => {
     expect(isOwnerSummaryRequest("Dá-me um resumo da loja")).toBe(true);
     expect(isOwnerSummaryRequest("Qual é o estado da oficina?")).toBe(true);
-    expect(isOwnerSummaryRequest("Quantas reparações temos abertas?")).toBe(true);
+    expect(isOwnerSummaryRequest("Quantas reparações temos abertas?")).toBe(
+      true
+    );
     expect(isOwnerSummaryRequest("Abre a ficha de cliente")).toBe(false);
   });
 
