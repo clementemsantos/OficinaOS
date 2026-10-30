@@ -15,7 +15,7 @@ describe("Inovito — autenticação Meta", () => {
     expect(verifyMetaSignature(raw, ["sha256=", digest].join(""), secret)).toBe(
       true
     );
-    expect(verifyMetaSignature(raw, "sha256=" + "a".repeat(64), secret)).toBe(
+    expect(verifyMetaSignature(raw, `sha256=${"a".repeat(64)}`, secret)).toBe(
       false
     );
     expect(verifyMetaSignature(Buffer.from("{}"), ["sha256=", digest].join(""), secret)).toBe(false);
