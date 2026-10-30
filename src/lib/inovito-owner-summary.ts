@@ -13,7 +13,9 @@ const OPEN_JOBS_PATTERN =
 
 export function isOwnerSummaryRequest(command: string): boolean {
   const normalized = normalizeVoice(command);
-  return SHOP_SUMMARY_PATTERN.test(normalized) || OPEN_JOBS_PATTERN.test(normalized);
+  return (
+    SHOP_SUMMARY_PATTERN.test(normalized) || OPEN_JOBS_PATTERN.test(normalized)
+  );
 }
 
 function plural(value: number, singular: string, multiple: string): string {
