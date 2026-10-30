@@ -261,7 +261,7 @@ export async function fetchGoogleOverview(accessToken: string): Promise<GoogleOv
   listsUrl.searchParams.set("maxResults", "10");
   const mailUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
   mailUrl.searchParams.set("maxResults", "10");
-  mailUrl.searchParams.set("q", "is:unread");
+  mailUrl.searchParams.set("labelIds", "UNREAD");
 
   const [events, lists, mail] = await Promise.all([
     googleGet(eventsUrl, accessToken) as Promise<GoogleCalendarData>,
