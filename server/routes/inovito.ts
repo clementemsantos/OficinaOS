@@ -7,6 +7,7 @@ import {
   googleAccessToken,
   googleIsConfigured,
 } from "../services/inovito-google.service.js";
+import { readConfiguredSites } from "../services/inovito-sites.service.js";
 import { getSessionId, getUserId } from "../utils/request.js";
 
 export const inovitoRoutes: FastifyPluginAsync = (app) => {
@@ -53,6 +54,33 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
           Boolean(process.env.INOVITO_META_APP_SECRET) &&
           Boolean(process.env.INOVITO_META_PAGE_ID),
         captureEnabled: process.env.INOVITO_META_CAPTURE_ENABLED === "true",
+      },
+    };
+  });
+
+  // The first site is inove.pt. Additional sites are trusted server config,
+  // never a free-form user URL. Public published products only; no writes.
+  app.get("/sites", async (_req, reply) => {
+    reply.header("cache-control", "private, no-store");
+    const [sites, woocommerce] = await Promise.all([
+      readConfiguredSites(),
+      app.prisma.integrationConnection.findUnique({
+        where: { kind: "WOOCOMMERCE" },
+        select: {
+          enabled: true,
+          lastSyncAt: true,
+          lastError: true,
+        },
+      }),
+    ]);
+    return {
+      sites,
+      orderImport: {
+        configured: Boolean(woocommerce),
+        enabled: woocommerce?.enabled ?? false,
+        lastSyncAt: woocommerce?.lastSyncAt ?? null,
+        hasError: Boolean(woocommerce?.lastError),
+        note: "O importador de encomendas existente suporta uma única loja; os catálogos públicos podem ter vários sites.",
       },
     };
   });
