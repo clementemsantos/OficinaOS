@@ -320,21 +320,32 @@ export async function fetchGoogleOverview(
   const firstList = lists.items?.find((item) => item.id);
   let tasks: GoogleTasksData = {};
   if (firstList?.id) {
-    const taskUrl = new URL(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(firstList.id)}/tasks`);
+    const taskUrl = new URL(
+      `https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(firstList.id)}/tasks`
+    );
     taskUrl.searchParams.set("maxResults", "8");
     taskUrl.searchParams.set("showCompleted", "false");
     tasks = (await googleGet(taskUrl, accessToken)) as GoogleTasksData;
   }
   return {
     calendar: (events.items ?? []).slice(0, 8).map((event) => ({
-      id: event.id ?? `${event.start?.dateTime ?? event.start?.date ?? ""}:${event.summary ?? ""}`,
+      id:
+        event.id ??
+        `${event.start?.dateTime ?? event.start?.date ?? ""}:${event.summary ?? ""}`,
       title: event.summary ?? "Evento sem título",
       start: event.start?.dateTime ?? event.start?.date ?? "",
     })),
     googleTasks: (tasks.items ?? [])
       .filter((task) => task.status !== "completed")
       .slice(0, 8)
-      .map((task) => ({ id: task.id ?? `${task.title ?? ""}:${task.due ?? ""}`, title: task.title ?? "Tarefa sem título", due: task.due ?? null })),
-    unreadMailEstimate: typeof mail.resultSizeEstimate === "number" ? mail.resultSizeEstimate : null,
+      .map((task) => ({
+        id: task.id ?? `${task.title ?? ""}:${task.due ?? ""}`,
+        title: task.title ?? "Tarefa sem título",
+        due: task.due ?? null,
+      })),
+    unreadMailEstimate:
+      typeof mail.resultSizeEstimate === "number"
+        ? mail.resultSizeEstimate
+        : null,
   };
 }
