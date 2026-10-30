@@ -135,7 +135,9 @@ export default function InovitoVoice() {
       const command = normalizeVoice(spoken);
       if (isOwnerSummaryRequest(command)) {
         if (!can(role, { dashboard: ["viewOwner"] })) {
-          speak("O resumo completo da loja só está disponível para o proprietário.");
+          speak(
+            "O resumo completo da loja só está disponível para o proprietário."
+          );
           return;
         }
         summaryRequestRef.current?.abort();
