@@ -37,7 +37,7 @@ describe("Inovito — sites permitidos no servidor", () => {
   it("limita a quantidade de sites por consulta", () => {
     const input = Array.from(
       { length: 12 },
-      (_, i) => "https://site-" + i + ".exemplo.pt"
+      (_, i) => `https://site-${i}.exemplo.pt`
     ).join(",");
     expect(configuredSites(input)).toHaveLength(8);
   });
@@ -46,14 +46,16 @@ describe("Inovito — sites permitidos no servidor", () => {
 describe("Inovito — catálogo público WooCommerce", () => {
   it("apresenta preços em euros sem alterar nem criar produtos", () => {
     const data = normalizeSiteProducts(
-      [{
-        id: 4762,
-        name: "Monitor HP",
-        permalink: "https://inove.pt/produto/monitor-hp/",
-        prices: {
-          price: "18799",
-          currency_code: "EUR",
-          currency_minor_unit: 2,
+      [
+        {
+          id: 4762,
+          name: "Monitor HP",
+          permalink: "https://inove.pt/produto/monitor-hp/",
+          prices: {
+            price: "18799",
+            currency_code: "EUR",
+            currency_minor_unit: 2,
+          },
         },
       }],
       "https://inove.pt"
@@ -67,11 +69,13 @@ describe("Inovito — catálogo público WooCommerce", () => {
   it("ignora ligações de produtos para outros domínios", () => {
     expect(
       normalizeSiteProducts(
-        [{
-          id: 1,
-          name: "Produto",
-          permalink: "https://outro-dominio.pt/produto/1",
-        }],
+        [
+          {
+            id: 1,
+            name: "Produto",
+            permalink: "https://outro-dominio.pt/produto/1",
+          },
+        ],
         "https://inove.pt"
       )
     ).toEqual([]);
@@ -83,16 +87,18 @@ describe("Inovito — catálogo público WooCommerce", () => {
     ).toEqual([]);
     expect(
       normalizeSiteProducts(
-        [{
-          id: 17,
-          name: "Produto",
-          permalink: "https://inove.pt/produto/17",
-          prices: {
-            price: "not-a-number",
-            currency_code: "EUR",
-            currency_minor_unit: 2,
+        [
+          {
+            id: 17,
+            name: "Produto",
+            permalink: "https://inove.pt/produto/17",
+            prices: {
+              price: "not-a-number",
+              currency_code: "EUR",
+              currency_minor_unit: 2,
+            },
           },
-        }],
+        ],
         "https://inove.pt"
       )
     ).toEqual([]);
