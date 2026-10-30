@@ -26,7 +26,7 @@ describe("Inovito — pré-visualização de Gmail sem conteúdo de mensagens", 
       id: "a8",
       payload: {
         headers: [
-          { name: "subject", value: "Texto\r\n" + "A".repeat(250) },
+          { name: "subject", value: `Texto\r\n${"A".repeat(250)}` },
           { name: "FROM", value: "Remetente\nOutra linha" },
         ],
       },
