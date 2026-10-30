@@ -61,8 +61,8 @@ export default function InovitoSitesPanel() {
         <div>
           <h2 className="font-bold text-lg">Os meus sites</h2>
           <p className="text-on-surface-variant text-xs">
-            Catálogo público consultado em tempo real; nunca altera os
-            produtos, preços ou encomendas do WordPress.
+            Catálogo público consultado em tempo real; nunca altera os produtos,
+            preços ou encomendas do WordPress.
           </p>
         </div>
         <Button
@@ -132,12 +132,12 @@ export default function InovitoSitesPanel() {
           {sites.orderImport.enabled ? "ativado" : "não ativado"}.
           {sites.orderImport.lastSyncAt && (
             <>
-              {" "}Última sincronização:{" "}
-              {formatDate(sites.orderImport.lastSyncAt)}.
+              {" "}
+              Última sincronização: {formatDate(sites.orderImport.lastSyncAt)}.
             </>
           )}
-          {sites.orderImport.hasError && " Existe um erro a verificar."}
-          {" "}Atualmente, o importador de encomendas suporta uma única loja.
+          {sites.orderImport.hasError && " Existe um erro a verificar."}{" "}
+          Atualmente, o importador de encomendas suporta uma única loja.
         </p>
       )}
       <p className="text-on-surface-variant text-xs">
