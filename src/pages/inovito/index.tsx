@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
+import InovitoSitesPanel from "@/components/modules/inovito-sites-panel";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 
@@ -339,14 +340,16 @@ export default function InovitoMobilePage() {
                 </div>
               )}
               <p className="mt-2 text-on-surface-variant text-xs">
-                Apresenta o remetente e o assunto de até 5 e-mails não lidos.
-                O corpo e os anexos não são lidos nem guardados no OficinaOS.
-                Não apresentar o painel perante clientes.
+                Apresenta o remetente e o assunto de até 5 e-mails não lidos. O
+                corpo e os anexos não são lidos nem guardados no OficinaOS. Não
+                apresentar o painel perante clientes.
               </p>
             </article>
           </div>
         )}
       </section>
+
+      <InovitoSitesPanel />
 
       <section className="space-y-3">
         <h2 className="font-bold text-lg">Mensagens e canais externos</h2>

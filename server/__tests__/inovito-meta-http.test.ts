@@ -72,10 +72,9 @@ describe("Inovito webhook Meta — protocolo HTTP", () => {
     process.env.INOVITO_META_APP_SECRET = "meta-test-secret";
     process.env.INOVITO_META_CAPTURE_ENABLED = "false";
     const body = '{"object":"page","entry":[]}';
-    const signature = createHmac(
-      "sha256",
-      process.env.INOVITO_META_APP_SECRET
-    ).update(body).digest("hex");
+    const signature = createHmac("sha256", process.env.INOVITO_META_APP_SECRET)
+      .update(body)
+      .digest("hex");
     const app = await metaTestApp();
     try {
       const response = await app.inject({
