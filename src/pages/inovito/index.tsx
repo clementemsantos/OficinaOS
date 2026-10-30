@@ -69,6 +69,12 @@ export default function InovitoMobilePage() {
   const [busy, setBusy] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  let googleStatusText = "É necessário configurar o cliente OAuth Google no servidor.";
+  if (connections?.google.connected) {
+    googleStatusText = "Conta Google autorizada para leitura.";
+  } else if (connections?.google.configured) {
+    googleStatusText = "Pronto para pedir autorização à tua conta Google.";
+  }
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -209,11 +215,7 @@ export default function InovitoMobilePage() {
         {!loading && connections && (
           <>
             <p className="text-on-surface-variant text-sm">
-              {connections.google.connected
-                ? "Conta Google autorizada para leitura."
-                : connections.google.configured
-                  ? "Pronto para pedir autorização à tua conta Google."
-                  : "É necessário configurar o cliente OAuth Google no servidor."}
+              {googleStatusText}
             </p>
             {!connections.google.connected && connections.google.configured && (
               <Button disabled={busy} onClick={connectGoogle}>
@@ -222,16 +224,7 @@ export default function InovitoMobilePage() {
             )}
             {connections.google.connected && (
               <div className="space-y-2">
-                {!confirmDisconnect ? (
-                  <Button
-                    disabled={busy}
-                    onClick={() => setConfirmDisconnect(true)}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    Desligar Google
-                  </Button>
-                ) : (
+                {confirmDisconnect ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm">
                       Confirmar remoção da ligação no OficinaOS?
@@ -252,6 +245,15 @@ export default function InovitoMobilePage() {
                       Cancelar
                     </Button>
                   </div>
+                ) : (
+                  <Button
+                    disabled={busy}
+                    onClick={() => setConfirmDisconnect(true)}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    Desligar Google
+                  </Button>
                 )}
               </div>
             )}
