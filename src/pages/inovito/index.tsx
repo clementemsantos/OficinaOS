@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Button } from "@/components/ui/button";
 import InovitoSitesPanel from "@/components/modules/inovito-sites-panel";
+import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 
 interface ConnectionStatus {
