@@ -63,9 +63,7 @@ function ChannelLink({
 }
 
 export default function InovitoMobilePage() {
-  const [connections, setConnections] = useState<ConnectionStatus | null>(
-    null
-  );
+  const [connections, setConnections] = useState<ConnectionStatus | null>(null);
   const [googleData, setGoogleData] = useState<GoogleOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -108,7 +106,9 @@ export default function InovitoMobilePage() {
     setBusy(true);
     setError(null);
     try {
-      const response = await api.get<{ url: string }>("/inovito/google/connect");
+      const response = await api.get<{ url: string }>(
+        "/inovito/google/connect"
+      );
       // Destination is fixed by the backend to accounts.google.com.
       const destination = new URL(response.data.url);
       if (destination.origin !== "https://accounts.google.com") {
@@ -146,13 +146,16 @@ export default function InovitoMobilePage() {
           Inovito JARVIS
         </h1>
         <p className="text-on-surface-variant text-sm">
-          Painel preparado para telemóvel. Os canais externos são de leitura
-          ou acesso manual até serem autorizados e testados.
+          Painel preparado para telemóvel. Os canais externos são de leitura ou
+          acesso manual até serem autorizados e testados.
         </p>
       </header>
 
       {error && (
-        <p className="rounded-xl border border-error/30 p-3 text-error text-sm" role="alert">
+        <p
+          className="rounded-xl border border-error/30 p-3 text-error text-sm"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -190,8 +193,15 @@ export default function InovitoMobilePage() {
 
       <section className="space-y-3 rounded-2xl bg-surface-container-low p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-bold text-lg">Google: e-mail, agenda e tarefas</h2>
-          <Button disabled={loading || busy} onClick={refresh} size="sm" variant="secondary">
+          <h2 className="font-bold text-lg">
+            Google: e-mail, agenda e tarefas
+          </h2>
+          <Button
+            disabled={loading || busy}
+            onClick={refresh}
+            size="sm"
+            variant="secondary"
+          >
             Atualizar
           </Button>
         </div>
@@ -252,7 +262,9 @@ export default function InovitoMobilePage() {
             <article className="space-y-2 rounded-xl bg-surface-container-lowest p-4">
               <h3 className="font-bold">Próximos eventos</h3>
               {googleData.calendar.length === 0 && (
-                <p className="text-sm">Sem eventos futuros na agenda principal.</p>
+                <p className="text-sm">
+                  Sem eventos futuros na agenda principal.
+                </p>
               )}
               {googleData.calendar.map((event, index) => (
                 <p className="border-outline-variant border-b pb-2 text-sm" key={index}>
@@ -266,7 +278,9 @@ export default function InovitoMobilePage() {
             <article className="space-y-2 rounded-xl bg-surface-container-lowest p-4">
               <h3 className="font-bold">Google Tasks</h3>
               {googleData.googleTasks.length === 0 && (
-                <p className="text-sm">Sem tarefas abertas na primeira lista.</p>
+                <p className="text-sm">
+                  Sem tarefas abertas na primeira lista.
+                </p>
               )}
               {googleData.googleTasks.map((task, index) => (
                 <p className="border-outline-variant border-b pb-2 text-sm" key={index}>
@@ -283,10 +297,13 @@ export default function InovitoMobilePage() {
               <h3 className="font-bold">Gmail</h3>
               <p className="mt-1 text-sm">
                 Estimativa de mensagens não lidas:{" "}
-                <strong>{googleData.unreadMailEstimate ?? "indisponível"}</strong>
+                <strong>
+                  {googleData.unreadMailEstimate ?? "indisponível"}
+                </strong>
               </p>
               <p className="mt-1 text-on-surface-variant text-xs">
-                Por segurança, o Inovito não lê o corpo das mensagens nesta fase.
+                Por segurança, o Inovito não lê o corpo das mensagens nesta
+                fase.
               </p>
             </article>
           </div>
@@ -333,14 +350,14 @@ export default function InovitoMobilePage() {
       <section className="space-y-2 rounded-2xl border border-outline-variant p-4">
         <h2 className="font-bold text-lg">Adicionar ao ecrã inicial</h2>
         <p className="text-on-surface-variant text-sm">
-          O OficinaOS já suporta aplicação web instalável. Num Android, abre
-          o menu do Chrome e escolhe «Instalar aplicação». No iPhone, usa
+          O OficinaOS já suporta aplicação web instalável. Num Android, abre o
+          menu do Chrome e escolhe «Instalar aplicação». No iPhone, usa
           «Partilhar» e «Adicionar ao ecrã principal». É necessário um endereço
           HTTPS válido e acesso remoto seguro à tua instalação.
         </p>
         <p className="text-on-surface-variant text-xs">
-          Não utilizar a instalação de produção sem corrigir as pendências
-          de segurança e testar previamente a autenticação no telemóvel.
+          Não utilizar a instalação de produção sem corrigir as pendências de
+          segurança e testar previamente a autenticação no telemóvel.
         </p>
       </section>
     </div>
