@@ -19,8 +19,8 @@ interface ConnectionStatus {
 }
 
 interface GoogleOverview {
-  calendar: Array<{ start: string; title: string }>;
-  googleTasks: Array<{ due: string | null; title: string }>;
+  calendar: Array<{ id: string; start: string; title: string }>;
+  googleTasks: Array<{ id: string; due: string | null; title: string }>;
   unreadMailEstimate: number | null;
 }
 
@@ -266,8 +266,8 @@ export default function InovitoMobilePage() {
                   Sem eventos futuros na agenda principal.
                 </p>
               )}
-              {googleData.calendar.map((event, index) => (
-                <p className="border-outline-variant border-b pb-2 text-sm" key={index}>
+              {googleData.calendar.map((event) => (
+                <p className="border-outline-variant border-b pb-2 text-sm" key={event.id}>
                   <strong>{event.title}</strong>
                   <span className="block text-on-surface-variant text-xs">
                     {formatDate(event.start)}
@@ -282,8 +282,8 @@ export default function InovitoMobilePage() {
                   Sem tarefas abertas na primeira lista.
                 </p>
               )}
-              {googleData.googleTasks.map((task, index) => (
-                <p className="border-outline-variant border-b pb-2 text-sm" key={index}>
+              {googleData.googleTasks.map((task) => (
+                <p className="border-outline-variant border-b pb-2 text-sm" key={task.id}>
                   <strong>{task.title}</strong>
                   {task.due && (
                     <span className="block text-on-surface-variant text-xs">
