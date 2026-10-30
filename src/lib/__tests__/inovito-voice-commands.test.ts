@@ -29,7 +29,9 @@ describe("Inovito voz — privacidade e navegação", () => {
   it("normaliza o português de Portugal", () => {
     expect(normalizeVoice("  REPARAÇÕES! ")).toBe("reparacoes");
     expect(matchVoiceDestination("Mostra as reparações")).toBe("/jobs");
-    expect(matchVoiceDestination("Abre as encomendas")).toBe("/purchase-orders");
+    expect(matchVoiceDestination("Abre as encomendas")).toBe(
+      "/purchase-orders"
+    );
     expect(matchVoiceDestination("Vai para o painel")).toBe("/");
   });
 
