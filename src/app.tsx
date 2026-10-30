@@ -140,7 +140,9 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute />}>
             <Route
-              element={<RequirePermission perm={{ dashboard: ["viewOwner"] }} />}
+              element={
+                <RequirePermission perm={{ dashboard: ["viewOwner"] }} />
+              }
             >
               <Route
                 element={
