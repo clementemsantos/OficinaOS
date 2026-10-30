@@ -10,22 +10,31 @@ import {
 import { NAV_ITEMS } from "@/lib/navigation";
 import { useAuthStore } from "@/stores/auth";
 
-type VoiceResult = { isFinal: boolean; 0: { transcript: string } };
-type VoiceEvent = { resultIndex: number; results: ArrayLike<VoiceResult> };
+interface VoiceResult {
+  0: { transcript: string };
+  isFinal: boolean;
+}
+
+interface VoiceEvent {
+  resultIndex: number;
+  results: ArrayLike<VoiceResult>;
+}
 
 interface BrowserSpeechRecognition {
+  abort: () => void;
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onresult: ((event: VoiceEvent) => void) | null;
-  abort: () => void;
   start: () => void;
   stop: () => void;
 }
 
 type SpeechConstructor = new () => BrowserSpeechRecognition;
+
+const GREETING_PATTERN = /\b(bom dia|boa tarde|boa noite|ola)\b/;
 
 function recognitionConstructor(): SpeechConstructor | undefined {
   const browser = window as Window & {
@@ -99,7 +108,9 @@ export default function InovitoVoice() {
     }
 
     if (!window.isSecureContext) {
-      setFeedback("Para usar o microfone, abre o OficinaOS por HTTPS ou localhost.");
+      setFeedback(
+        "Para usar o microfone, abre o OficinaOS por HTTPS ou localhost."
+      );
       setStatus("É necessária uma ligação segura");
       setEnabled(false);
       return;
@@ -120,7 +131,11 @@ export default function InovitoVoice() {
     listeningRef.current = true;
 
     recognizer.onresult = (event) => {
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
         const result = event.results[index];
         if (!result?.isFinal) {
           continue;
@@ -151,7 +166,7 @@ export default function InovitoVoice() {
         const route = matchVoiceDestination(command);
         if (route) {
           const destination = NAV_ITEMS.find((item) => item.to === route);
-          if (!destination || !can(role, destination.perm)) {
+          if (!(destination && can(role, destination.perm))) {
             speak("Não tens permissão para abrir essa área.");
             return;
           }
@@ -166,26 +181,38 @@ export default function InovitoVoice() {
           );
           return;
         }
-        if (/\b(bom dia|boa tarde|boa noite|ola)\b/.test(command)) {
+        if (GREETING_PATTERN.test(command)) {
           speak("Olá! Estou pronto para te ajudar a navegar pelo OficinaOS.");
           return;
         }
-        speak("Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis.");
+        speak(
+          "Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis."
+        );
         return;
       }
     };
 
     recognizer.onerror = (event) => {
       if (
-        ["not-allowed", "service-not-allowed", "audio-capture", "network", "language-not-supported"].includes(event.error)
+        [
+          "not-allowed",
+          "service-not-allowed",
+          "audio-capture",
+          "network",
+          "language-not-supported",
+        ].includes(event.error)
       ) {
         listeningRef.current = false;
-        setFeedback("O microfone ou o serviço de reconhecimento não está disponível. Verifica as permissões, o navegador e a ligação.");
+        setFeedback(
+          "O microfone ou o serviço de reconhecimento não está disponível. Verifica as permissões, o navegador e a ligação."
+        );
         setStatus("Escuta interrompida");
         setEnabled(false);
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
         setStatus("Reconhecimento temporariamente indisponível");
-        setFeedback("O serviço de reconhecimento falhou. Verifica a ligação ou usa o botão para desligar.");
+        setFeedback(
+          "O serviço de reconhecimento falhou. Verifica a ligação ou usa o botão para desligar."
+        );
       }
     };
 
@@ -227,7 +254,7 @@ export default function InovitoVoice() {
   return (
     <aside
       aria-label="Assistente Inovito por voz"
-      className="fixed bottom-20 right-4 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 shadow-xl"
+      className="fixed right-4 bottom-20 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 shadow-xl"
     >
       <div className="flex items-center justify-between gap-2">
         <div>
@@ -259,7 +286,7 @@ export default function InovitoVoice() {
       <p aria-live="polite" className="mt-2 text-on-surface-variant text-xs">
         {feedback}
       </p>
-      <p className="mt-2 text-on-surface-variant text-[11px]">
+      <p className="mt-2 text-[11px] text-on-surface-variant">
         Escuta opcional enquanto esta página estiver aberta. O navegador poderá
         processar a voz num serviço externo. Não usar para ditar dados de clientes.
       </p>
