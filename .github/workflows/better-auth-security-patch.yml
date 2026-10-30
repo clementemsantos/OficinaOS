@@ -1,0 +1,68 @@
+name: Better Auth — isolated security patch
+
+on:
+  push:
+    branches:
+      - security/better-auth-1-7-7-safe
+    paths:
+      - .github/workflows/better-auth-security-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  safe-upgrade:
+    name: Upgrade, audit and test before committing lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: reparilo
+          POSTGRES_PASSWORD: reparilo_test
+          POSTGRES_DB: reparilo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://reparilo:reparilo_test@localhost:5432/reparilo_test
+      BETTER_AUTH_SECRET: test-secret-at-least-thirty-two-chars-long-aaaa
+      AI_ENCRYPTION_KEY: test-aes-key-at-least-thirty-two-chars-ok-bbbb
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Upgrade only Better Auth to the patched release
+        run: bun add --exact better-auth@1.7.7
+      - name: Check lockfile is reproducible
+        run: bun install --frozen-lockfile
+      - name: Generate Prisma client
+        run: bun run db:generate
+      - name: Validate types
+        run: bun run typecheck
+      - name: Validate authentication and permissions
+        run: bun run test -- server/__tests__/auth-plugin.test.ts server/__tests__/rbac.test.ts server/__tests__/rbac-matrix.test.ts
+      - name: Compile with updated dependencies
+        run: bun run build
+      - name: Audit for critical vulnerabilities
+        run: bun audit --audit-level=critical
+      - name: Commit only tested package and lock files to security branch
+        run: |
+          if git diff --quiet -- package.json bun.lock; then
+            echo "Nothing to update"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package.json bun.lock
+          git commit -m "fix(security): pin better-auth 1.7.7 with tested lockfile"
+          git push origin HEAD:security/better-auth-1-7-7-safe
