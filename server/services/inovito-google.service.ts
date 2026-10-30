@@ -274,13 +274,14 @@ async function googleGet(url: URL, accessToken: string): Promise<unknown> {
 }
 
 export interface GoogleOverview {
-  calendar: Array<{ start: string; title: string }>;
-  googleTasks: Array<{ due: string | null; title: string }>;
+  calendar: Array<{ id: string; start: string; title: string }>;
+  googleTasks: Array<{ id: string; due: string | null; title: string }>;
   unreadMailEstimate: number | null;
 }
 
 interface GoogleCalendarData {
   items?: Array<{
+    id?: string;
     summary?: string;
     start?: { dateTime?: string; date?: string };
   }>;
@@ -289,7 +290,7 @@ interface GoogleListsData {
   items?: Array<{ id?: string; title?: string }>;
 }
 interface GoogleTasksData {
-  items?: Array<{ title?: string; due?: string; status?: string }>;
+  items?: Array<{ id?: string; title?: string; due?: string; status?: string }>;
 }
 interface GoogleMailData {
   resultSizeEstimate?: number;
@@ -321,13 +322,14 @@ export async function fetchGoogleOverview(
   }
   return {
     calendar: (events.items ?? []).slice(0, 8).map((event) => ({
+      id: event.id ?? `${event.start?.dateTime ?? event.start?.date ?? ""}:${event.summary ?? ""}`,
       title: event.summary ?? "Evento sem título",
       start: event.start?.dateTime ?? event.start?.date ?? "",
     })),
     googleTasks: (tasks.items ?? [])
       .filter((task) => task.status !== "completed")
       .slice(0, 8)
-      .map((task) => ({ title: task.title ?? "Tarefa sem título", due: task.due ?? null })),
+      .map((task) => ({ id: task.id ?? `${task.title ?? ""}:${task.due ?? ""}`, title: task.title ?? "Tarefa sem título", due: task.due ?? null })),
     unreadMailEstimate: typeof mail.resultSizeEstimate === "number" ? mail.resultSizeEstimate : null,
   };
 }
