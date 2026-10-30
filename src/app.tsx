@@ -125,7 +125,9 @@ export default function App() {
       {/* Outside Suspense and outside any layout: the palette has to survive
           route changes and lazy chunk loading, and open from every screen. */}
       {isAuthenticated && <CommandPalette />}
-      {isAuthenticated && <InovitoVoice />}
+      {isAuthenticated && import.meta.env.VITE_INOVITO_VOICE_ENABLED === "true" && (
+        <InovitoVoice />
+      )}
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route element={<LoginPage />} path="/login" />
