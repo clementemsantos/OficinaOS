@@ -4,7 +4,7 @@ import {
   googlePkceVerifier,
   makeGoogleState,
   verifyGoogleState,
-} from "../../services/inovito-google.service";
+} from "../services/inovito-google.service";
 
 describe("Inovito Google OAuth — proteção de ligação", () => {
   const secret = "test-secret-long-enough-and-not-production";
