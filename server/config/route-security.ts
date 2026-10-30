@@ -129,6 +129,13 @@ export const routeSecurity: [string, RouteSecurityOverride][] = [
       rateLimit: { max: 60, timeWindow: "1 minute" },
     },
   ],
+  [
+    "/api/public/inovito-meta",
+    {
+      csrf: false,
+      rateLimit: { max: 120, timeWindow: "1 minute" },
+    },
+  ],
   ["/health", { rateLimit: false, csrf: false }],
   // Public demo entry — anonymous, IP-keyed, tight budget.
   [
