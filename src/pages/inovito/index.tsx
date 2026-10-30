@@ -14,8 +14,18 @@ interface ConnectionStatus {
     hasError: boolean;
     lastSyncAt: string | null;
   };
-  messenger: { connected: boolean; setupRequired: boolean };
-  whatsapp: { connected: boolean; setupRequired: boolean };
+  messenger: {
+    connected: boolean;
+    setupRequired: boolean;
+    webhookConfigured?: boolean;
+    captureEnabled?: boolean;
+  };
+  whatsapp: {
+    connected: boolean;
+    setupRequired: boolean;
+    webhookConfigured?: boolean;
+    captureEnabled?: boolean;
+  };
 }
 
 interface GoogleOverview {
@@ -326,6 +336,13 @@ export default function InovitoMobilePage() {
             Importação IMAP do OficinaOS:{" "}
             {connections.mailImport.enabled ? "ativada" : "não ativada"}.
             {connections.mailImport.hasError && " Existe um erro a verificar."}
+          </p>
+        )}
+        {connections && (
+          <p className="text-on-surface-variant text-xs">
+            WhatsApp: {connections.whatsapp.webhookConfigured ? "webhook configurado" : "por configurar"}.
+            Messenger: {connections.messenger.webhookConfigured ? "webhook configurado" : "por configurar"}.
+            A receção automática só funciona após validação das subscrições oficiais da Meta.
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
