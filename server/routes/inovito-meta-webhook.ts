@@ -87,7 +87,10 @@ export const inovitoMetaWebhookRoutes: FastifyPluginAsync = (app) => {
         channel: msg.channel,
         direction: "INBOUND",
         deliveryStatus: "CAPTURED",
-        subject: msg.channel === "WHATSAPP" ? "WhatsApp recebido" : "Messenger recebido",
+        subject:
+          msg.channel === "WHATSAPP"
+            ? "WhatsApp recebido"
+            : "Messenger recebido",
         body: msg.text,
         correspondent: msg.correspondent,
         externalId: msg.externalId,
