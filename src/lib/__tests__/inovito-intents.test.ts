@@ -8,7 +8,9 @@ import {
 
 describe("Inovito — tarefas por concluir", () => {
   it("identifica pedidos de contagem em pt-PT", () => {
-    expect(isPendingTasksRequest("Quantas tarefas pendentes temos?")).toBe(true);
+    expect(isPendingTasksRequest("Quantas tarefas pendentes temos?")).toBe(
+      true
+    );
     expect(isPendingTasksRequest("Dá-me o total de tarefas")).toBe(true);
     expect(isPendingTasksRequest("Abre as tarefas")).toBe(false);
     expect(isPendingTasksRequest("Quantas reparações há?")).toBe(false);
@@ -42,7 +44,7 @@ describe("Inovito — perguntas à IA sem envio automático", () => {
   });
 
   it("rejeita textos demasiado longos e valores inválidos no estado de navegação", () => {
-    expect(extractAiQuestion("pergunta a ia " + "x".repeat(501))).toBeNull();
+    expect(extractAiQuestion(`pergunta a ia ${"x".repeat(501)}`)).toBeNull();
     expect(readInovitoDraft({ inovitoDraft: " Teste " })).toBe("Teste");
     expect(readInovitoDraft({ inovitoDraft: "x".repeat(501) })).toBeNull();
     expect(readInovitoDraft({ inovitoDraft: 17 })).toBeNull();
