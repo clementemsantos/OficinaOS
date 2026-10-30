@@ -269,7 +269,11 @@ export default function InovitoVoice() {
           </p>
         </div>
         <button
-          aria-label={enabled ? "Desligar o microfone do Inovito" : "Ativar o microfone do Inovito"}
+          aria-label={
+            enabled
+              ? "Desligar o microfone do Inovito"
+              : "Ativar o microfone do Inovito"
+          }
           aria-pressed={enabled}
           className={
             enabled
@@ -293,7 +297,8 @@ export default function InovitoVoice() {
       </p>
       <p className="mt-2 text-[11px] text-on-surface-variant">
         Escuta opcional enquanto esta página estiver aberta. O navegador poderá
-        processar a voz num serviço externo. Não usar para ditar dados de clientes.
+        processar a voz num serviço externo. Não usar para ditar dados de
+        clientes.
       </p>
     </aside>
   );
