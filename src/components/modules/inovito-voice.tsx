@@ -102,6 +102,38 @@ export default function InovitoVoice() {
     [startRecognition]
   );
 
+  const handleSpokenCommand = useCallback(
+    (spoken: string) => {
+      const command = normalizeVoice(spoken);
+      const route = matchVoiceDestination(command);
+      if (route) {
+        const destination = NAV_ITEMS.find((item) => item.to === route);
+        if (!(destination && can(role, destination.perm))) {
+          speak("Não tens permissão para abrir essa área.");
+          return;
+        }
+        navigate(route);
+        speak("A abrir a secção pedida.");
+        return;
+      }
+
+      if (isVoiceHelpRequest(command)) {
+        speak(
+          "Podes pedir para abrir tarefas, reparações, encomendas, clientes, stock, relatórios ou o painel."
+        );
+        return;
+      }
+      if (GREETING_PATTERN.test(command)) {
+        speak("Olá! Estou pronto para te ajudar a navegar pelo OficinaOS.");
+        return;
+      }
+      speak(
+        "Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis."
+      );
+    },
+    [navigate, role, speak]
+  );
+
   useEffect(() => {
     if (!enabled) {
       return;
@@ -140,9 +172,8 @@ export default function InovitoVoice() {
         if (!result?.isFinal) {
           continue;
         }
-        const phrase = result[0]?.transcript ?? "";
         const heard = parseVoiceInput(
-          phrase,
+          result[0]?.transcript ?? "",
           Date.now() < awakeUntilRef.current
         );
         if (heard.kind === "ignore") {
@@ -157,37 +188,11 @@ export default function InovitoVoice() {
           }, 15_000);
           setStatus("Pronto para o comando");
           speak("Sim, estou a ouvir.");
-          return;
+        } else {
+          awakeUntilRef.current = 0;
+          window.clearTimeout(awakeTimerRef.current);
+          handleSpokenCommand(heard.text);
         }
-
-        awakeUntilRef.current = 0;
-        window.clearTimeout(awakeTimerRef.current);
-        const command = normalizeVoice(heard.text);
-        const route = matchVoiceDestination(command);
-        if (route) {
-          const destination = NAV_ITEMS.find((item) => item.to === route);
-          if (!(destination && can(role, destination.perm))) {
-            speak("Não tens permissão para abrir essa área.");
-            return;
-          }
-          navigate(route);
-          speak("A abrir a secção pedida.");
-          return;
-        }
-
-        if (isVoiceHelpRequest(command)) {
-          speak(
-            "Podes pedir para abrir tarefas, reparações, encomendas, clientes, stock, relatórios ou o painel."
-          );
-          return;
-        }
-        if (GREETING_PATTERN.test(command)) {
-          speak("Olá! Estou pronto para te ajudar a navegar pelo OficinaOS.");
-          return;
-        }
-        speak(
-          "Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis."
-        );
         return;
       }
     };
@@ -249,7 +254,7 @@ export default function InovitoVoice() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.speechSynthesis?.cancel();
     };
-  }, [enabled, navigate, role, speak, startRecognition]);
+  }, [enabled, handleSpokenCommand, speak, startRecognition]);
 
   return (
     <aside
