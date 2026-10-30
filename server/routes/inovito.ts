@@ -36,8 +36,24 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
         lastSyncAt: mail?.lastSyncAt ?? null,
         hasError: Boolean(mail?.lastError),
       },
-      whatsapp: { connected: false, setupRequired: true },
-      messenger: { connected: false, setupRequired: true },
+      whatsapp: {
+        connected: false,
+        setupRequired: true,
+        webhookConfigured:
+          process.env.INOVITO_META_WEBHOOK_ENABLED === "true" &&
+          Boolean(process.env.INOVITO_META_APP_SECRET) &&
+          Boolean(process.env.INOVITO_META_WA_PHONE_NUMBER_ID),
+        captureEnabled: process.env.INOVITO_META_CAPTURE_ENABLED === "true",
+      },
+      messenger: {
+        connected: false,
+        setupRequired: true,
+        webhookConfigured:
+          process.env.INOVITO_META_WEBHOOK_ENABLED === "true" &&
+          Boolean(process.env.INOVITO_META_APP_SECRET) &&
+          Boolean(process.env.INOVITO_META_PAGE_ID),
+        captureEnabled: process.env.INOVITO_META_CAPTURE_ENABLED === "true",
+      },
     };
   });
 
