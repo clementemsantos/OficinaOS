@@ -26,9 +26,7 @@ export function verifyMetaSignature(
   }
   const expected = createHmac("sha256", appSecret).update(rawBody).digest();
   const actual = Buffer.from(match[1], "hex");
-  return (
-    expected.length === actual.length && timingSafeEqual(expected, actual)
-  );
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 export function verifyMetaChallenge(
@@ -59,36 +57,60 @@ export function verifyMetaChallenge(
 
 const whatsappEnvelope = z.object({
   object: z.literal("whatsapp_business_account"),
-  entry: z.array(z.object({
-    changes: z.array(z.object({
-      value: z.object({
-        metadata: z.object({
-          phone_number_id: z.string().optional(),
-        }).optional(),
-        messages: z.array(z.object({
-          id: z.string().max(300),
-          from: z.string().max(100),
-          type: z.string(),
-          text: z.object({ body: z.string() }).optional(),
-        })).optional(),
-      }),
-    })).optional(),
-  })).optional(),
+  entry: z
+    .array(
+      z.object({
+        changes: z
+          .array(
+            z.object({
+              value: z.object({
+                metadata: z
+                  .object({
+                    phone_number_id: z.string().optional(),
+                  })
+                  .optional(),
+                messages: z
+                  .array(
+                    z.object({
+                      id: z.string().max(300),
+                      from: z.string().max(100),
+                      type: z.string(),
+                      text: z.object({ body: z.string() }).optional(),
+                    })
+                  )
+                  .optional(),
+              }),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 });
 
 const messengerEnvelope = z.object({
   object: z.literal("page"),
-  entry: z.array(z.object({
-    id: z.string().max(100),
-    messaging: z.array(z.object({
-      sender: z.object({ id: z.string().max(100) }).optional(),
-      message: z.object({
-        mid: z.string().max(300),
-        text: z.string().optional(),
-        is_echo: z.boolean().optional(),
-      }).optional(),
-    })).optional(),
-  })).optional(),
+  entry: z
+    .array(
+      z.object({
+        id: z.string().max(100),
+        messaging: z
+          .array(
+            z.object({
+              sender: z.object({ id: z.string().max(100) }).optional(),
+              message: z
+                .object({
+                  mid: z.string().max(300),
+                  text: z.string().optional(),
+                  is_echo: z.boolean().optional(),
+                })
+                .optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 });
 
 function parseWhatsApp(
@@ -96,7 +118,7 @@ function parseWhatsApp(
   whatsappPhoneId: string
 ): IncomingMetaText[] {
   const payload = whatsappEnvelope.safeParse(body);
-  if (!payload.success || !whatsappPhoneId) {
+  if (!(payload.success && whatsappPhoneId)) {
     return [];
   }
   const results: IncomingMetaText[] = [];
@@ -133,7 +155,7 @@ function parseMessenger(
   messengerPageId: string
 ): IncomingMetaText[] {
   const payload = messengerEnvelope.safeParse(body);
-  if (!payload.success || !messengerPageId) {
+  if (!(payload.success && messengerPageId)) {
     return [];
   }
   const results: IncomingMetaText[] = [];
