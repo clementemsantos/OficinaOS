@@ -6,6 +6,9 @@ on:
       - "src/components/modules/inovito-voice.tsx"
       - "src/lib/inovito-voice-commands.ts"
       - "src/lib/inovito-owner-summary.ts"
+      - "src/lib/inovito-intents.ts"
+      - "src/lib/__tests__/inovito-intents.test.ts"
+      - "src/pages/ai-analyst/chat-interface.tsx"
       - "src/lib/__tests__/inovito-owner-summary.test.ts"
       - "src/lib/__tests__/inovito-voice-commands.test.ts"
       - "src/app.tsx"
@@ -36,6 +39,6 @@ jobs:
       - name: Validar tipos
         run: bun run typecheck
       - name: Testar comandos
-        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts
       - name: Compilar funcionalidade ativada
         run: bun run build
