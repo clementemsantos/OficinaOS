@@ -137,70 +137,78 @@ export default function InovitoVoice() {
     [continuousMode, startRecognition]
   );
 
+  const requestOwnerSummary = useCallback(() => {
+    if (!can(role, { dashboard: ["viewOwner"] })) {
+      speak(
+        "O resumo completo da loja só está disponível para o proprietário."
+      );
+      return;
+    }
+    summaryRequestRef.current?.abort();
+    const controller = new AbortController();
+    summaryRequestRef.current = controller;
+    api
+      .get<OwnerDashboardDTO>("/dashboard/owner", {
+        signal: controller.signal,
+      })
+      .then((response) => {
+        if (!controller.signal.aborted) {
+          speak(formatOwnerSummary(response.data));
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          speak(
+            "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
+          );
+        }
+      })
+      .finally(() => {
+        if (summaryRequestRef.current === controller) {
+          summaryRequestRef.current = null;
+        }
+      });
+  }, [role, speak]);
+
+  const requestPendingTasks = useCallback(() => {
+    if (!can(role, { jobs: ["view"] })) {
+      speak("Não tens autorização para consultar tarefas.");
+      return;
+    }
+    taskRequestRef.current?.abort();
+    const controller = new AbortController();
+    taskRequestRef.current = controller;
+    api
+      .get<PendingTasksPage>("/tasks", {
+        params: { completed: "false" },
+        signal: controller.signal,
+      })
+      .then((response) => {
+        if (!controller.signal.aborted) {
+          speak(formatPendingTasks(response.data));
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          speak("Não consegui consultar as tarefas neste momento.");
+        }
+      })
+      .finally(() => {
+        if (taskRequestRef.current === controller) {
+          taskRequestRef.current = null;
+        }
+      });
+  }, [role, speak]);
+
   const handleSpokenCommand = useCallback(
     (spoken: string) => {
       const command = normalizeVoice(spoken);
       if (isOwnerSummaryRequest(command)) {
-        if (!can(role, { dashboard: ["viewOwner"] })) {
-          speak(
-            "O resumo completo da loja só está disponível para o proprietário."
-          );
-          return;
-        }
-        summaryRequestRef.current?.abort();
-        const controller = new AbortController();
-        summaryRequestRef.current = controller;
-        api
-          .get<OwnerDashboardDTO>("/dashboard/owner", {
-            signal: controller.signal,
-          })
-          .then((response) => {
-            if (!controller.signal.aborted) {
-              speak(formatOwnerSummary(response.data));
-            }
-          })
-          .catch(() => {
-            if (!controller.signal.aborted) {
-              speak(
-                "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
-              );
-            }
-          })
-          .finally(() => {
-            if (summaryRequestRef.current === controller) {
-              summaryRequestRef.current = null;
-            }
-          });
+        requestOwnerSummary();
         return;
       }
       if (isPendingTasksRequest(command)) {
-        if (!can(role, { jobs: ["view"] })) {
-          speak("Não tens autorização para consultar tarefas.");
-          return;
-        }
-        taskRequestRef.current?.abort();
-        const controller = new AbortController();
-        taskRequestRef.current = controller;
-        api
-          .get<PendingTasksPage>("/tasks", {
-            params: { completed: "false" },
-            signal: controller.signal,
-          })
-          .then((response) => {
-            if (!controller.signal.aborted) {
-              speak(formatPendingTasks(response.data));
-            }
-          })
-          .catch(() => {
-            if (!controller.signal.aborted) {
-              speak("Não consegui consultar as tarefas neste momento.");
-            }
-          })
-          .finally(() => {
-            if (taskRequestRef.current === controller) {
-              taskRequestRef.current = null;
-            }
-          });
+        requestPendingTasks();
         return;
       }
 
@@ -211,7 +219,9 @@ export default function InovitoVoice() {
           return;
         }
         navigate("/ai-analyst", { state: { inovitoDraft: question } });
-        speak("A pergunta está preparada no assistente. Revê-a antes de enviar.");
+        speak(
+          "A pergunta está preparada no assistente. Revê-a antes de enviar."
+        );
         return;
       }
 
@@ -241,7 +251,7 @@ export default function InovitoVoice() {
         "Ainda não sei executar esse pedido. Pede ajuda para ouvir os comandos disponíveis."
       );
     },
-    [navigate, role, speak]
+    [navigate, requestOwnerSummary, requestPendingTasks, role, speak]
   );
 
   const handleHeard = useCallback(
