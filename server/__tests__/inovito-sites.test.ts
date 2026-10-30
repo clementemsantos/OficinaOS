@@ -57,7 +57,7 @@ describe("Inovito — catálogo público WooCommerce", () => {
             currency_minor_unit: 2,
           },
         },
-      }],
+      ],
       "https://inove.pt"
     );
     expect(data).toHaveLength(1);
