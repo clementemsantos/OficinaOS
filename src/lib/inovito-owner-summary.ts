@@ -13,10 +13,7 @@ const OPEN_JOBS_PATTERN =
 
 export function isOwnerSummaryRequest(command: string): boolean {
   const normalized = normalizeVoice(command);
-  return (
-    SHOP_SUMMARY_PATTERN.test(normalized) ||
-    OPEN_JOBS_PATTERN.test(normalized)
-  );
+  return SHOP_SUMMARY_PATTERN.test(normalized) || OPEN_JOBS_PATTERN.test(normalized);
 }
 
 function plural(value: number, singular: string, multiple: string): string {
@@ -30,13 +27,27 @@ export function formatOwnerSummary(data: OwnerSnapshot): string {
   const overdue = data.overdueJobs.length;
   const pickup = data.pickupReady.length;
 
-  return (
+  const lines = [
     "Segundo o painel do OficinaOS, há " +
-    active + " " + plural(active, "serviço ativo", "serviços ativos") + ". " +
-    "Hoje foram concluídos " + done + " " + plural(done, "serviço", "serviços") + ". " +
+      active +
+      " " +
+      plural(active, "serviço ativo", "serviços ativos") +
+      ".",
+    "Hoje foram concluídos " +
+      done +
+      " " +
+      plural(done, "serviço", "serviços") +
+      ".",
     "Nas listas consultadas aparecem " +
-    overdue + " " + plural(overdue, "reparação em atraso", "reparações em atraso") +
-    " e " + pickup + " " + plural(pickup, "equipamento pronto", "equipamentos prontos") +
-    " para recolha. As listas podem não incluir todos os registos."
-  );
+      overdue +
+      " " +
+      plural(overdue, "reparação em atraso", "reparações em atraso") +
+      " e " +
+      pickup +
+      " " +
+      plural(pickup, "equipamento pronto", "equipamentos prontos") +
+      " para recolha.",
+    "As listas podem não incluir todos os registos.",
+  ];
+  return lines.join(" ");
 }
