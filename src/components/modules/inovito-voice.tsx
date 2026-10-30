@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import type { OwnerDashboardDTO } from "@shared/types/dashboard";
 import { can } from "@/hooks/use-can";
+import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
 import {
   isVoiceHelpRequest,
   matchVoiceDestination,
@@ -8,6 +11,10 @@ import {
   parseVoiceInput,
 } from "@/lib/inovito-voice-commands";
 import { NAV_ITEMS } from "@/lib/navigation";
+import {
+  formatOwnerSummary,
+  isOwnerSummaryRequest,
+} from "@/lib/inovito-owner-summary";
 import { useAuthStore } from "@/stores/auth";
 
 interface VoiceResult {
@@ -53,9 +60,11 @@ export default function InovitoVoice() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
   const [enabled, setEnabled] = useState(false);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [typedCommand, setTypedCommand] = useState("");
   const [status, setStatus] = useState("Desligado");
   const [feedback, setFeedback] = useState(
-    "Ativa o microfone e diz «Inovito, abre as tarefas»."
+    "Carrega em «Falar» e diz, por exemplo, «resumo da loja»."
   );
   const recognizerRef = useRef<BrowserSpeechRecognition | null>(null);
   const listeningRef = useRef(false);
@@ -84,6 +93,10 @@ export default function InovitoVoice() {
     (message: string) => {
       setFeedback(message);
       if (!("speechSynthesis" in window)) {
+        if (!continuousMode) {
+          listeningRef.current = false;
+          setEnabled(false);
+        }
         return;
       }
       window.speechSynthesis.cancel();
@@ -93,18 +106,41 @@ export default function InovitoVoice() {
       utterance.lang = "pt-PT";
       const resume = () => {
         speakingRef.current = false;
-        startRecognition();
+        if (continuousMode) {
+          startRecognition();
+        } else {
+          listeningRef.current = false;
+          setEnabled(false);
+          setStatus("Microfone desligado");
+        }
       };
       utterance.onend = resume;
       utterance.onerror = resume;
       window.speechSynthesis.speak(utterance);
     },
-    [startRecognition]
+    [continuousMode, startRecognition]
   );
 
   const handleSpokenCommand = useCallback(
     (spoken: string) => {
       const command = normalizeVoice(spoken);
+      if (isOwnerSummaryRequest(command)) {
+        if (!can(role, { dashboard: ["viewOwner"] })) {
+          speak("O resumo completo da loja só está disponível para o proprietário.");
+          return;
+        }
+        api
+          .get<OwnerDashboardDTO>("/dashboard/owner")
+          .then((response) => {
+            speak(formatOwnerSummary(response.data));
+          })
+          .catch(() => {
+            speak(
+              "Não consegui consultar os indicadores da loja. Tenta novamente mais tarde."
+            );
+          });
+        return;
+      }
       const route = matchVoiceDestination(command);
       if (route) {
         const destination = NAV_ITEMS.find((item) => item.to === route);
@@ -157,7 +193,7 @@ export default function InovitoVoice() {
 
     const recognizer = new Constructor();
     recognizer.lang = "pt-PT";
-    recognizer.continuous = true;
+    recognizer.continuous = continuousMode;
     recognizer.interimResults = false;
     recognizerRef.current = recognizer;
     listeningRef.current = true;
@@ -174,12 +210,14 @@ export default function InovitoVoice() {
         }
         const heard = parseVoiceInput(
           result[0]?.transcript ?? "",
-          Date.now() < awakeUntilRef.current
+          !continuousMode || Date.now() < awakeUntilRef.current
         );
         if (heard.kind === "ignore") {
           continue;
         }
-        if (heard.kind === "wake") {
+        if (heard.kind === "wake" && !continuousMode) {
+          speak("Pede o comando completo depois de carregar em falar.");
+        } else if (heard.kind === "wake") {
           awakeUntilRef.current = Date.now() + 15_000;
           window.clearTimeout(awakeTimerRef.current);
           awakeTimerRef.current = window.setTimeout(() => {
@@ -225,16 +263,22 @@ export default function InovitoVoice() {
       if (!listeningRef.current || speakingRef.current) {
         return;
       }
+      if (!continuousMode) {
+        listeningRef.current = false;
+        setEnabled(false);
+        setStatus("Microfone desligado");
+        return;
+      }
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = window.setTimeout(startRecognition, 600);
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        recognizer.stop();
-        setStatus("Em pausa: separador em segundo plano");
-      } else {
-        startRecognition();
+        listeningRef.current = false;
+        recognizer.abort();
+        setEnabled(false);
+        setStatus("Microfone desligado: separador em segundo plano");
       }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -252,9 +296,15 @@ export default function InovitoVoice() {
       recognizer.abort();
       recognizerRef.current = null;
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.speechSynthesis?.cancel();
     };
-  }, [enabled, handleSpokenCommand, speak, startRecognition]);
+  }, [continuousMode, enabled, handleSpokenCommand, speak, startRecognition]);
+
+  useEffect(
+    () => () => {
+      window.speechSynthesis?.cancel();
+    },
+    []
+  );
 
   return (
     <aside
@@ -272,7 +322,9 @@ export default function InovitoVoice() {
           aria-label={
             enabled
               ? "Desligar o microfone do Inovito"
-              : "Ativar o microfone do Inovito"
+              : continuousMode
+                ? "Ativar escuta experimental"
+                : "Falar com o Inovito"
           }
           aria-pressed={enabled}
           className={
@@ -289,16 +341,55 @@ export default function InovitoVoice() {
           }}
           type="button"
         >
-          {enabled ? "Desligar" : "Ativar"}
+          {enabled ? "Desligar" : continuousMode ? "Ativar escuta" : "Falar"}
         </button>
       </div>
+      <button
+        aria-pressed={continuousMode}
+        className="mt-2 w-full text-left text-on-surface-variant text-xs underline disabled:opacity-50"
+        disabled={enabled}
+        onClick={() => setContinuousMode((current) => !current)}
+        type="button"
+      >
+        {continuousMode
+          ? "Modo experimental contínuo — selecionar para desligar"
+          : "Ativar modo experimental «Inovito» (escuta contínua)"}
+      </button>
+      <form
+        className="mt-2 flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const command = typedCommand.trim();
+          if (!command) {
+            return;
+          }
+          setTypedCommand("");
+          handleSpokenCommand(command);
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <Input
+            aria-label="Escrever comando para o Inovito"
+            onChange={(event) => setTypedCommand(event.target.value)}
+            placeholder="Resumo da loja"
+            value={typedCommand}
+          />
+        </div>
+        <button
+          className="min-h-10 rounded-xl bg-primary px-3 text-on-primary text-sm"
+          disabled={!typedCommand.trim()}
+          type="submit"
+        >
+          Enviar
+        </button>
+      </form>
       <p aria-live="polite" className="mt-2 text-on-surface-variant text-xs">
         {feedback}
       </p>
       <p className="mt-2 text-[11px] text-on-surface-variant">
-        Escuta opcional enquanto esta página estiver aberta. O navegador poderá
-        processar a voz num serviço externo. Não usar para ditar dados de
-        clientes.
+        Por defeito, só escuta ao carregar em «Falar». O reconhecimento
+        do navegador pode enviar áudio para serviços externos. Não usar
+        junto de clientes. O modo contínuo é apenas experimental.
       </p>
     </aside>
   );
