@@ -304,7 +304,12 @@ interface GoogleMessageMetadata {
 }
 
 const GMAIL_MESSAGE_ID = /^[a-zA-Z0-9_-]{1,100}$/;
-const HEADER_CONTROL = /[\r\n\t\u0000-\u001f\u007f]/g;
+function removeHeaderControls(text: string): string {
+  return Array.from(text, (character) => {
+    const value = character.charCodeAt(0);
+    return value < 32 || value === 127 ? " " : character;
+  }).join("");
+}
 
 /** Sanitise only metadata headers; no message body or attachment is exposed. */
 export function formatGmailHeaders(message: GoogleMessageMetadata): {
@@ -312,14 +317,14 @@ export function formatGmailHeaders(message: GoogleMessageMetadata): {
   from: string;
   subject: string;
 } | null {
-  if (!message.id || !GMAIL_MESSAGE_ID.test(message.id)) {
+  if (!(message.id && GMAIL_MESSAGE_ID.test(message.id))) {
     return null;
   }
   const headers = message.payload?.headers ?? [];
   const find = (name: string) =>
     headers.find((header) => header.name?.toLowerCase() === name)?.value;
   const clean = (value: string | undefined, fallback: string) =>
-    (value ?? fallback).replace(HEADER_CONTROL, " ").trim().slice(0, 160);
+    removeHeaderControls(value ?? fallback).trim().slice(0, 160);
   return {
     id: message.id,
     from: clean(find("from"), "Remetente não disponível"),
