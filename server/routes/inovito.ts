@@ -13,7 +13,9 @@ import { readConfiguredSites } from "../services/inovito-sites.service.js";
 import {
   createWooImportDryRun,
   permittedWooOrigin,
+  readWooOrderPage,
   verifyWooReadAccess,
+  wooOrderPageInput,
   wooPrivateConnectInput,
   wooPrivateEnabled,
 } from "../services/inovito-woo-private.service.js";
@@ -179,6 +181,7 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
       z.object({ host: z.string().max(253) }),
       req.params
     );
+    const { page, limit } = parseInput(wooOrderPageInput, req.query);
     const origin = permittedWooOrigin(`https://${host}`);
     if (!origin) {
       return reply.code(404).send({ message: "Site não autorizado." });
@@ -191,24 +194,43 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
     }
     try {
       const credentials = JSON.parse(decryptSecret(connection.credentials));
-      const orders = await verifyWooReadAccess(origin, credentials);
-      // The legacy importer's unique key is source + Woo order ID.
-      const receipts = await app.prisma.integrationReceipt.findMany({
-        where: {
-          source: `WOO:${origin}`,
-          externalId: { in: orders.map((order) => String(order.id)) },
-        },
-        select: { externalId: true },
-      });
+      const orders = await readWooOrderPage(origin, credentials, page, limit);
+      const ids = orders.map((order) => String(order.id));
+      const [receipts, existingOrders] = await Promise.all([
+        app.prisma.integrationReceipt.findMany({
+          where: { source: { startsWith: "WOO:" }, externalId: { in: ids } },
+          select: { source: true, externalId: true },
+        }),
+        app.prisma.purchaseOrder.findMany({
+          where: {
+            reference: { in: ids },
+            title: { startsWith: "WooCommerce #" },
+          },
+          select: { reference: true },
+        }),
+      ]);
+      const recorded = new Set(
+        receipts
+          .filter((receipt) => receipt.source === `WOO:${origin}`)
+          .map((receipt) => receipt.externalId)
+      );
+      const potential = new Set([
+        ...receipts
+          .filter((receipt) => receipt.source !== `WOO:${origin}`)
+          .map((receipt) => receipt.externalId),
+        ...existingOrders
+          .map((order) => order.reference)
+          .filter((reference): reference is string => reference !== null),
+      ]);
       return {
         origin,
+        page,
+        limit,
         sampleSize: orders.length,
-        ...createWooImportDryRun(
-          orders,
-          new Set(receipts.map((receipt) => receipt.externalId))
-        ),
+        hasNextPage: orders.length === limit && page < 5,
+        ...createWooImportDryRun(orders, recorded, potential),
         warning:
-          "Simulação das últimas cinco encomendas apenas. Pedidos sem registo ainda exigem validação de IVA, clientes e artigos antes de qualquer importação.",
+          "Simulação parcial e apenas de leitura. Duplicados potenciais podem corresponder a outras lojas ou importações antigas. Validar IVA, clientes, artigos e histórico antes de importar.",
       };
     } catch {
       return reply.code(503).send({

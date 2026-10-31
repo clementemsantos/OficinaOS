@@ -52,7 +52,7 @@ export interface WooOrderPreview {
 
 /** Only non-personal fields. No billing, email, address, phone, or line items. */
 export function parseWooOrderPreviews(raw: unknown): WooOrderPreview[] {
-  const collection = z.array(z.unknown()).max(5).safeParse(raw);
+  const collection = z.array(z.unknown()).max(25).safeParse(raw);
   if (!collection.success) {
     return [];
   }
@@ -83,6 +83,7 @@ export function parseWooOrderPreviews(raw: unknown): WooOrderPreview[] {
 
 export type WooImportPreviewStatus =
   | "already_recorded"
+  | "possible_duplicate"
   | "not_recorded"
   | "excluded_status";
 
@@ -97,11 +98,13 @@ export interface WooImportPreviewRow extends WooOrderPreview {
  */
 export function createWooImportDryRun(
   orders: WooOrderPreview[],
-  recordedIds: ReadonlySet<string>
+  recordedIds: ReadonlySet<string>,
+  potentiallyRecordedIds: ReadonlySet<string> = new Set()
 ): {
   alreadyRecorded: number;
   excluded: number;
   notRecorded: number;
+  possibleDuplicates: number;
   rows: WooImportPreviewRow[];
 } {
   const excludedStatuses = new Set([
@@ -114,6 +117,8 @@ export function createWooImportDryRun(
     let importStatus: WooImportPreviewStatus = "not_recorded";
     if (recordedIds.has(String(order.id))) {
       importStatus = "already_recorded";
+    } else if (potentiallyRecordedIds.has(String(order.id))) {
+      importStatus = "possible_duplicate";
     } else if (excludedStatuses.has(order.status.toLowerCase())) {
       importStatus = "excluded_status";
     }
@@ -127,16 +132,28 @@ export function createWooImportDryRun(
       .length,
     notRecorded: rows.filter((row) => row.importStatus === "not_recorded")
       .length,
+    possibleDuplicates: rows.filter(
+      (row) => row.importStatus === "possible_duplicate"
+    ).length,
     rows,
   };
 }
 
-export async function verifyWooReadAccess(
+export const wooOrderPageInput = z.object({
+  limit: z.coerce.number().int().min(5).max(25).default(5),
+  page: z.coerce.number().int().min(1).max(5).default(1),
+});
+
+export async function readWooOrderPage(
   origin: string,
-  credentials: WooPrivateCredentials
+  credentials: WooPrivateCredentials,
+  page: number,
+  limit: number
 ): Promise<WooOrderPreview[]> {
+  const validated = wooOrderPageInput.parse({ page, limit });
   const url = new URL("/wp-json/wc/v3/orders", origin);
-  url.searchParams.set("per_page", "5");
+  url.searchParams.set("per_page", String(validated.limit));
+  url.searchParams.set("page", String(validated.page));
   url.searchParams.set("orderby", "modified");
   url.searchParams.set("order", "desc");
   url.searchParams.set(
@@ -147,5 +164,13 @@ export async function verifyWooReadAccess(
     `${credentials.key}:${credentials.secret}`
   ).toString("base64");
   const raw = await integrationJson(url, `Basic ${secret}`);
-  return parseWooOrderPreviews(raw);
+  const collection = z.array(z.unknown()).max(validated.limit).parse(raw);
+  return parseWooOrderPreviews(collection);
+}
+
+export function verifyWooReadAccess(
+  origin: string,
+  credentials: WooPrivateCredentials
+): Promise<WooOrderPreview[]> {
+  return readWooOrderPage(origin, credentials, 1, 5);
 }

@@ -19,11 +19,19 @@ interface OrderPreview {
 interface DryRunResult {
   alreadyRecorded: number;
   excluded: number;
+  hasNextPage: boolean;
+  limit: number;
   notRecorded: number;
   origin: string;
+  page: number;
+  possibleDuplicates: number;
   rows: Array<
     OrderPreview & {
-      importStatus: "already_recorded" | "not_recorded" | "excluded_status";
+      importStatus:
+        | "already_recorded"
+        | "possible_duplicate"
+        | "not_recorded"
+        | "excluded_status";
     }
   >;
   sampleSize: number;
@@ -36,6 +44,8 @@ function importStatusLabel(
   switch (status) {
     case "already_recorded":
       return "Já registada";
+    case "possible_duplicate":
+      return "Possível duplicado — confirmar origem";
     case "excluded_status":
       return "Excluída pelo estado";
     default:
@@ -102,13 +112,14 @@ export default function InovitoWooPrivatePanel({
     }
   };
 
-  const simulateImport = async (site: Site) => {
+  const simulateImport = async (site: Site, page = 1) => {
     setBusy(true);
     setError(null);
     setDryRun(null);
     try {
       const result = await api.get<DryRunResult>(
-        `/inovito/sites/private/${encodeURIComponent(site.id)}/dry-run`
+        `/inovito/sites/private/${encodeURIComponent(site.id)}/dry-run`,
+        { params: { page, limit: 25 } }
       );
       setDryRun(result.data);
     } catch {
@@ -299,9 +310,11 @@ export default function InovitoWooPrivatePanel({
                   Simulação — nenhuma alteração efetuada
                 </h4>
                 <p>
-                  Amostra: {dryRun.sampleSize} encomendas · Já registadas:{" "}
-                  {dryRun.alreadyRecorded} · Sem registo nesta origem:{" "}
-                  {dryRun.notRecorded} · Estados excluídos: {dryRun.excluded}.
+                  Página {dryRun.page} (até {dryRun.limit} encomendas) ·
+                  Devolvidas: {dryRun.sampleSize} · Já registadas:{" "}
+                  {dryRun.alreadyRecorded} · Potenciais duplicados:{" "}
+                  {dryRun.possibleDuplicates} · Sem registo:{" "}
+                  {dryRun.notRecorded} · Excluídas: {dryRun.excluded}.
                 </p>
                 {dryRun.rows.map((order) => (
                   <p
@@ -312,6 +325,28 @@ export default function InovitoWooPrivatePanel({
                     {importStatusLabel(order.importStatus)}
                   </p>
                 ))}
+                <div className="flex flex-wrap gap-2">
+                  {dryRun.page > 1 && (
+                    <Button
+                      disabled={busy}
+                      onClick={() => simulateImport(site, dryRun.page - 1)}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      Página anterior
+                    </Button>
+                  )}
+                  {dryRun.hasNextPage && (
+                    <Button
+                      disabled={busy}
+                      onClick={() => simulateImport(site, dryRun.page + 1)}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      Página seguinte
+                    </Button>
+                  )}
+                </div>
                 <p className="text-on-surface-variant text-xs">
                   {dryRun.warning}
                 </p>
