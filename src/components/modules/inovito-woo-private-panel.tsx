@@ -16,6 +16,18 @@ interface OrderPreview {
   total: string;
 }
 
+interface DryRunResult {
+  alreadyRecorded: number;
+  excluded: number;
+  notRecorded: number;
+  origin: string;
+  rows: Array<OrderPreview & {
+    importStatus: "already_recorded" | "not_recorded" | "excluded_status";
+  }>;
+  sampleSize: number;
+  warning: string;
+}
+
 interface Props {
   connectedOrigins: string[];
   enabled: boolean;
@@ -39,6 +51,7 @@ export default function InovitoWooPrivatePanel({
     data: OrderPreview[];
   } | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [dryRun, setDryRun] = useState<DryRunResult | null>(null);
 
   const connect = async (origin: string) => {
     setBusy(true);
@@ -74,12 +87,29 @@ export default function InovitoWooPrivatePanel({
     }
   };
 
+  const simulateImport = async (site: Site) => {
+    setBusy(true);
+    setError(null);
+    setDryRun(null);
+    try {
+      const result = await api.get<DryRunResult>(
+        `/inovito/sites/private/${encodeURIComponent(site.id)}/dry-run`
+      );
+      setDryRun(result.data);
+    } catch {
+      setError("Não foi possível comparar as encomendas com o OficinaOS.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async (site: Site) => {
     setBusy(true);
     try {
       await api.delete(`/inovito/sites/private/${encodeURIComponent(site.id)}`);
       setConfirmRemove(null);
       setPreview(null);
+      setDryRun(null);
       onChanged();
     } catch {
       setError("Não foi possível remover esta ligação.");
@@ -192,6 +222,14 @@ export default function InovitoWooPrivatePanel({
                 >
                   Consultar últimas encomendas
                 </Button>
+                <Button
+                  disabled={busy}
+                  onClick={() => simulateImport(site)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  Simular importação
+                </Button>
                 {confirmRemove === site.origin ? (
                   <>
                     <Button
@@ -238,6 +276,27 @@ export default function InovitoWooPrivatePanel({
                   Apenas cinco encomendas recentes. Não inclui nomes ou
                   contactos de clientes. Nenhuma importação foi executada.
                 </p>
+              </div>
+            )}
+            {dryRun?.origin === site.origin && (
+              <div className="space-y-2 rounded-xl border border-outline-variant p-3 text-sm">
+                <h4 className="font-semibold">Simulação — nenhuma alteração efetuada</h4>
+                <p>
+                  Amostra: {dryRun.sampleSize} encomendas · Já registadas:{" "}
+                  {dryRun.alreadyRecorded} · Sem registo nesta origem:{" "}
+                  {dryRun.notRecorded} · Estados excluídos: {dryRun.excluded}.
+                </p>
+                {dryRun.rows.map((order) => (
+                  <p className="border-outline-variant border-b pb-1" key={order.id}>
+                    #{order.number} · {order.total} ·{" "}
+                    {order.importStatus === "already_recorded"
+                      ? "Já registada"
+                      : order.importStatus === "excluded_status"
+                        ? "Excluída pelo estado"
+                        : "Sem registo — requer validação"}
+                  </p>
+                ))}
+                <p className="text-on-surface-variant text-xs">{dryRun.warning}</p>
               </div>
             )}
           </div>
