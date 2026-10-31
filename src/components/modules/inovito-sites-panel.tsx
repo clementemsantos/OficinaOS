@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import InovitoWooPrivatePanel from "@/components/modules/inovito-woo-private-panel";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 
@@ -16,6 +17,10 @@ interface SiteSnapshot {
 }
 
 interface SitesResponse {
+  privateWoo: {
+    enabled: boolean;
+    connectedOrigins: string[];
+  };
   orderImport: {
     configured: boolean;
     enabled: boolean;
@@ -126,6 +131,14 @@ export default function InovitoSitesPanel() {
           ))}
         </article>
       ))}
+      {sites && (
+        <InovitoWooPrivatePanel
+          connectedOrigins={sites.privateWoo.connectedOrigins}
+          enabled={sites.privateWoo.enabled}
+          onChanged={refreshSites}
+          sites={sites.sites}
+        />
+      )}
       {sites?.orderImport && (
         <p className="text-on-surface-variant text-xs">
           Importador de encomendas WooCommerce do OficinaOS:{" "}
