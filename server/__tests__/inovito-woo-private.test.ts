@@ -3,9 +3,9 @@ import {
   createWooImportDryRun,
   parseWooOrderPreviews,
   permittedWooOrigin,
+  wooOrderPageInput,
   wooPrivateConnectInput,
   wooPrivateEnabled,
-  wooOrderPageInput,
 } from "../services/inovito-woo-private.service";
 
 const previousEnv = {
@@ -186,20 +186,38 @@ describe("Inovito WooCommerce — reconciliação paginada", () => {
       page: 2,
       limit: 25,
     });
-    expect(wooOrderPageInput.safeParse({ page: "6", limit: "25" }).success).toBe(
-      false
-    );
-    expect(wooOrderPageInput.safeParse({ page: "1", limit: "100" }).success).toBe(
-      false
-    );
+    expect(
+      wooOrderPageInput.safeParse({ page: "6", limit: "25" }).success
+    ).toBe(false);
+    expect(
+      wooOrderPageInput.safeParse({ page: "1", limit: "100" }).success
+    ).toBe(false);
     expect(wooOrderPageInput.safeParse({ page: "-1" }).success).toBe(false);
   });
 
   it("distingue duplicados certos de correspondências potenciais", () => {
     const list = [
-      { id: 16, number: "16", status: "completed", total: "15 €", dateModified: null },
-      { id: 17, number: "17", status: "processing", total: "19 €", dateModified: null },
-      { id: 18, number: "18", status: "processing", total: "25 €", dateModified: null },
+      {
+        id: 16,
+        number: "16",
+        status: "completed",
+        total: "15 €",
+        dateModified: null,
+      },
+      {
+        id: 17,
+        number: "17",
+        status: "processing",
+        total: "19 €",
+        dateModified: null,
+      },
+      {
+        id: 18,
+        number: "18",
+        status: "processing",
+        total: "25 €",
+        dateModified: null,
+      },
     ];
     const report = createWooImportDryRun(
       list,
@@ -217,13 +235,15 @@ describe("Inovito WooCommerce — reconciliação paginada", () => {
   });
 
   it("a marcação de possível duplicado nunca autoriza importação automática", () => {
-    const list = [{
-      id: 25,
-      number: "25",
-      status: "cancelled",
-      total: "10 €",
-      dateModified: null,
-    }];
+    const list = [
+      {
+        id: 25,
+        number: "25",
+        status: "cancelled",
+        total: "10 €",
+        dateModified: null,
+      },
+    ];
     const report = createWooImportDryRun(list, new Set(), new Set(["25"]));
     expect(report.possibleDuplicates).toBe(1);
     expect(report.notRecorded).toBe(0);
