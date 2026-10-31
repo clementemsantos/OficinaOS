@@ -74,20 +74,22 @@ describe("Inovito WooCommerce — permissão e domínio", () => {
 
 describe("Inovito WooCommerce — pré-visualização", () => {
   it("devolve apenas os campos essenciais e nunca dados do cliente", () => {
-    const preview = parseWooOrderPreviews([{
-      id: 25,
-      number: "25",
-      status: "processing",
-      total: "49.99",
-      currency: "EUR",
-      date_modified_gmt: "2026-10-01T13:30:00",
-      billing: {
-        email: "privado@example.com",
-        phone: "900000000",
-        first_name: "Pessoa confidencial",
+    const preview = parseWooOrderPreviews([
+      {
+        id: 25,
+        number: "25",
+        status: "processing",
+        total: "49.99",
+        currency: "EUR",
+        date_modified_gmt: "2026-10-01T13:30:00",
+        billing: {
+          email: "privado@example.com",
+          phone: "900000000",
+          first_name: "Pessoa confidencial",
+        },
+        line_items: [{ name: "Produto secreto" }],
       },
-      line_items: [{ name: "Produto secreto" }],
-    }]);
+    ]);
     expect(preview).toHaveLength(1);
     expect(preview[0].total).toContain("49,99");
     expect(JSON.stringify(preview)).not.toContain("privado@example.com");
@@ -98,13 +100,15 @@ describe("Inovito WooCommerce — pré-visualização", () => {
   it("rejeita respostas malformadas sem apresentar dados brutos", () => {
     expect(parseWooOrderPreviews({ error: "credenciais" })).toEqual([]);
     expect(
-      parseWooOrderPreviews([{
-        id: 1,
-        number: "1",
-        status: "processing",
-        total: "NaN",
-        currency: "EUR",
-      }])
+      parseWooOrderPreviews([
+        {
+          id: 1,
+          number: "1",
+          status: "processing",
+          total: "NaN",
+          currency: "EUR",
+        },
+      ])
     ).toEqual([]);
   });
 });
