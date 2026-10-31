@@ -30,7 +30,9 @@ interface DryRunResult {
   warning: string;
 }
 
-function importStatusLabel(status: DryRunResult["rows"][number]["importStatus"]): string {
+function importStatusLabel(
+  status: DryRunResult["rows"][number]["importStatus"]
+): string {
   switch (status) {
     case "already_recorded":
       return "Já registada";
