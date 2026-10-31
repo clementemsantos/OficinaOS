@@ -12,10 +12,10 @@ import {
 import { readConfiguredSites } from "../services/inovito-sites.service.js";
 import {
   createWooImportDryRun,
-  readWooOrderPage,
-  wooOrderPageInput,
   permittedWooOrigin,
+  readWooOrderPage,
   verifyWooReadAccess,
+  wooOrderPageInput,
   wooPrivateConnectInput,
   wooPrivateEnabled,
 } from "../services/inovito-woo-private.service.js";
@@ -194,12 +194,7 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
     }
     try {
       const credentials = JSON.parse(decryptSecret(connection.credentials));
-      const orders = await readWooOrderPage(
-        origin,
-        credentials,
-        page,
-        limit
-      );
+      const orders = await readWooOrderPage(origin, credentials, page, limit);
       const ids = orders.map((order) => String(order.id));
       const [receipts, existingOrders] = await Promise.all([
         app.prisma.integrationReceipt.findMany({
