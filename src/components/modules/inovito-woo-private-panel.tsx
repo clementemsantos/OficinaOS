@@ -21,9 +21,11 @@ interface DryRunResult {
   excluded: number;
   notRecorded: number;
   origin: string;
-  rows: Array<OrderPreview & {
-    importStatus: "already_recorded" | "not_recorded" | "excluded_status";
-  }>;
+  rows: Array<
+    OrderPreview & {
+      importStatus: "already_recorded" | "not_recorded" | "excluded_status";
+    }
+  >;
   sampleSize: number;
   warning: string;
 }
@@ -291,19 +293,26 @@ export default function InovitoWooPrivatePanel({
             )}
             {dryRun?.origin === site.origin && (
               <div className="space-y-2 rounded-xl border border-outline-variant p-3 text-sm">
-                <h4 className="font-semibold">Simulação — nenhuma alteração efetuada</h4>
+                <h4 className="font-semibold">
+                  Simulação — nenhuma alteração efetuada
+                </h4>
                 <p>
                   Amostra: {dryRun.sampleSize} encomendas · Já registadas:{" "}
                   {dryRun.alreadyRecorded} · Sem registo nesta origem:{" "}
                   {dryRun.notRecorded} · Estados excluídos: {dryRun.excluded}.
                 </p>
                 {dryRun.rows.map((order) => (
-                  <p className="border-outline-variant border-b pb-1" key={order.id}>
+                  <p
+                    className="border-outline-variant border-b pb-1"
+                    key={order.id}
+                  >
                     #{order.number} · {order.total} ·{" "}
                     {importStatusLabel(order.importStatus)}
                   </p>
                 ))}
-                <p className="text-on-surface-variant text-xs">{dryRun.warning}</p>
+                <p className="text-on-surface-variant text-xs">
+                  {dryRun.warning}
+                </p>
               </div>
             )}
           </div>
