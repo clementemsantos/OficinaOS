@@ -28,6 +28,17 @@ interface DryRunResult {
   warning: string;
 }
 
+function importStatusLabel(status: DryRunResult["rows"][number]["importStatus"]): string {
+  switch (status) {
+    case "already_recorded":
+      return "Já registada";
+    case "excluded_status":
+      return "Excluída pelo estado";
+    default:
+      return "Sem registo — requer validação";
+  }
+}
+
 interface Props {
   connectedOrigins: string[];
   enabled: boolean;
@@ -289,11 +300,7 @@ export default function InovitoWooPrivatePanel({
                 {dryRun.rows.map((order) => (
                   <p className="border-outline-variant border-b pb-1" key={order.id}>
                     #{order.number} · {order.total} ·{" "}
-                    {order.importStatus === "already_recorded"
-                      ? "Já registada"
-                      : order.importStatus === "excluded_status"
-                        ? "Excluída pelo estado"
-                        : "Sem registo — requer validação"}
+                    {importStatusLabel(order.importStatus)}
                   </p>
                 ))}
                 <p className="text-on-surface-variant text-xs">{dryRun.warning}</p>
