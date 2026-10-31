@@ -81,6 +81,56 @@ export function parseWooOrderPreviews(raw: unknown): WooOrderPreview[] {
   });
 }
 
+export type WooImportPreviewStatus =
+  | "already_recorded"
+  | "not_recorded"
+  | "excluded_status";
+
+export interface WooImportPreviewRow extends WooOrderPreview {
+  importStatus: WooImportPreviewStatus;
+}
+
+/**
+ * Compare with the existing importer receipt keys. A missing receipt means
+ * "not recorded in this source", NOT that the order is safe to import.
+ * VAT, totals, customer matching and line items still require validation.
+ */
+export function createWooImportDryRun(
+  orders: WooOrderPreview[],
+  recordedIds: ReadonlySet<string>
+): {
+  alreadyRecorded: number;
+  excluded: number;
+  notRecorded: number;
+  rows: WooImportPreviewRow[];
+} {
+  const excludedStatuses = new Set([
+    "cancelled",
+    "failed",
+    "trash",
+    "refunded",
+  ]);
+  const rows: WooImportPreviewRow[] = orders.map((order) => {
+    let importStatus: WooImportPreviewStatus = "not_recorded";
+    if (recordedIds.has(String(order.id))) {
+      importStatus = "already_recorded";
+    } else if (excludedStatuses.has(order.status.toLowerCase())) {
+      importStatus = "excluded_status";
+    }
+    return { ...order, importStatus };
+  });
+  return {
+    alreadyRecorded: rows.filter(
+      (row) => row.importStatus === "already_recorded"
+    ).length,
+    excluded: rows.filter((row) => row.importStatus === "excluded_status")
+      .length,
+    notRecorded: rows.filter((row) => row.importStatus === "not_recorded")
+      .length,
+    rows,
+  };
+}
+
 export async function verifyWooReadAccess(
   origin: string,
   credentials: WooPrivateCredentials
