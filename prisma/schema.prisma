@@ -1910,6 +1910,16 @@ model InovitoGoogleConnection {
   @@map("inovito_google_connections")
 }
 
+// Encrypted, owner-controlled WooCommerce credentials. No order writes in this phase.
+model InovitoWooConnection {
+  origin      String   @id @db.VarChar(253)
+  credentials String   @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@map("inovito_woo_connections")
+}
+
 model IntegrationReceipt {
   id         String @id @default(cuid())
   source     String

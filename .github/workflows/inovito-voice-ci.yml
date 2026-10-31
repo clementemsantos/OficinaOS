@@ -25,6 +25,10 @@ on:
       - "server/services/inovito-google.service.ts"
       - "server/services/inovito-sites.service.ts"
       - "server/__tests__/inovito-sites.test.ts"
+      - "server/services/inovito-woo-private.service.ts"
+      - "server/__tests__/inovito-woo-private.test.ts"
+      - "src/components/modules/inovito-woo-private-panel.tsx"
+      - "prisma/migrations/20261123000000_inovito_woo_private_connections/**"
       - "server/__tests__/inovito-google-oauth.test.ts"
       - "server/register-api-routes.ts"
       - "prisma/schema.prisma"
@@ -57,6 +61,6 @@ jobs:
       - name: Validar tipos
         run: bun run typecheck
       - name: Testar comandos
-        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts server/__tests__/inovito-google-oauth.test.ts server/__tests__/inovito-meta.test.ts server/__tests__/inovito-gmail-metadata.test.ts server/__tests__/inovito-meta-http.test.ts server/__tests__/inovito-sites.test.ts
+        run: bun run test -- src/lib/__tests__/inovito-voice-commands.test.ts src/lib/__tests__/inovito-owner-summary.test.ts src/lib/__tests__/inovito-intents.test.ts server/__tests__/inovito-google-oauth.test.ts server/__tests__/inovito-meta.test.ts server/__tests__/inovito-gmail-metadata.test.ts server/__tests__/inovito-meta-http.test.ts server/__tests__/inovito-sites.test.ts server/__tests__/inovito-woo-private.test.ts
       - name: Compilar funcionalidade ativada
         run: bun run build
