@@ -28,7 +28,7 @@ on:
       - "server/services/inovito-woo-private.service.ts"
       - "server/__tests__/inovito-woo-private.test.ts"
       - "src/components/modules/inovito-woo-private-panel.tsx"
-      - "prisma/migrations/20261101000000_inovito_woo_private_connections/**"
+      - "prisma/migrations/20261123000000_inovito_woo_private_connections/**"
       - "server/__tests__/inovito-google-oauth.test.ts"
       - "server/register-api-routes.ts"
       - "prisma/schema.prisma"
