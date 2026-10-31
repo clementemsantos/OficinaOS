@@ -223,7 +223,9 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
         ...receipts
           .filter((receipt) => receipt.source !== `WOO:${origin}`)
           .map((receipt) => receipt.externalId),
-        ...existingOrders.map((order) => order.reference),
+        ...existingOrders
+          .map((order) => order.reference)
+          .filter((reference): reference is string => reference !== null),
       ]);
       return {
         origin,
