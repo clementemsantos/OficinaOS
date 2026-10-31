@@ -123,8 +123,10 @@ export function createWooImportDryRun(
     alreadyRecorded: rows.filter(
       (row) => row.importStatus === "already_recorded"
     ).length,
-    excluded: rows.filter((row) => row.importStatus === "excluded_status").length,
-    notRecorded: rows.filter((row) => row.importStatus === "not_recorded").length,
+    excluded: rows.filter((row) => row.importStatus === "excluded_status")
+      .length,
+    notRecorded: rows.filter((row) => row.importStatus === "not_recorded")
+      .length,
     rows,
   };
 }
