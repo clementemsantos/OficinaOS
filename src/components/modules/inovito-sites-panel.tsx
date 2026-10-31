@@ -17,16 +17,16 @@ interface SiteSnapshot {
 }
 
 interface SitesResponse {
-  privateWoo: {
-    enabled: boolean;
-    connectedOrigins: string[];
-  };
   orderImport: {
     configured: boolean;
     enabled: boolean;
     hasError: boolean;
     lastSyncAt: string | null;
     note: string;
+  };
+  privateWoo: {
+    connectedOrigins: string[];
+    enabled: boolean;
   };
   sites: SiteSnapshot[];
 }
