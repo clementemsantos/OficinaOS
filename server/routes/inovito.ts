@@ -11,6 +11,7 @@ import {
 } from "../services/inovito-google.service.js";
 import { readConfiguredSites } from "../services/inovito-sites.service.js";
 import {
+  createWooImportDryRun,
   permittedWooOrigin,
   verifyWooReadAccess,
   wooPrivateConnectInput,
@@ -163,6 +164,55 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
     } catch {
       return reply.code(503).send({
         message: "Não foi possível ler as encomendas. Verifica a ligação.",
+      });
+    }
+  });
+
+  // Read-only comparison with existing import receipts. No purchase orders,
+  // stock movements or receipts are created by this endpoint.
+  app.get("/sites/private/:host/dry-run", async (req, reply) => {
+    reply.header("cache-control", "no-store");
+    if (!wooPrivateEnabled()) {
+      return reply.code(409).send({ message: "Ligação privada desativada." });
+    }
+    const { host } = parseInput(
+      z.object({ host: z.string().max(253) }),
+      req.params
+    );
+    const origin = permittedWooOrigin(`https://${host}`);
+    if (!origin) {
+      return reply.code(404).send({ message: "Site não autorizado." });
+    }
+    const connection = await app.prisma.inovitoWooConnection.findUnique({
+      where: { origin },
+    });
+    if (!connection) {
+      return reply.code(404).send({ message: "Site sem ligação privada." });
+    }
+    try {
+      const credentials = JSON.parse(decryptSecret(connection.credentials));
+      const orders = await verifyWooReadAccess(origin, credentials);
+      // The legacy importer's unique key is source + Woo order ID.
+      const receipts = await app.prisma.integrationReceipt.findMany({
+        where: {
+          source: `WOO:${origin}`,
+          externalId: { in: orders.map((order) => String(order.id)) },
+        },
+        select: { externalId: true },
+      });
+      return {
+        origin,
+        sampleSize: orders.length,
+        ...createWooImportDryRun(
+          orders,
+          new Set(receipts.map((receipt) => receipt.externalId))
+        ),
+        warning:
+          "Simulação das últimas cinco encomendas apenas. Pedidos sem registo ainda exigem validação de IVA, clientes e artigos antes de qualquer importação.",
+      };
+    } catch {
+      return reply.code(503).send({
+        message: "Não foi possível simular a importação. Verifica a ligação.",
       });
     }
   });
