@@ -1,4 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
+import { decryptSecret, encryptSecret } from "../lib/crypto.js";
 import { requirePermission } from "../middlewares/rbac.js";
 import {
   createGoogleAuthorizeUrl,
@@ -8,7 +10,6 @@ import {
   googleIsConfigured,
 } from "../services/inovito-google.service.js";
 import { readConfiguredSites } from "../services/inovito-sites.service.js";
-import { decryptSecret, encryptSecret } from "../lib/crypto.js";
 import {
   permittedWooOrigin,
   verifyWooReadAccess,
@@ -16,7 +17,6 @@ import {
   wooPrivateEnabled,
 } from "../services/inovito-woo-private.service.js";
 import { parseInput } from "../utils/parse-input.js";
-import { z } from "zod";
 import { getSessionId, getUserId } from "../utils/request.js";
 
 export const inovitoRoutes: FastifyPluginAsync = (app) => {
@@ -101,42 +101,38 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
     };
   });
 
-
   // Private WooCommerce is read-only; never calls syncWoo or mutates orders.
   // All these routes inherit the authenticated owner permission.
   app.post("/sites/private", async (req, reply) => {
     reply.header("cache-control", "no-store");
     if (!wooPrivateEnabled()) {
-      return reply.code(409).send({ message: "Ligação privada desativada no servidor." });
+      return reply
+        .code(409)
+        .send({ message: "Ligação privada desativada no servidor." });
     }
     const payload = parseInput(wooPrivateConnectInput, req.body);
     const origin = permittedWooOrigin(payload.origin);
     if (!origin) {
-      return reply.code(400).send({ message: "O domínio não está autorizado." });
+      return reply
+        .code(400)
+        .send({ message: "O domínio não está autorizado." });
     }
     try {
       const preview = await verifyWooReadAccess(origin, payload);
+      const credentials = encryptSecret(
+        JSON.stringify({ key: payload.key, secret: payload.secret })
+      );
       await app.prisma.inovitoWooConnection.upsert({
         where: { origin },
-        create: {
-          origin,
-          credentials: encryptSecret(JSON.stringify({
-            key: payload.key,
-            secret: payload.secret,
-          })),
-        },
-        update: {
-          credentials: encryptSecret(JSON.stringify({
-            key: payload.key,
-            secret: payload.secret,
-          })),
-        },
+        create: { origin, credentials },
+        update: { credentials },
       });
       return { connected: true, origin, verifiedOrders: preview.length };
     } catch {
       // Never log raw credentials or provider response.
       return reply.code(422).send({
-        message: "A ligação WooCommerce falhou. Confirma as permissões de leitura e as chaves.",
+        message:
+          "A ligação WooCommerce falhou. Confirma as permissões de leitura e as chaves.",
       });
     }
   });
