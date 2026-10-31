@@ -1,15 +1,14 @@
 import { z } from "zod";
 import { integrationJson } from "../lib/integration-network.js";
-import {
-  configuredSites,
-  parseSiteOrigin,
-} from "./inovito-sites.service.js";
+import { configuredSites, parseSiteOrigin } from "./inovito-sites.service.js";
 
 /** Explicit opt-in so merely deploying this code never activates private access. */
 export function wooPrivateEnabled(): boolean {
-  return process.env.INOVITO_WOO_PRIVATE_ENABLED === "true" &&
+  return (
+    process.env.INOVITO_WOO_PRIVATE_ENABLED === "true" &&
     process.env.OFICINAOS_SANDBOX !== "true" &&
-    process.env.DEMO_MODE !== "true";
+    process.env.DEMO_MODE !== "true"
+  );
 }
 
 export const wooPrivateConnectInput = z.object({
@@ -28,7 +27,9 @@ export function permittedWooOrigin(origin: string): string | null {
   if (!config) {
     return null;
   }
-  const approved = configuredSites().some((item) => item.origin === config.origin);
+  const approved = configuredSites().some(
+    (item) => item.origin === config.origin
+  );
   return approved ? config.origin : null;
 }
 
@@ -42,11 +43,11 @@ const rawWooOrder = z.object({
 });
 
 export interface WooOrderPreview {
+  dateModified: string | null;
   id: number;
   number: string;
   status: string;
   total: string;
-  dateModified: string | null;
 }
 
 /** Only non-personal fields. No billing, email, address, phone, or line items. */
@@ -65,16 +66,18 @@ export function parseWooOrderPreviews(raw: unknown): WooOrderPreview[] {
     if (!Number.isFinite(totalNumber)) {
       return [];
     }
-    return [{
-      id: order.id,
-      number: order.number,
-      status: order.status,
-      total: new Intl.NumberFormat("pt-PT", {
-        style: "currency",
-        currency: order.currency,
-      }).format(totalNumber),
-      dateModified: order.date_modified_gmt ?? null,
-    }];
+    return [
+      {
+        id: order.id,
+        number: order.number,
+        status: order.status,
+        total: new Intl.NumberFormat("pt-PT", {
+          style: "currency",
+          currency: order.currency,
+        }).format(totalNumber),
+        dateModified: order.date_modified_gmt ?? null,
+      },
+    ];
   });
 }
 
@@ -86,7 +89,10 @@ export async function verifyWooReadAccess(
   url.searchParams.set("per_page", "5");
   url.searchParams.set("orderby", "modified");
   url.searchParams.set("order", "desc");
-  url.searchParams.set("_fields", "id,number,status,total,currency,date_modified_gmt");
+  url.searchParams.set(
+    "_fields",
+    "id,number,status,total,currency,date_modified_gmt"
+  );
   const secret = Buffer.from(
     `${credentials.key}:${credentials.secret}`
   ).toString("base64");
