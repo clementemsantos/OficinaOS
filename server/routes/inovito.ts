@@ -8,6 +8,15 @@ import {
   googleIsConfigured,
 } from "../services/inovito-google.service.js";
 import { readConfiguredSites } from "../services/inovito-sites.service.js";
+import { decryptSecret, encryptSecret } from "../lib/crypto.js";
+import {
+  permittedWooOrigin,
+  verifyWooReadAccess,
+  wooPrivateConnectInput,
+  wooPrivateEnabled,
+} from "../services/inovito-woo-private.service.js";
+import { parseInput } from "../utils/parse-input.js";
+import { z } from "zod";
 import { getSessionId, getUserId } from "../utils/request.js";
 
 export const inovitoRoutes: FastifyPluginAsync = (app) => {
@@ -62,7 +71,7 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
   // never a free-form user URL. Public published products only; no writes.
   app.get("/sites", async (_req, reply) => {
     reply.header("cache-control", "private, no-store");
-    const [sites, woocommerce] = await Promise.all([
+    const [sites, woocommerce, privateConnections] = await Promise.all([
       readConfiguredSites(),
       app.prisma.integrationConnection.findUnique({
         where: { kind: "WOOCOMMERCE" },
@@ -72,9 +81,16 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
           lastError: true,
         },
       }),
+      app.prisma.inovitoWooConnection.findMany({
+        select: { origin: true },
+      }),
     ]);
     return {
       sites,
+      privateWoo: {
+        enabled: wooPrivateEnabled(),
+        connectedOrigins: privateConnections.map((item) => item.origin),
+      },
       orderImport: {
         configured: Boolean(woocommerce),
         enabled: woocommerce?.enabled ?? false,
@@ -83,6 +99,90 @@ export const inovitoRoutes: FastifyPluginAsync = (app) => {
         note: "O importador de encomendas existente suporta uma única loja; os catálogos públicos podem ter vários sites.",
       },
     };
+  });
+
+
+  // Private WooCommerce is read-only; never calls syncWoo or mutates orders.
+  // All these routes inherit the authenticated owner permission.
+  app.post("/sites/private", async (req, reply) => {
+    reply.header("cache-control", "no-store");
+    if (!wooPrivateEnabled()) {
+      return reply.code(409).send({ message: "Ligação privada desativada no servidor." });
+    }
+    const payload = parseInput(wooPrivateConnectInput, req.body);
+    const origin = permittedWooOrigin(payload.origin);
+    if (!origin) {
+      return reply.code(400).send({ message: "O domínio não está autorizado." });
+    }
+    try {
+      const preview = await verifyWooReadAccess(origin, payload);
+      await app.prisma.inovitoWooConnection.upsert({
+        where: { origin },
+        create: {
+          origin,
+          credentials: encryptSecret(JSON.stringify({
+            key: payload.key,
+            secret: payload.secret,
+          })),
+        },
+        update: {
+          credentials: encryptSecret(JSON.stringify({
+            key: payload.key,
+            secret: payload.secret,
+          })),
+        },
+      });
+      return { connected: true, origin, verifiedOrders: preview.length };
+    } catch {
+      // Never log raw credentials or provider response.
+      return reply.code(422).send({
+        message: "A ligação WooCommerce falhou. Confirma as permissões de leitura e as chaves.",
+      });
+    }
+  });
+
+  app.get("/sites/private/:host/preview", async (req, reply) => {
+    reply.header("cache-control", "no-store");
+    if (!wooPrivateEnabled()) {
+      return reply.code(409).send({ message: "Ligação privada desativada." });
+    }
+    const { host } = parseInput(
+      z.object({ host: z.string().max(253) }),
+      req.params
+    );
+    const origin = permittedWooOrigin(`https://${host}`);
+    if (!origin) {
+      return reply.code(404).send({ message: "Site não autorizado." });
+    }
+    const connection = await app.prisma.inovitoWooConnection.findUnique({
+      where: { origin },
+    });
+    if (!connection) {
+      return reply.code(404).send({ message: "Site sem ligação privada." });
+    }
+    try {
+      const credentials = JSON.parse(decryptSecret(connection.credentials));
+      const data = await verifyWooReadAccess(origin, credentials);
+      return { origin, data };
+    } catch {
+      return reply.code(503).send({
+        message: "Não foi possível ler as encomendas. Verifica a ligação.",
+      });
+    }
+  });
+
+  app.delete("/sites/private/:host", async (req, reply) => {
+    reply.header("cache-control", "no-store");
+    const { host } = parseInput(
+      z.object({ host: z.string().max(253) }),
+      req.params
+    );
+    const origin = permittedWooOrigin(`https://${host}`);
+    if (!origin) {
+      return reply.code(404).send({ message: "Site não autorizado." });
+    }
+    await app.prisma.inovitoWooConnection.deleteMany({ where: { origin } });
+    return { disconnected: true };
   });
 
   app.get("/google/connect", (req, reply) => {
