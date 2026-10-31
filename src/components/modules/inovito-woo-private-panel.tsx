@@ -9,18 +9,18 @@ interface Site {
 }
 
 interface OrderPreview {
+  dateModified: string | null;
   id: number;
   number: string;
   status: string;
   total: string;
-  dateModified: string | null;
 }
 
 interface Props {
-  sites: Site[];
-  enabled: boolean;
   connectedOrigins: string[];
+  enabled: boolean;
   onChanged: () => void;
+  sites: Site[];
 }
 
 export default function InovitoWooPrivatePanel({
@@ -48,7 +48,9 @@ export default function InovitoWooPrivatePanel({
       setEditing(null);
       onChanged();
     } catch {
-      setError("A ligação falhou. Confirma a chave e as permissões de leitura.");
+      setError(
+        "A ligação falhou. Confirma a chave e as permissões de leitura."
+      );
     } finally {
       setKey("");
       setSecret("");
@@ -75,9 +77,7 @@ export default function InovitoWooPrivatePanel({
   const disconnect = async (site: Site) => {
     setBusy(true);
     try {
-      await api.delete(
-        `/inovito/sites/private/${encodeURIComponent(site.id)}`
-      );
+      await api.delete(`/inovito/sites/private/${encodeURIComponent(site.id)}`);
       setConfirmRemove(null);
       setPreview(null);
       onChanged();
@@ -91,11 +91,13 @@ export default function InovitoWooPrivatePanel({
   return (
     <div className="space-y-3 rounded-xl border border-outline-variant p-3">
       <div>
-        <h3 className="font-semibold">Encomendas WooCommerce — consulta privada</h3>
+        <h3 className="font-semibold">
+          Encomendas WooCommerce — consulta privada
+        </h3>
         <p className="mt-1 text-on-surface-variant text-xs">
-          É necessária uma chave WooCommerce com acesso apenas de leitura.
-          As credenciais são cifradas no servidor. Não são alterados
-          produtos, stock ou encomendas.
+          É necessária uma chave WooCommerce com acesso apenas de leitura. As
+          credenciais são cifradas no servidor. Não são alterados produtos,
+          stock ou encomendas.
         </p>
       </div>
       {!enabled && (
@@ -112,7 +114,10 @@ export default function InovitoWooPrivatePanel({
       {sites.map((site) => {
         const connected = connectedOrigins.includes(site.origin);
         return (
-          <div className="space-y-2 border-outline-variant border-t pt-3" key={site.id}>
+          <div
+            className="space-y-2 border-outline-variant border-t pt-3"
+            key={site.id}
+          >
             <p className="font-semibold text-sm">
               {site.id} — {connected ? "Ligação guardada" : "Sem chave privada"}
             </p>
@@ -156,7 +161,11 @@ export default function InovitoWooPrivatePanel({
                   value={secret}
                 />
                 <div className="flex flex-wrap gap-2">
-                  <Button disabled={busy || !key || !secret} size="sm" type="submit">
+                  <Button
+                    disabled={busy || !key || !secret}
+                    size="sm"
+                    type="submit"
+                  >
                     Testar e guardar
                   </Button>
                   <Button
@@ -218,7 +227,10 @@ export default function InovitoWooPrivatePanel({
                   <p>Sem encomendas devolvidas na consulta.</p>
                 )}
                 {preview.data.map((order) => (
-                  <p className="border-outline-variant border-b py-1" key={order.id}>
+                  <p
+                    className="border-outline-variant border-b py-1"
+                    key={order.id}
+                  >
                     #{order.number} · {order.status} · {order.total}
                   </p>
                 ))}
