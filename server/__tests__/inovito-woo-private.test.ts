@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  createWooImportDryRun,
   parseWooOrderPreviews,
   permittedWooOrigin,
   wooPrivateConnectInput,
@@ -110,5 +111,69 @@ describe("Inovito WooCommerce — pré-visualização", () => {
         },
       ])
     ).toEqual([]);
+  });
+});
+
+describe("Inovito WooCommerce — simulação de importação sem escritas", () => {
+  const orders = [
+    {
+      id: 11,
+      number: "11",
+      total: "29,99 €",
+      status: "processing",
+      dateModified: null,
+    },
+    {
+      id: 12,
+      number: "12",
+      total: "0,00 €",
+      status: "completed",
+      dateModified: null,
+    },
+    {
+      id: 13,
+      number: "13",
+      total: "10,00 €",
+      status: "cancelled",
+      dateModified: null,
+    },
+  ];
+
+  it("identifica recibos anteriores pela identidade da encomenda e exclui cancelados", () => {
+    const result = createWooImportDryRun(orders, new Set(["12"]));
+    expect(result.alreadyRecorded).toBe(1);
+    expect(result.notRecorded).toBe(1);
+    expect(result.excluded).toBe(1);
+    expect(result.rows.map((order) => order.importStatus)).toEqual([
+      "not_recorded",
+      "already_recorded",
+      "excluded_status",
+    ]);
+  });
+
+  it("não considera uma encomenda elegível para escrita só por não ter registo", () => {
+    const original = structuredClone(orders);
+    const result = createWooImportDryRun(orders, new Set<string>());
+    expect(result.rows[0].importStatus).toBe("not_recorded");
+    expect(orders).toEqual(original);
+    expect(result.rows[0]).not.toBe(orders[0]);
+  });
+
+  it("reconhece recibo existente mesmo se a encomenda for reembolsada", () => {
+    const result = createWooImportDryRun(
+      [{ ...orders[2], status: "refunded" }],
+      new Set(["13"])
+    );
+    expect(result.alreadyRecorded).toBe(1);
+    expect(result.excluded).toBe(0);
+  });
+
+  it("devolve relatório vazio para amostra sem encomendas", () => {
+    expect(createWooImportDryRun([], new Set())).toEqual({
+      alreadyRecorded: 0,
+      excluded: 0,
+      notRecorded: 0,
+      rows: [],
+    });
   });
 });
