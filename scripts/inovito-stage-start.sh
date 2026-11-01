@@ -39,6 +39,21 @@ dc() {
 dc config --quiet
 echo "Configuração válida. Projeto: oficinaos-inovito-stage (porta loopback 4003)."
 dc up -d db
+# On a cold start the container may be "running" before PostgreSQL accepts
+# connections. Never attempt a staging backup until the database is ready.
+echo "A aguardar que a base PostgreSQL de staging aceite ligações..."
+db_ready=false
+for _ in $(seq 1 60); do
+  if dc exec -T db pg_isready -U inovito_stage -d oficinaos_stage >/dev/null 2>&1; then
+    db_ready=true
+    break
+  fi
+  sleep 2
+done
+if [[ "$db_ready" != "true" ]]; then
+  echo "A base de dados de staging não ficou pronta. App não iniciada." >&2
+  exit 1
+fi
 
 backup_dir="$PWD/backups/inovito-stage"
 mkdir -p "$backup_dir"
