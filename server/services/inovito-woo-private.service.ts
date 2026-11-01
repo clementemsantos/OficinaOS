@@ -4,10 +4,14 @@ import { configuredSites, parseSiteOrigin } from "./inovito-sites.service.js";
 
 /** Explicit opt-in so merely deploying this code never activates private access. */
 export function wooPrivateEnabled(): boolean {
+  const dedicatedStaging =
+    process.env.OFICINAOS_SANDBOX === "true" &&
+    process.env.OFICINAOS_INOVITO_STAGING === "true" &&
+    process.env.INOVITO_STAGE_PRIVATE_READ === "true";
   return (
     process.env.INOVITO_WOO_PRIVATE_ENABLED === "true" &&
-    process.env.OFICINAOS_SANDBOX !== "true" &&
-    process.env.DEMO_MODE !== "true"
+    process.env.DEMO_MODE !== "true" &&
+    (process.env.OFICINAOS_SANDBOX !== "true" || dedicatedStaging)
   );
 }
 

@@ -1,0 +1,49 @@
+# Inovito staging for Inove.pt — independent of existing 4000/4001/4002 projects.
+# IMPORTANT: only launch from an independent checkout using the documented project.
+# No database, uploads or ports are shared with production, test or misto.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: inovito_stage
+      POSTGRES_PASSWORD: ${INOVITO_STAGE_DB_PASSWORD:?run scripts/setup-inovito-stage-env.sh}
+      POSTGRES_DB: oficinaos_stage
+    volumes:
+      - inovito-stage-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inovito_stage -d oficinaos_stage"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    # No LAN/WAN binding. HTTPS via a separately configured trusted reverse proxy.
+    ports:
+      - "127.0.0.1:4003:4000"
+    env_file:
+      - .env.inovito-stage
+    environment:
+      DATABASE_URL: postgresql://inovito_stage:${INOVITO_STAGE_DB_PASSWORD}@db:5432/oficinaos_stage
+      NODE_ENV: production
+      OFICINAOS_SANDBOX: "true"
+      OFICINAOS_INOVITO_STAGING: "true"
+      INOVITO_WOO_PRIVATE_ENABLED: "${INOVITO_WOO_PRIVATE_ENABLED:-false}"
+      INOVITO_STAGE_PRIVATE_READ: "${INOVITO_STAGE_PRIVATE_READ:-false}"
+      OFICINAOS_ENABLE_INTEGRATION_POLLING: "false"
+      INOVITO_META_WEBHOOK_ENABLED: "false"
+      INOVITO_META_CAPTURE_ENABLED: "false"
+      DEMO_MODE: "false"
+    volumes:
+      - inovito-stage-uploads:/app/uploads
+
+volumes:
+  inovito-stage-pgdata:
+  inovito-stage-uploads:
