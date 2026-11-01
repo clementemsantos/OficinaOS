@@ -6,6 +6,7 @@ import { Link, Route, Routes } from "react-router";
 import CommandPalette from "@/components/modules/command-palette";
 import DashboardLayout from "@/components/modules/dashboard-layout";
 import DemoBanner from "@/components/modules/demo-banner";
+import InovitoVoice from "@/components/modules/inovito-voice";
 import ProtectedRoute, {
   RequirePermission,
 } from "@/components/modules/protected-route";
@@ -17,6 +18,7 @@ const AiAnalystLayout = lazy(() => import("@/pages/ai-analyst/layout"));
 const AiMemoriesPage = lazy(() => import("@/pages/ai-analyst/memories/page"));
 const ChangePasswordPage = lazy(() => import("@/pages/auth/change-password"));
 const HelpPage = lazy(() => import("@/pages/help"));
+const InovitoMobilePage = lazy(() => import("@/pages/inovito"));
 const LoginPage = lazy(() => import("@/pages/auth/login"));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password"));
 const SetupPage = lazy(() => import("@/pages/auth/setup"));
@@ -124,6 +126,10 @@ export default function App() {
       {/* Outside Suspense and outside any layout: the palette has to survive
           route changes and lazy chunk loading, and open from every screen. */}
       {isAuthenticated && <CommandPalette />}
+      {isAuthenticated &&
+        import.meta.env.VITE_INOVITO_VOICE_ENABLED === "true" && (
+          <InovitoVoice />
+        )}
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route element={<LoginPage />} path="/login" />
@@ -133,6 +139,20 @@ export default function App() {
             <Route element={<ChangePasswordPage />} path="/change-password" />
           </Route>
           <Route element={<ProtectedRoute />}>
+            <Route
+              element={
+                <RequirePermission perm={{ dashboard: ["viewOwner"] }} />
+              }
+            >
+              <Route
+                element={
+                  <DashboardLayout>
+                    <InovitoMobilePage />
+                  </DashboardLayout>
+                }
+                path="/inovito"
+              />
+            </Route>
             <Route
               element={
                 <DashboardLayout>

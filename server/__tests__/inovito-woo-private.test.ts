@@ -1,0 +1,270 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  createWooImportDryRun,
+  parseWooOrderPreviews,
+  permittedWooOrigin,
+  wooOrderPageInput,
+  wooPrivateConnectInput,
+  wooPrivateEnabled,
+} from "../services/inovito-woo-private.service";
+
+const previousEnv = {
+  enabled: process.env.INOVITO_WOO_PRIVATE_ENABLED,
+  origins: process.env.INOVITO_SITE_ORIGINS,
+  sandbox: process.env.OFICINAOS_SANDBOX,
+  demo: process.env.DEMO_MODE,
+  staging: process.env.OFICINAOS_INOVITO_STAGING,
+  stagingRead: process.env.INOVITO_STAGE_PRIVATE_READ,
+};
+
+afterEach(() => {
+  const next = {
+    INOVITO_WOO_PRIVATE_ENABLED: previousEnv.enabled,
+    INOVITO_SITE_ORIGINS: previousEnv.origins,
+    OFICINAOS_SANDBOX: previousEnv.sandbox,
+    DEMO_MODE: previousEnv.demo,
+    OFICINAOS_INOVITO_STAGING: previousEnv.staging,
+    INOVITO_STAGE_PRIVATE_READ: previousEnv.stagingRead,
+  };
+  for (const [name, value] of Object.entries(next)) {
+    if (value === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = value;
+    }
+  }
+});
+
+describe("Inovito WooCommerce — permissão e domínio", () => {
+  it("começa desligado e nunca permite captura em demo/sandbox", () => {
+    delete process.env.INOVITO_WOO_PRIVATE_ENABLED;
+    expect(wooPrivateEnabled()).toBe(false);
+    process.env.INOVITO_WOO_PRIVATE_ENABLED = "true";
+    process.env.OFICINAOS_SANDBOX = "true";
+    expect(wooPrivateEnabled()).toBe(false);
+    delete process.env.OFICINAOS_SANDBOX;
+    process.env.DEMO_MODE = "true";
+    expect(wooPrivateEnabled()).toBe(false);
+  });
+
+  it("permite leitura Woo em staging isolada só com as três opções explícitas", () => {
+    process.env.INOVITO_WOO_PRIVATE_ENABLED = "true";
+    process.env.OFICINAOS_SANDBOX = "true";
+    process.env.OFICINAOS_INOVITO_STAGING = "true";
+    delete process.env.INOVITO_STAGE_PRIVATE_READ;
+    expect(wooPrivateEnabled()).toBe(false);
+    process.env.INOVITO_STAGE_PRIVATE_READ = "true";
+    expect(wooPrivateEnabled()).toBe(true);
+    process.env.DEMO_MODE = "true";
+    expect(wooPrivateEnabled()).toBe(false);
+    delete process.env.DEMO_MODE;
+    delete process.env.OFICINAOS_INOVITO_STAGING;
+    expect(wooPrivateEnabled()).toBe(false);
+  });
+
+  it("aceita somente origem de site previamente aprovada", () => {
+    process.env.INOVITO_SITE_ORIGINS =
+      "https://inove.pt,https://loja.exemplo.pt";
+    expect(permittedWooOrigin("https://inove.pt")).toBe("https://inove.pt");
+    expect(permittedWooOrigin("https://loja.exemplo.pt/")).toBe(
+      "https://loja.exemplo.pt"
+    );
+    expect(permittedWooOrigin("https://outro-site.pt")).toBeNull();
+    expect(permittedWooOrigin("http://inove.pt")).toBeNull();
+    expect(permittedWooOrigin("https://localhost")).toBeNull();
+    expect(permittedWooOrigin("https://inove.pt/admin")).toBeNull();
+  });
+
+  it("limita o formato das credenciais sem as divulgar", () => {
+    expect(
+      wooPrivateConnectInput.safeParse({
+        origin: "https://inove.pt",
+        key: "ck_test_reader",
+        secret: "cs_test_reader",
+      }).success
+    ).toBe(true);
+    expect(
+      wooPrivateConnectInput.safeParse({
+        origin: "https://inove.pt",
+        key: "x",
+        secret: "",
+      }).success
+    ).toBe(false);
+  });
+});
+
+describe("Inovito WooCommerce — pré-visualização", () => {
+  it("devolve apenas os campos essenciais e nunca dados do cliente", () => {
+    const preview = parseWooOrderPreviews([
+      {
+        id: 25,
+        number: "25",
+        status: "processing",
+        total: "49.99",
+        currency: "EUR",
+        date_modified_gmt: "2026-10-01T13:30:00",
+        billing: {
+          email: "privado@example.com",
+          phone: "900000000",
+          first_name: "Pessoa confidencial",
+        },
+        line_items: [{ name: "Produto secreto" }],
+      },
+    ]);
+    expect(preview).toHaveLength(1);
+    expect(preview[0].total).toContain("49,99");
+    expect(JSON.stringify(preview)).not.toContain("privado@example.com");
+    expect(JSON.stringify(preview)).not.toContain("900000000");
+    expect(JSON.stringify(preview)).not.toContain("Produto secreto");
+  });
+
+  it("rejeita respostas malformadas sem apresentar dados brutos", () => {
+    expect(parseWooOrderPreviews({ error: "credenciais" })).toEqual([]);
+    expect(
+      parseWooOrderPreviews([
+        {
+          id: 1,
+          number: "1",
+          status: "processing",
+          total: "NaN",
+          currency: "EUR",
+        },
+      ])
+    ).toEqual([]);
+  });
+});
+
+describe("Inovito WooCommerce — simulação de importação sem escritas", () => {
+  const orders = [
+    {
+      id: 11,
+      number: "11",
+      total: "29,99 €",
+      status: "processing",
+      dateModified: null,
+    },
+    {
+      id: 12,
+      number: "12",
+      total: "0,00 €",
+      status: "completed",
+      dateModified: null,
+    },
+    {
+      id: 13,
+      number: "13",
+      total: "10,00 €",
+      status: "cancelled",
+      dateModified: null,
+    },
+  ];
+
+  it("identifica recibos anteriores pela identidade da encomenda e exclui cancelados", () => {
+    const result = createWooImportDryRun(orders, new Set(["12"]));
+    expect(result.alreadyRecorded).toBe(1);
+    expect(result.notRecorded).toBe(1);
+    expect(result.excluded).toBe(1);
+    expect(result.rows.map((order) => order.importStatus)).toEqual([
+      "not_recorded",
+      "already_recorded",
+      "excluded_status",
+    ]);
+  });
+
+  it("não considera uma encomenda elegível para escrita só por não ter registo", () => {
+    const original = structuredClone(orders);
+    const result = createWooImportDryRun(orders, new Set<string>());
+    expect(result.rows[0].importStatus).toBe("not_recorded");
+    expect(orders).toEqual(original);
+    expect(result.rows[0]).not.toBe(orders[0]);
+  });
+
+  it("reconhece recibo existente mesmo se a encomenda for reembolsada", () => {
+    const result = createWooImportDryRun(
+      [{ ...orders[2], status: "refunded" }],
+      new Set(["13"])
+    );
+    expect(result.alreadyRecorded).toBe(1);
+    expect(result.excluded).toBe(0);
+  });
+
+  it("devolve relatório vazio para amostra sem encomendas", () => {
+    expect(createWooImportDryRun([], new Set())).toEqual({
+      alreadyRecorded: 0,
+      excluded: 0,
+      notRecorded: 0,
+      possibleDuplicates: 0,
+      rows: [],
+    });
+  });
+});
+
+describe("Inovito WooCommerce — reconciliação paginada", () => {
+  it("limita os pedidos a 25 encomendas e cinco páginas", () => {
+    expect(wooOrderPageInput.parse({ page: "2", limit: "25" })).toEqual({
+      page: 2,
+      limit: 25,
+    });
+    expect(
+      wooOrderPageInput.safeParse({ page: "6", limit: "25" }).success
+    ).toBe(false);
+    expect(
+      wooOrderPageInput.safeParse({ page: "1", limit: "100" }).success
+    ).toBe(false);
+    expect(wooOrderPageInput.safeParse({ page: "-1" }).success).toBe(false);
+  });
+
+  it("distingue duplicados certos de correspondências potenciais", () => {
+    const list = [
+      {
+        id: 16,
+        number: "16",
+        status: "completed",
+        total: "15 €",
+        dateModified: null,
+      },
+      {
+        id: 17,
+        number: "17",
+        status: "processing",
+        total: "19 €",
+        dateModified: null,
+      },
+      {
+        id: 18,
+        number: "18",
+        status: "processing",
+        total: "25 €",
+        dateModified: null,
+      },
+    ];
+    const report = createWooImportDryRun(
+      list,
+      new Set(["16"]),
+      new Set(["16", "17"])
+    );
+    expect(report.alreadyRecorded).toBe(1);
+    expect(report.possibleDuplicates).toBe(1);
+    expect(report.notRecorded).toBe(1);
+    expect(report.rows.map((row) => row.importStatus)).toEqual([
+      "already_recorded",
+      "possible_duplicate",
+      "not_recorded",
+    ]);
+  });
+
+  it("a marcação de possível duplicado nunca autoriza importação automática", () => {
+    const list = [
+      {
+        id: 25,
+        number: "25",
+        status: "cancelled",
+        total: "10 €",
+        dateModified: null,
+      },
+    ];
+    const report = createWooImportDryRun(list, new Set(), new Set(["25"]));
+    expect(report.possibleDuplicates).toBe(1);
+    expect(report.notRecorded).toBe(0);
+  });
+});
