@@ -1,0 +1,74 @@
+name: Inovito staging — compose e segurança
+
+on:
+  pull_request:
+    paths:
+      - "compose.inovito-stage.yaml"
+      - "scripts/setup-inovito-stage-env.sh"
+      - "scripts/inovito-stage-start.sh"
+      - "server/services/inovito-woo-private.service.ts"
+      - "server/__tests__/inovito-woo-private.test.ts"
+      - ".github/workflows/inovito-staging-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Validar staging isolada (sem deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: OficinaOS-inovito-stage
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: OficinaOS-inovito-stage
+      - name: Validate shell syntax
+        run: bash -n scripts/setup-inovito-stage-env.sh scripts/inovito-stage-start.sh
+      - name: Generate isolated test configuration
+        run: bash scripts/setup-inovito-stage-env.sh https://staging-ci.tailnet.ts.net:8443
+      - name: Validate Docker Compose configuration and isolation
+        run: |
+          test "$(stat -c %a .env.inovito-stage)" = "600"
+          docker compose --project-name oficinaos-inovito-stage \
+            --env-file .env.inovito-stage -f compose.inovito-stage.yaml config --quiet
+          docker compose --project-name oficinaos-inovito-stage \
+            --env-file .env.inovito-stage -f compose.inovito-stage.yaml \
+            config --format json > /tmp/inovito-staging-compose.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/inovito-staging-compose.json", encoding="utf-8") as f:
+              data = json.load(f)
+          app = data["services"]["app"]
+          db = data["services"]["db"]
+          env = app["environment"]
+          assert app["ports"][0]["host_ip"] == "127.0.0.1"
+          assert app["ports"][0]["published"] == "4003"
+          assert app["ports"][0]["target"] == 4000
+          assert env["NODE_ENV"] == "production"
+          assert env["OFICINAOS_SANDBOX"] == "true"
+          assert env["OFICINAOS_INOVITO_STAGING"] == "true"
+          assert env["INOVITO_WOO_PRIVATE_ENABLED"] == "false"
+          assert env["INOVITO_STAGE_PRIVATE_READ"] == "false"
+          assert env["INOVITO_META_WEBHOOK_ENABLED"] == "false"
+          assert env["INOVITO_META_CAPTURE_ENABLED"] == "false"
+          assert env["DEMO_MODE"] == "false"
+          assert "ports" not in db
+          assert db["environment"]["POSTGRES_USER"] == "inovito_stage"
+          assert data["name"] == "oficinaos-inovito-stage"
+          assert len(data["volumes"]) == 2
+          print("Staging isolated: 127.0.0.1:4003, separate volumes and opt-in disabled")
+          PY
+      - name: Verify configuration script does not overwrite secrets
+        run: |
+          before=$(sha256sum .env.inovito-stage | cut -d' ' -f1)
+          bash scripts/setup-inovito-stage-env.sh https://staging-ci.tailnet.ts.net:8443
+          after=$(sha256sum .env.inovito-stage | cut -d' ' -f1)
+          test "$before" = "$after"
+      - name: Build staging application image
+        run: |
+          docker compose --project-name oficinaos-inovito-stage \
+            --env-file .env.inovito-stage -f compose.inovito-stage.yaml \
+            build app
