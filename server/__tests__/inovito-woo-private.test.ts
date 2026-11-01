@@ -13,6 +13,8 @@ const previousEnv = {
   origins: process.env.INOVITO_SITE_ORIGINS,
   sandbox: process.env.OFICINAOS_SANDBOX,
   demo: process.env.DEMO_MODE,
+  staging: process.env.OFICINAOS_INOVITO_STAGING,
+  stagingRead: process.env.INOVITO_STAGE_PRIVATE_READ,
 };
 
 afterEach(() => {
@@ -21,6 +23,8 @@ afterEach(() => {
     INOVITO_SITE_ORIGINS: previousEnv.origins,
     OFICINAOS_SANDBOX: previousEnv.sandbox,
     DEMO_MODE: previousEnv.demo,
+    OFICINAOS_INOVITO_STAGING: previousEnv.staging,
+    INOVITO_STAGE_PRIVATE_READ: previousEnv.stagingRead,
   };
   for (const [name, value] of Object.entries(next)) {
     if (value === undefined) {
@@ -40,6 +44,21 @@ describe("Inovito WooCommerce — permissão e domínio", () => {
     expect(wooPrivateEnabled()).toBe(false);
     delete process.env.OFICINAOS_SANDBOX;
     process.env.DEMO_MODE = "true";
+    expect(wooPrivateEnabled()).toBe(false);
+  });
+
+  it("permite leitura Woo em staging isolada só com as três opções explícitas", () => {
+    process.env.INOVITO_WOO_PRIVATE_ENABLED = "true";
+    process.env.OFICINAOS_SANDBOX = "true";
+    process.env.OFICINAOS_INOVITO_STAGING = "true";
+    delete process.env.INOVITO_STAGE_PRIVATE_READ;
+    expect(wooPrivateEnabled()).toBe(false);
+    process.env.INOVITO_STAGE_PRIVATE_READ = "true";
+    expect(wooPrivateEnabled()).toBe(true);
+    process.env.DEMO_MODE = "true";
+    expect(wooPrivateEnabled()).toBe(false);
+    delete process.env.DEMO_MODE;
+    delete process.env.OFICINAOS_INOVITO_STAGING;
     expect(wooPrivateEnabled()).toBe(false);
   });
 
