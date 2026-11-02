@@ -384,7 +384,7 @@ export default function IphoneAtlasPage() {
           <section className="space-y-4 rounded-2xl bg-surface-container p-5 sm:p-7">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-extrabold text-xl">Peças, ferramentas e reparação passo a passo</h2>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Atlas técnico · PT-PT</span>
+              <span className="rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary text-xs">Atlas técnico · PT-PT</span>
             </div>
             <p className="text-on-surface-variant text-sm">
               Seleciona uma peça para consultar a função, a dificuldade, o material necessário,
@@ -395,7 +395,7 @@ export default function IphoneAtlasPage() {
               {REAL_PARTS.map((item) => (
                 <button
                   aria-pressed={activePart === item.id}
-                  className={"rounded-xl border p-3 text-left text-sm " + (activePart === item.id ? "border-primary bg-primary/10" : "border-outline-variant/50 hover:bg-surface-container-high")}
+                  className={`rounded-xl border p-3 text-left text-sm ${activePart === item.id ? "border-primary bg-primary/10" : "border-outline-variant/50 hover:bg-surface-container-high"}`}
                   key={item.id}
                   onClick={() => setActivePart(item.id)}
                   type="button"
@@ -434,51 +434,51 @@ export default function IphoneAtlasPage() {
               </div>
               {verifiedGuide && (
                 <div className="rounded-lg border border-primary/40 p-4">
-                  <p className="text-sm font-bold">Guia com fotografias para este modelo e peça</p>
-                  <a className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary underline" href={verifiedGuide.url} target="_blank" rel="noreferrer">
+                  <p className="font-bold text-sm">Guia com fotografias para este modelo e peça</p>
+                  <a className="mt-2 inline-flex items-center gap-2 font-semibold text-primary text-sm underline" href={verifiedGuide.url} rel="noreferrer" target="_blank">
                     {verifiedGuide.title} <Icon name="open_in_new" />
                   </a>
                   {verifiedGuide.time && <p className="mt-1 text-on-surface-variant text-xs">{verifiedGuide.time}</p>}
-                  <p className="mt-2 text-xs text-on-surface-variant">As fotografias da iFixit são consultadas no site de origem, sem republicação no OficinaOS.</p>
+                  <p className="mt-2 text-on-surface-variant text-xs">As fotografias da iFixit são consultadas no site de origem, sem republicação no OficinaOS.</p>
                 </div>
               )}
             </div>
             <div className="space-y-3">
               <div>
                 <h3 className="font-bold">Fotografias reais da peça no modelo selecionado</h3>
-                <p className="text-sm text-on-surface-variant">Só são mostradas fotografias identificadas para o mesmo iPhone, nunca de um modelo parecido.</p>
+                <p className="text-on-surface-variant text-sm">Só são mostradas fotografias identificadas para o mesmo iPhone, nunca de um modelo parecido.</p>
               </div>
               {selectedPhotos.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {selectedPhotos.map((photo) => {
-                    const originalUrl = "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(photo.file.replaceAll(" ", "_"));
-                    const imageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(photo.file.replaceAll(" ", "_")) + "?width=700";
+                    const originalUrl = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(photo.file.replaceAll(" ", "_"))}`;
+                    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(photo.file.replaceAll(" ", "_"))}?width=700`;
                     return (
                       <figure className="overflow-hidden rounded-xl border border-outline-variant/50" key={photo.file}>
-                        <a href={originalUrl} target="_blank" rel="noopener noreferrer" title="Abrir fotografia original e licença">
-                          <img alt={photo.title + " — " + selected} className="h-56 w-full bg-black/5 object-contain" loading="lazy" src={imageUrl} />
+                        <a href={originalUrl} rel="noopener noreferrer" target="_blank" title="Abrir fotografia original e licença">
+                          <img alt={`${photo.title} — ${selected}`} className="h-56 w-full bg-black/5 object-contain" height={700} loading="lazy" src={imageUrl} width={700} />
                         </a>
                         <figcaption className="space-y-1 p-3 text-xs">
                           <strong className="block text-sm">{photo.title}</strong>
                           <span>© {photo.author} · {photo.license} · Wikimedia Commons</span>
-                          <a href={originalUrl} className="block font-semibold text-primary underline" target="_blank" rel="noopener noreferrer">Origem, resolução e licença</a>
+                          <a className="block font-semibold text-primary underline" href={originalUrl} rel="noopener noreferrer" target="_blank">Origem, resolução e licença</a>
                         </figcaption>
                       </figure>
                     );
                   })}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-outline-variant p-4 text-sm text-on-surface-variant">
+                <div className="rounded-xl border border-outline-variant border-dashed p-4 text-on-surface-variant text-sm">
                   Ainda não existe uma fotografia licenciada e validada desta peça para {selected}.
                   Consulta o manual do fabricante abaixo, com as imagens originais, ou acrescenta fotografias próprias
                   através do editor do Atlas.
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <a className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-bold text-primary" href={manualLink} rel="noopener noreferrer" target="_blank">
+                <a className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 font-bold text-primary text-sm" href={manualLink} rel="noopener noreferrer" target="_blank">
                   {hasSpecificManual ? "Manual Apple para este modelo" : "Localizar manual Apple do modelo"} <Icon name="open_in_new" />
                 </a>
-                <Link className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 px-4 py-2 text-sm font-bold text-primary" to="/atlas/colaborativo">
+                <Link className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 px-4 py-2 font-bold text-primary text-sm" to="/atlas/colaborativo">
                   <Icon name="add_photo_alternate" /> Adicionar fotos/guia próprios
                 </Link>
               </div>
